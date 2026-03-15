@@ -1,0 +1,85 @@
+# CI : lint, tests et build frontend + backend
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  frontend:
+    name: Frontend (lint, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        continue-on-error: true
+
+      - name: Install dependencies (no lockfile)
+        if: failure()
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXTAUTH_URL: https://example.com
+          NEXTAUTH_SECRET: ci-secret-min-32-chars-for-nextauth
+          DISCORD_CLIENT_ID: ci
+          DISCORD_CLIENT_SECRET: ci
+          BACKEND_JWT_SECRET: ci-jwt-secret-min-32-chars-for-hs256
+          BACKEND_BASE_URL: http://backend
+
+  backend:
+    name: Backend (PHPUnit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: ctype iconv intl pdo_sqlite
+          coverage: none
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Create schema (test)
+        run: php bin/console doctrine:schema:create --env=test --no-interaction
+
+      - name: PHPUnit
+        run: php vendor/bin/simple-phpunit

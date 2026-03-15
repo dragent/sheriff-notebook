@@ -1,0 +1,16 @@
+{
+  "name": "sheriff-annesburg",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm run start --prefix frontend",
+    "db:migrate": "docker compose exec backend php bin/console doctrine:migrations:migrate -n",
+    "db:import-services": "docker compose exec backend php bin/console app:import-services",
+    "db:import": "npm run db:import-services",
+    "db:setup": "npm run db:migrate && npm run db:import",
+    "db:link-users": "docker compose exec backend php bin/console app:link-service-records-to-users",
+    "users:list": "docker compose exec backend php bin/console app:users:list"
+  }
+}

@@ -1,0 +1,62 @@
+security:
+    # Hiérarchie des grades (du plus gradé au moins gradé) :
+    # 1. Sheriff Comté, 2. Sheriff Adjoint, 3. Sheriff en chef, 4. Sheriff, 5. Sheriff Deputy
+    role_hierarchy:
+        ROLE_SHERIFF_COMTE: ROLE_SHERIFF_ADJOINT
+        ROLE_SHERIFF_ADJOINT: ROLE_SHERIFF_EN_CHEF
+        ROLE_SHERIFF_EN_CHEF: ROLE_SHERIFF
+        ROLE_SHERIFF: ROLE_SHERIFF_DEPUTY
+        ROLE_SHERIFF_DEPUTY: ROLE_USER
+
+    # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
+    # No passwords in this app (Discord-only auth).
+    password_hashers:
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+
+    # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
+    providers:
+        app_user_provider:
+            entity:
+                class: App\Entity\User
+                property: discordId
+
+    firewalls:
+        dev:
+            # Ensure dev tools and static assets are always allowed
+            pattern: ^/(_profiler|_wdt|assets|build)/
+            security: false
+        main:
+            lazy: true
+            provider: app_user_provider
+            stateless: true
+            entry_point: App\Security\DiscordJwtAuthenticator
+            custom_authenticators:
+                - App\Security\DiscordJwtAuthenticator
+
+            # Activate different ways to authenticate:
+            # https://symfony.com/doc/current/security.html#the-firewall
+
+            # https://symfony.com/doc/current/security/impersonating_user.html
+            # switch_user: true
+
+    # Note: Only the *first* matching rule is applied
+    access_control:
+        - { path: ^/api/health$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/debug/, roles: PUBLIC_ACCESS }
+        - { path: ^/api/sheriffs$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/home-info$, roles: PUBLIC_ACCESS }
+        # Gestion des utilisateurs et recrutement : réservé aux shérifs adjoints et comté (hiérarchie incluse).
+        - { path: ^/api/users, roles: ROLE_SHERIFF_ADJOINT }
+        - { path: ^/api/recruits, roles: ROLE_SHERIFF_ADJOINT }
+        - { path: ^/api, roles: ROLE_USER }
+
+when@test:
+    security:
+        password_hashers:
+            # Password hashers are resource-intensive by design to ensure security.
+            # In tests, it's safe to reduce their cost to improve performance.
+            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+                algorithm: auto
+                cost: 4 # Lowest possible value for bcrypt
+                time_cost: 3 # Lowest possible value for argon
+                memory_cost: 10 # Lowest possible value for argon

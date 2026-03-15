@@ -1,0 +1,78 @@
+# Secrets (JWT, Discord, etc.) : à définir dans .env.local à la racine (fichier non versionné).
+# Ne pas mettre de secrets en dur dans ce fichier.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sheriff
+      POSTGRES_USER: sheriff
+      POSTGRES_PASSWORD: sheriff
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./docker/db-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sheriff -d sheriff"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - .env.local
+    environment:
+      APP_ENV: dev
+      APP_SECRET: change_me
+      DATABASE_URL: "postgresql://sheriff:sheriff@db:5432/sheriff?serverVersion=16&charset=utf8"
+      CORS_ALLOW_ORIGIN: "^https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?$"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/var/www/html
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    env_file:
+      - .env.local
+    environment:
+      NEXTAUTH_URL: "http://localhost:3000"
+      BACKEND_BASE_URL: "http://backend"
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    # En dev on surcharge la commande pour utiliser `next dev`.
+    # --webpack évite l'erreur « controller[kState].transformAlgorithm is not a function » (bug connu RSC/Turbopack).
+    command: ["npm", "run", "dev", "--", "--webpack", "-H", "0.0.0.0", "-p", "3000"]
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode >= 200 && r.statusCode < 300 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  db_data:
+  frontend_node_modules:
+

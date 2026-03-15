@@ -1,0 +1,48 @@
+---
+description: Sheriff Annesburg project rules — lead dev conventions (stack, API, frontend, backend)
+alwaysApply: true
+---
+
+# Project rules — Sheriff's Office Annesburg
+
+## Project context
+
+- **Monorepo**: root = npm scripts (dev/build/start for `frontend`). Application code in `frontend/` (Next.js) and `backend/` (Symfony).
+- **Stack**: Next.js 16, React 19, NextAuth (Discord), Tailwind 4, TypeScript on the front. Symfony, Doctrine, JWT HS256 on the back. Auth: NextAuth session → JWT signed with shared secret `BACKEND_JWT_SECRET` for API calls.
+- **Language**: code comments and repo documentation in **English**. User-facing messages may stay in French. Variable/type names in code remain in English.
+
+## Environment variables
+
+- **Root**: `.env` / `.env.local` for Docker and NEXTAUTH (NEXTAUTH_URL, NEXTAUTH_SECRET), Discord (DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_GUILD_ID, DISCORD_BOT_TOKEN), BACKEND_BASE_URL. **Never commit secrets**; use `.env.example` to document keys.
+- **Backend**: `backend/.env.local` (or `.env` in Docker): DATABASE_URL, BACKEND_JWT_SECRET, Discord (bot). `BACKEND_JWT_SECRET` must be **identical** on frontend and backend or you get “backend rejected the token”.
+
+## API proxies (frontend → backend)
+
+- **Spec**: `docs/PROXY_SPEC.md` is the source of truth. Any new proxy route or behaviour change must be reflected there.
+- **Implementation**: use **only** the module `frontend/src/lib/proxyBackend.ts` (`proxyRequest`, `getBackendBase`, `createProxyContext`) and the logger `proxyLogger.ts` (`proxyLog`) for routes that call Symfony. No direct `fetch` to the backend in Route Handlers.
+- **Current inventory**: `GET /api/me`, `PUT /api/reference`, `PATCH /api/services/[id]`, and others listed in PROXY_SPEC. For a new proxy: add the Next route, use `proxyRequest` and structured JSON logging (requestId, route, method, userId, backendUrl, backendStatus, durationMs, error on failure).
+- **Errors**: 401 → `{ "error": "Non authentifié" }`; 400 invalid body → `{ "error": "Corps de requête invalide" }`; 502 backend unreachable → `{ "error": "Backend injoignable" }`. No automatic retry on the proxy.
+
+## Frontend (Next.js / React)
+
+- **Components**: functional only, no classes. Reusable logic in hooks or `src/lib/`. Styles: Tailwind (global file `globals.css`).
+- **Backend calls**: from the server (layout, pages), use the proxies or `getBackendBase()` + JWT from the session (see `backendJwt.ts`). Do not expose `BACKEND_BASE_URL` to the client; backend calls go through Next Route Handlers (`/api/me`, etc.).
+- **Auth**: `getServerSession()` (NextAuth) to protect pages; JWT for the backend via `backendJwt.ts`. Types extended in `src/types/next-auth.d.ts`.
+
+## Backend (Symfony)
+
+- **API**: controllers under `src/Controller/Api/`, routes prefixed `/api`. JSON responses; exceptions formatted by `ApiExceptionSubscriber`.
+- **Security**: JWT validated by `DiscordJwtAuthenticator` (secret shared with the frontend). No direct Discord auth on the backend; the frontend sends the JWT.
+
+## Quality / tooling
+
+- **Frontend**: ESLint (Next config in `eslint.config.mjs`). Run `npm run lint` from `frontend/` before pushing.
+- **Backend**: PHP, Symfony conventions; php-cs-fixer in place. Doctrine migrations: `doctrine:migrations:migrate`. Business commands: `app:import-dossiers`, `app:import-services`, `app:link-service-records-to-users`, etc. (see README).
+
+## Key files to know
+
+- `README.md`: Docker setup, Discord config, JWT troubleshooting.
+- `docs/PROXY_SPEC.md`: proxy inventory and error/log strategy.
+- `frontend/src/lib/proxyBackend.ts`, `proxyLogger.ts`: proxy core.
+- `frontend/src/lib/auth.ts`, `backendJwt.ts`: session and JWT.
+- Logo: `frontend/public/logo.png` (replace file without changing code).

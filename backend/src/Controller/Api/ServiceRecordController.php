@@ -1,0 +1,257 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controller\Api;
+
+use App\Entity\ServiceRecord;
+use App\Entity\User;
+use App\Repository\CountyReferenceRepository;
+use App\Repository\ServiceRecordRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Uid\Uuid;
+
+#[Route('/api/services')]
+final class ServiceRecordController
+{
+    private const GRADE_ORDER = [
+        'Sheriff de comté' => 0,
+        'Sheriff Adjoint' => 1,
+        'Sheriff en chef' => 2,
+        'Sheriff' => 3,
+        'Sheriff Deputy' => 4,
+        'Deputy' => 5,
+    ];
+
+    public function __construct(
+        private readonly ServiceRecordRepository $repository,
+        private readonly CountyReferenceRepository $referenceRepository,
+        private readonly EntityManagerInterface $entityManager,
+    ) {
+    }
+
+    #[Route('', name: 'api_services_list', methods: ['GET'])]
+    public function list(): JsonResponse
+    {
+        $records = $this->repository->findBy([], ['name' => 'ASC']);
+
+        return new JsonResponse(array_map(self::toArray(...), $records));
+    }
+
+    /** Current user's service record (one per user); created on first access if missing. */
+    #[Route('/me', name: 'api_services_me', methods: ['GET'])]
+    public function me(#[CurrentUser] User $user): JsonResponse
+    {
+        $record = $this->repository->findOneByUser($user);
+        if (!$record instanceof ServiceRecord) {
+            $record = new ServiceRecord($user->getUsername());
+            $record->setUser($user);
+            $user->setServiceRecord($record);
+            $this->entityManager->persist($record);
+            $this->entityManager->flush();
+        }
+
+        return new JsonResponse(self::toArray($record));
+    }
+
+    #[Route('/{id}', name: 'api_services_patch', methods: ['PATCH'])]
+    public function patch(string $id, Request $request, #[CurrentUser] User $user): JsonResponse
+    {
+        try {
+            $uuid = Uuid::fromString($id);
+        } catch (\ValueError) {
+            return new JsonResponse(['error' => 'Invalid id'], 400);
+        }
+
+        $record = $this->repository->find($uuid);
+        if (!$record instanceof ServiceRecord) {
+            return new JsonResponse(['error' => 'Service record not found'], 404);
+        }
+
+        $recordUser = $record->getUser();
+        $isOwnRecord = $recordUser?->getId()?->equals($user->getId()) === true;
+
+        $data = json_decode((string) $request->getContent(), true);
+        if (!\is_array($data)) {
+            return new JsonResponse(['error' => 'Invalid JSON'], 400);
+        }
+
+        $planningKeys = [
+            'monDay', 'monNight', 'tueDay', 'tueNight',
+            'wedDay', 'wedNight', 'thuDay', 'thuNight',
+            'friDay', 'friNight', 'satDay', 'satNight',
+            'sunDay', 'sunNight',
+        ];
+        $equipmentKeys = [
+            'telegramPrimary', 'primaryWeapon', 'primaryWeaponSerial',
+            'hasScope', 'secondaryWeapon', 'secondaryWeaponSerial',
+            'cartInfo', 'boatInfo',
+        ];
+        $hasFormationUpdate = array_key_exists('formationValidations', $data);
+
+        $hasPlanningOrEquipmentUpdate = false;
+        foreach (array_merge($planningKeys, $equipmentKeys) as $key) {
+            if (array_key_exists($key, $data)) {
+                $hasPlanningOrEquipmentUpdate = true;
+                break;
+            }
+        }
+
+        if ($hasPlanningOrEquipmentUpdate && !$isOwnRecord) {
+            return new JsonResponse(['error' => 'Forbidden: not your service record'], 403);
+        }
+
+        if ($hasFormationUpdate && $isOwnRecord) {
+            $actorOrder = self::GRADE_ORDER[$user->getGrade()] ?? null;
+            if ($actorOrder !== 0) {
+                return new JsonResponse(['error' => 'Forbidden: only County Sheriff can validate their own formations'], 403);
+            }
+        }
+        if ($hasFormationUpdate && !$isOwnRecord) {
+            if (!self::canValidateFormationFor($user, $recordUser)) {
+                return new JsonResponse(['error' => 'Forbidden: cannot validate formation for this grade'], 403);
+            }
+        }
+
+        self::applyPlanning($record, $data);
+        self::applyEquipment($record, $data);
+        $this->applyFormationValidations($record, $data);
+
+        $this->entityManager->flush();
+
+        return new JsonResponse(self::toArray($record));
+    }
+
+    private static function applyPlanning(ServiceRecord $record, array $data): void
+    {
+        $setters = [
+            'monDay' => 'setMonDay', 'monNight' => 'setMonNight',
+            'tueDay' => 'setTueDay', 'tueNight' => 'setTueNight',
+            'wedDay' => 'setWedDay', 'wedNight' => 'setWedNight',
+            'thuDay' => 'setThuDay', 'thuNight' => 'setThuNight',
+            'friDay' => 'setFriDay', 'friNight' => 'setFriNight',
+            'satDay' => 'setSatDay', 'satNight' => 'setSatNight',
+            'sunDay' => 'setSunDay', 'sunNight' => 'setSunNight',
+        ];
+        foreach ($setters as $key => $setter) {
+            if (array_key_exists($key, $data)) {
+                $record->$setter((bool) $data[$key]);
+            }
+        }
+    }
+
+    private static function applyEquipment(ServiceRecord $record, array $data): void
+    {
+        if (array_key_exists('telegramPrimary', $data)) {
+            $record->setTelegramPrimary($data['telegramPrimary'] !== null ? trim((string) $data['telegramPrimary']) : null);
+        }
+        if (array_key_exists('primaryWeapon', $data)) {
+            $record->setPrimaryWeapon($data['primaryWeapon'] !== null ? trim((string) $data['primaryWeapon']) : null);
+        }
+        if (array_key_exists('primaryWeaponSerial', $data)) {
+            $record->setPrimaryWeaponSerial($data['primaryWeaponSerial'] !== null ? trim((string) $data['primaryWeaponSerial']) : null);
+        }
+        if (array_key_exists('hasScope', $data)) {
+            $record->setHasScope((bool) $data['hasScope']);
+        }
+        if (array_key_exists('secondaryWeapon', $data)) {
+            $record->setSecondaryWeapon($data['secondaryWeapon'] !== null ? trim((string) $data['secondaryWeapon']) : null);
+        }
+        if (array_key_exists('secondaryWeaponSerial', $data)) {
+            $record->setSecondaryWeaponSerial($data['secondaryWeaponSerial'] !== null ? trim((string) $data['secondaryWeaponSerial']) : null);
+        }
+        if (array_key_exists('cartInfo', $data)) {
+            $record->setCartInfo($data['cartInfo'] !== null ? trim((string) $data['cartInfo']) : null);
+        }
+        if (array_key_exists('boatInfo', $data)) {
+            $record->setBoatInfo($data['boatInfo'] !== null ? trim((string) $data['boatInfo']) : null);
+        }
+    }
+
+    private function applyFormationValidations(ServiceRecord $record, array $data): void
+    {
+        if (!array_key_exists('formationValidations', $data) || !\is_array($data['formationValidations'])) {
+            return;
+        }
+        $ref = $this->referenceRepository->getSingleton();
+        $refData = $ref->getData();
+        $catalog = $refData['formations'] ?? [];
+        $allowedIds = [];
+        foreach ($catalog as $item) {
+            if (\is_array($item) && isset($item['id']) && \is_string($item['id']) && $item['id'] !== '') {
+                $allowedIds[$item['id']] = true;
+            }
+        }
+        $filtered = [];
+        foreach ($data['formationValidations'] as $id => $valid) {
+            if (\is_string($id) && isset($allowedIds[$id]) && $valid === true) {
+                $filtered[$id] = true;
+            }
+        }
+        $record->setFormationValidations($filtered);
+    }
+
+    private static function toArray(ServiceRecord $record): array
+    {
+        return [
+            'id' => $record->getId()->toRfc4122(),
+            'name' => $record->getName(),
+            'grade' => $record->getUser()?->getGrade(),
+            'telegramPrimary' => $record->getTelegramPrimary(),
+            'total' => $record->getTotal(),
+            'monDay' => $record->isMonDay(),
+            'monNight' => $record->isMonNight(),
+            'tueDay' => $record->isTueDay(),
+            'tueNight' => $record->isTueNight(),
+            'wedDay' => $record->isWedDay(),
+            'wedNight' => $record->isWedNight(),
+            'thuDay' => $record->isThuDay(),
+            'thuNight' => $record->isThuNight(),
+            'friDay' => $record->isFriDay(),
+            'friNight' => $record->isFriNight(),
+            'satDay' => $record->isSatDay(),
+            'satNight' => $record->isSatNight(),
+            'sunDay' => $record->isSunDay(),
+            'sunNight' => $record->isSunNight(),
+            'primaryWeapon' => $record->getPrimaryWeapon(),
+            'primaryWeaponSerial' => $record->getPrimaryWeaponSerial(),
+            'hasScope' => $record->isHasScope(),
+            'secondaryWeapon' => $record->getSecondaryWeapon(),
+            'secondaryWeaponSerial' => $record->getSecondaryWeaponSerial(),
+            'cartInfo' => $record->getCartInfo(),
+            'boatInfo' => $record->getBoatInfo(),
+            'formationValidations' => $record->getFormationValidations(),
+        ];
+    }
+
+    /** County Sheriff / Deputy / Chief can validate formations only for strictly lower grades. */
+    private static function canValidateFormationFor(User $actor, ?User $target): bool
+    {
+        if ($target === null) {
+            return false;
+        }
+
+        $actorGrade = $actor->getGrade();
+        $targetGrade = $target->getGrade();
+        if ($actorGrade === null || $targetGrade === null) {
+            return false;
+        }
+
+        $actorOrder = self::GRADE_ORDER[$actorGrade] ?? null;
+        $targetOrder = self::GRADE_ORDER[$targetGrade] ?? null;
+        if ($actorOrder === null || $targetOrder === null) {
+            return false;
+        }
+
+        if ($actorOrder > 2) {
+            return false;
+        }
+
+        return $actorOrder < $targetOrder;
+    }
+}
+

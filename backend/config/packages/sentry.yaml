@@ -1,0 +1,12 @@
+# Sentry : erreurs et performances backend. Aucun envoi si SENTRY_DSN est vide.
+# Voir README section Observabilité et .env.example.
+
+sentry:
+  dsn: '%env(default::SENTRY_DSN)%'
+  options:
+    # En prod, définir SENTRY_ENVIRONMENT=production pour filtrer dans Sentry
+    environment: '%env(default:kernel.environment:SENTRY_ENVIRONMENT)%'
+    # Échantillonnage des traces (0 = désactivé)
+    traces_sample_rate: 0.1
+    # Ne pas envoyer d’infos personnelles par défaut
+    send_default_pii: false
