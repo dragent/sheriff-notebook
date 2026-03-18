@@ -85,7 +85,10 @@ final class CountyReferenceControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertArrayHasKey('data', $data);
-        self::assertSame(['Springfield', 'Bolt'], $data['data']['fusil'] ?? null);
+        self::assertSame([
+            ['name' => 'Springfield', 'destructionValue' => ''],
+            ['name' => 'Bolt', 'destructionValue' => ''],
+        ], $data['data']['fusil'] ?? null);
     }
 
 }
