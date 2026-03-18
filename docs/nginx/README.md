@@ -2,6 +2,8 @@
 
 - **sheriff.dragent.fr** → frontend (Next.js, port 3000)
 - **api.sheriff.dragent.fr** → backend (Symfony, port 8080)
+- **sheriffnotebook.dragent** → frontend (Next.js, port 3000)
+- **api.sheriffnotebook.dragent** → backend (Symfony, port 8080)
 
 Assumes Docker Compose prod is running and exposing `3000` (frontend) and `8080` (backend) on the host.
 
@@ -45,6 +47,18 @@ Certbot installs a timer. Test renewal:
 
 ```bash
 sudo certbot renew --dry-run
+```
+
+### sheriffnotebook.dragent variant
+
+```bash
+sudo mkdir -p /var/www/certbot
+sudo cp docs/nginx/sheriffnotebook.dragent.http-only.conf /etc/nginx/sites-available/sheriffnotebook.dragent
+sudo ln -sf /etc/nginx/sites-available/sheriffnotebook.dragent /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot certonly --webroot -w /var/www/certbot -d sheriffnotebook.dragent -d api.sheriffnotebook.dragent
+sudo cp docs/nginx/sheriffnotebook.dragent.conf /etc/nginx/sites-available/sheriffnotebook.dragent
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 ## 5. If you use only one domain (no api.sheriff.dragent.fr)
