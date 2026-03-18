@@ -1,0 +1,588 @@
+@import "tailwindcss";
+
+/* ========== Palette Annesburg (gris, noir, blanc) ========== */
+/* Light et dark partagent la même identité visuelle Annesburg. */
+
+/* ========== Dark mode (défaut) ========== */
+:root,
+[data-theme="dark"] {
+  /* Annesburg : gris / noir / blanc (charbon et acier) */
+  --sheriff-charcoal: #0f1012;
+  --sheriff-wood: #1a1b1e;
+  --sheriff-gold: #c5c7cc;
+  --sheriff-gold-hover: #dedfe3;
+  --sheriff-gold-accent: #f5f5f7;
+  --sheriff-paper: #e6e7ea;
+  --sheriff-paper-muted: rgba(230, 231, 234, 0.86);
+  --sheriff-leather: #3a3b3f;
+  /* Contraste accessibilité */
+  --sheriff-ink: #070809;
+  --sheriff-ink-on-gold: #111218;
+  /* Ombres (light mode utilise des ombres plus douces via override) */
+  --sheriff-card-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  --sheriff-header-shadow: 0 2px 20px rgba(0, 0, 0, 0.35);
+  --sheriff-table-head-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --sheriff-panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  /* Scrollbars dark — piste sombre (wood), curseur clair (gold) pour rester discret */
+  --sheriff-scroll-track: #252525;
+  --sheriff-scroll-thumb: #6a6a6a;
+  --sheriff-scroll-thumb-hover: #b8b8b8;
+  /* Sémantique comptabilité (entrée = recette, sortie = dépense) */
+  --sheriff-entree: #7a9e7a;
+  --sheriff-entree-bg: rgba(122, 158, 122, 0.15);
+  --sheriff-sortie: #c49a7a;
+  --sheriff-sortie-bg: rgba(196, 154, 122, 0.15);
+  /* Barre d’onglets (dark) */
+  --sheriff-tab-track: #252525;
+  --sheriff-tab-active-bg: #b8b8b8;
+  --sheriff-tab-active-text: #1a1814;
+  /* Checkbox (dark) */
+  --sheriff-checkbox-border: rgba(184, 184, 184, 0.5);
+  --sheriff-checkbox-bg: #1b1b1b;
+  --sheriff-checkbox-hover-bg: rgba(27, 27, 27, 0.95);
+  --sheriff-checkbox-checked-bg: rgba(184, 184, 184, 0.18);
+  --sheriff-checkbox-checked-hover-bg: rgba(184, 184, 184, 0.25);
+  --sheriff-checkbox-checked-icon: #b8b8b8;
+  --sheriff-checkbox-focus-ring: rgba(184, 184, 184, 0.2);
+  /* Flashbag (dark) */
+  --flashbag-default-border: rgba(245, 158, 11, 0.5);
+  --flashbag-default-bg: rgba(245, 158, 11, 0.1);
+  --flashbag-default-text: #fde68a;
+  --flashbag-default-btn-hover: rgba(245, 158, 11, 0.25);
+  --flashbag-warning-border: rgba(245, 158, 11, 0.6);
+  --flashbag-warning-bg: rgba(245, 158, 11, 0.2);
+  --flashbag-warning-text: #fde68a;
+  --flashbag-warning-btn-hover: rgba(245, 158, 11, 0.35);
+  --flashbag-error-border: rgba(239, 68, 68, 0.6);
+  --flashbag-error-bg: rgba(239, 68, 68, 0.2);
+  --flashbag-error-text: #fecaca;
+  --flashbag-error-btn-hover: rgba(239, 68, 68, 0.3);
+  --flashbag-success-border: rgba(16, 185, 129, 0.6);
+  --flashbag-success-bg: rgba(16, 185, 129, 0.2);
+  --flashbag-success-text: #a7f3d0;
+  --flashbag-success-btn-hover: rgba(16, 185, 129, 0.3);
+  --flashbag-code-bg: rgba(0, 0, 0, 0.2);
+  /* Bouton Enregistrer (dark) */
+  --sheriff-btn-save-bg: #b8b8b8;
+  --sheriff-btn-save-text: #1a1814;
+  --sheriff-btn-save-border: #b8b8b8;
+  --sheriff-btn-save-hover-bg: #d0d0d0;
+  --sheriff-btn-save-soft-bg: rgba(184, 184, 184, 0.25);
+  --sheriff-btn-save-soft-text: #b8b8b8;
+  --sheriff-btn-save-soft-border: rgba(184, 184, 184, 0.6);
+  --sheriff-btn-save-soft-hover-bg: rgba(184, 184, 184, 0.35);
+  /* Actions destructives (licenciement, suppression) */
+  --sheriff-destructive-bg: rgba(127, 29, 29, 0.6);
+  --sheriff-destructive-text: #fecaca;
+  --sheriff-destructive-hover: rgba(153, 27, 27, 0.8);
+  /* Avertissement / config (ErrorState warning) */
+  --sheriff-warning-bg: rgba(180, 83, 9, 0.2);
+  --sheriff-warning-border: rgba(180, 83, 9, 0.5);
+  --sheriff-warning-icon-bg: rgba(245, 158, 11, 0.2);
+  --sheriff-warning-icon: #fbbf24;
+  /* Code / détail (flashbag, erreurs) */
+  --sheriff-code-bg: rgba(0, 0, 0, 0.2);
+}
+
+/* ========== Light mode — Annesburg (gris, noir, blanc, très doux) ========== */
+[data-theme="light"] {
+  /* Fonds : gris clair très doux (presque papier, non éblouissant) */
+  --sheriff-charcoal: #e7eaee;
+  --sheriff-wood: #f6f7fb;
+  --sheriff-gold: #4a4b4f;
+  --sheriff-gold-hover: #36373a;
+  /* Accent actif / hover : brun doré pour rappeler l’identité shérif */
+  --sheriff-gold-accent: #2c2d30;
+  /* Texte moins dur : gris foncé au lieu de noir pur */
+  --sheriff-paper: #0f1012;
+  --sheriff-paper-muted: rgba(15, 16, 18, 0.78);
+  --sheriff-leather: #9a9ba0;
+  --sheriff-ink: #070809;
+  --sheriff-ink-on-gold: #e6e7ea;
+  /* Barre d’onglets (light) : piste très claire, onglet actif gris chaud foncé */
+  --sheriff-tab-track: #e0e1e4;
+  --sheriff-tab-active-bg: #3a3b3f;
+  --sheriff-tab-active-text: #e6e7ea;
+  /* Ombres légères */
+  --sheriff-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --sheriff-header-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --sheriff-table-head-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --sheriff-panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  /* Scrollbars */
+  --sheriff-scroll-track: #e0e1e4;
+  --sheriff-scroll-thumb: #6a6b6f;
+  --sheriff-scroll-thumb-hover: #4a4b4f;
+  --sheriff-entree: #2d6b2d;
+  --sheriff-entree-bg: rgba(45, 107, 45, 0.1);
+  --sheriff-sortie: #8b5a3c;
+  --sheriff-sortie-bg: rgba(139, 90, 60, 0.1);
+  /* Checkbox */
+  --sheriff-checkbox-border: rgba(58, 59, 63, 0.5);
+  --sheriff-checkbox-bg: #ffffff;
+  --sheriff-checkbox-hover-bg: #f0f0f2;
+  --sheriff-checkbox-checked-bg: rgba(58, 59, 63, 0.2);
+  --sheriff-checkbox-checked-hover-bg: rgba(58, 59, 63, 0.28);
+  --sheriff-checkbox-checked-icon: #2c2d30;
+  --sheriff-checkbox-focus-ring: rgba(58, 59, 63, 0.3);
+  /* Flashbag */
+  --flashbag-default-border: rgba(90, 90, 95, 0.5);
+  --flashbag-default-bg: rgba(90, 90, 95, 0.08);
+  --flashbag-default-text: #1a1b1e;
+  --flashbag-default-btn-hover: rgba(90, 90, 95, 0.15);
+  --flashbag-warning-border: rgba(180, 83, 9, 0.55);
+  --flashbag-warning-bg: rgba(253, 224, 71, 0.2);
+  --flashbag-warning-text: #78350f;
+  --flashbag-warning-btn-hover: rgba(180, 83, 9, 0.2);
+  --flashbag-error-border: rgba(185, 28, 28, 0.5);
+  --flashbag-error-bg: rgba(254, 202, 202, 0.5);
+  --flashbag-error-text: #991b1b;
+  --flashbag-error-btn-hover: rgba(185, 28, 28, 0.12);
+  --flashbag-success-border: rgba(4, 120, 87, 0.5);
+  --flashbag-success-bg: rgba(167, 243, 208, 0.4);
+  --flashbag-success-text: #065f46;
+  --flashbag-success-btn-hover: rgba(4, 120, 87, 0.12);
+  --flashbag-code-bg: rgba(58, 59, 63, 0.1);
+  /* Bouton Enregistrer : gris foncé, texte clair */
+  --sheriff-btn-save-bg: #3a3b3f;
+  --sheriff-btn-save-text: #e6e7ea;
+  --sheriff-btn-save-border: #2c2d30;
+  --sheriff-btn-save-hover-bg: #4a4b4f;
+  --sheriff-btn-save-soft-bg: rgba(58, 59, 63, 0.15);
+  --sheriff-btn-save-soft-text: #0f1012;
+  --sheriff-btn-save-soft-border: rgba(58, 59, 63, 0.4);
+  --sheriff-btn-save-soft-hover-bg: rgba(58, 59, 63, 0.22);
+  /* Actions destructives */
+  --sheriff-destructive-bg: rgba(185, 28, 28, 0.2);
+  --sheriff-destructive-text: #991b1b;
+  --sheriff-destructive-hover: rgba(185, 28, 28, 0.3);
+  /* Avertissement */
+  --sheriff-warning-bg: rgba(251, 191, 36, 0.2);
+  --sheriff-warning-border: rgba(180, 83, 9, 0.45);
+  --sheriff-warning-icon-bg: rgba(245, 158, 11, 0.25);
+  --sheriff-warning-icon: #b45309;
+  /* Code */
+  --sheriff-code-bg: rgba(58, 59, 63, 0.12);
+}
+
+@theme inline {
+  --color-sheriff-charcoal: var(--sheriff-charcoal);
+  --color-sheriff-wood: var(--sheriff-wood);
+  --color-sheriff-gold: var(--sheriff-gold);
+  --color-sheriff-gold-hover: var(--sheriff-gold-hover);
+  --color-sheriff-gold-accent: var(--sheriff-gold-accent);
+  --color-sheriff-paper: var(--sheriff-paper);
+  --color-sheriff-paper-muted: var(--sheriff-paper-muted);
+  --color-sheriff-leather: var(--sheriff-leather);
+  --color-sheriff-ink: var(--sheriff-ink);
+  --color-sheriff-ink-on-gold: var(--sheriff-ink-on-gold);
+  --color-sheriff-tab-track: var(--sheriff-tab-track);
+  --color-sheriff-tab-active-bg: var(--sheriff-tab-active-bg);
+  --color-sheriff-tab-active-text: var(--sheriff-tab-active-text);
+  --color-sheriff-entree: var(--sheriff-entree);
+  --color-sheriff-entree-bg: var(--sheriff-entree-bg);
+  --color-sheriff-sortie: var(--sheriff-sortie);
+  --color-sheriff-sortie-bg: var(--sheriff-sortie-bg);
+  --color-sheriff-destructive-bg: var(--sheriff-destructive-bg);
+  --color-sheriff-destructive-text: var(--sheriff-destructive-text);
+  --color-sheriff-warning-bg: var(--sheriff-warning-bg);
+  --color-sheriff-warning-icon: var(--sheriff-warning-icon);
+  --font-heading: var(--font-cinzel);
+  --font-body: var(--font-source-sans);
+}
+
+/* Texture papier très légère (optionnel, performant) */
+.sheriff-paper-bg {
+  background-color: var(--sheriff-wood);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* Ombres (header : douces en light) */
+.sheriff-header-shadow {
+  box-shadow: var(--sheriff-header-shadow);
+}
+.sheriff-table-head-shadow {
+  box-shadow: var(--sheriff-table-head-shadow);
+}
+.sheriff-panel-shadow {
+  box-shadow: var(--sheriff-panel-shadow);
+}
+
+/* Bordures style registre (ombre selon le thème : douce en light) */
+.sheriff-card {
+  border: 1px solid var(--sheriff-gold);
+  border-radius: 0.5rem;
+  box-shadow: var(--sheriff-card-shadow);
+}
+
+.sheriff-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--sheriff-gold) 15%,
+    var(--sheriff-gold) 85%,
+    transparent
+  );
+  opacity: 0.6;
+}
+
+/* Flashbag — variantes via variables (adaptées dark/light) */
+.flashbag--default {
+  border-color: var(--flashbag-default-border);
+  background-color: var(--flashbag-default-bg);
+  color: var(--flashbag-default-text);
+}
+.flashbag--default button:hover {
+  background-color: var(--flashbag-default-btn-hover);
+}
+.flashbag--default button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--sheriff-charcoal), 0 0 0 4px var(--flashbag-default-border);
+}
+.flashbag--warning {
+  border-color: var(--flashbag-warning-border);
+  background-color: var(--flashbag-warning-bg);
+  color: var(--flashbag-warning-text);
+}
+.flashbag--warning button:hover {
+  background-color: var(--flashbag-warning-btn-hover);
+}
+.flashbag--warning button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--sheriff-charcoal), 0 0 0 4px var(--flashbag-warning-border);
+}
+.flashbag--error {
+  border-color: var(--flashbag-error-border);
+  background-color: var(--flashbag-error-bg);
+  color: var(--flashbag-error-text);
+}
+.flashbag--error button:hover {
+  background-color: var(--flashbag-error-btn-hover);
+}
+.flashbag--error button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--sheriff-charcoal), 0 0 0 4px var(--flashbag-error-border);
+}
+.flashbag--success {
+  border-color: var(--flashbag-success-border);
+  background-color: var(--flashbag-success-bg);
+  color: var(--flashbag-success-text);
+}
+.flashbag--success button:hover {
+  background-color: var(--flashbag-success-btn-hover);
+}
+.flashbag--success button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--sheriff-charcoal), 0 0 0 4px var(--flashbag-success-border);
+}
+.flashbag code {
+  background-color: var(--flashbag-code-bg);
+}
+/* Fond code / détail (erreurs, technique) — adapté dark/light */
+.sheriff-code-bg {
+  background-color: var(--sheriff-code-bg);
+}
+.flashbag button {
+  color: inherit;
+}
+
+/* Bouton Enregistrer — variantes pleine et soft (adaptées dark/light) */
+.sheriff-btn-save {
+  border: 2px solid var(--sheriff-btn-save-border);
+  background-color: var(--sheriff-btn-save-bg);
+  color: var(--sheriff-btn-save-text);
+  transition: background-color 0.2s ease, filter 0.2s ease;
+}
+.sheriff-btn-save:hover:not(:disabled) {
+  background-color: var(--sheriff-btn-save-hover-bg);
+}
+[data-theme="dark"] .sheriff-btn-save:hover:not(:disabled),
+:root .sheriff-btn-save:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+.sheriff-btn-save-soft {
+  border: 1px solid var(--sheriff-btn-save-soft-border);
+  background-color: var(--sheriff-btn-save-soft-bg);
+  color: var(--sheriff-btn-save-soft-text);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.sheriff-btn-save-soft:hover:not(:disabled) {
+  background-color: var(--sheriff-btn-save-soft-hover-bg);
+}
+
+/* Focus visible (accessibilité) */
+.sheriff-focus-ring:focus-visible {
+  outline: 2px solid var(--sheriff-gold);
+  outline-offset: 2px;
+}
+
+/* Select natif — style shérif (flèche, focus) ; à combiner avec les classes input (border, bg, etc.) */
+.sheriff-select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 2.25rem;
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1.125rem 1.125rem;
+}
+/* Flèche du select : couleur gold selon le thème (dark / light) */
+.sheriff-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23b8b8b8'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0L5.21 8.28a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+}
+[data-theme="light"] .sheriff-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235c554d'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0L5.21 8.28a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+}
+/* Cases à cocher tableaux — thème shérif, variables pour dark/light */
+.sheriff-checkbox {
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border: 2px solid var(--sheriff-checkbox-border);
+  border-radius: 0.25rem;
+  background-color: var(--sheriff-checkbox-bg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.sheriff-checkbox:hover:not(:disabled):not([readonly]) {
+  border-color: var(--sheriff-gold);
+  background-color: var(--sheriff-checkbox-hover-bg);
+  box-shadow: 0 0 0 1px var(--sheriff-checkbox-focus-ring);
+}
+.sheriff-checkbox:checked {
+  border-color: var(--sheriff-gold);
+  background-color: var(--sheriff-checkbox-checked-bg);
+  /* Coche : gris en dark (défaut), brun en light (voir override ci‑dessous) */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23b8b8b8' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 4L6 11 3 8'/%3E%3C/svg%3E");
+}
+[data-theme="light"] .sheriff-checkbox:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235c4a38' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 4L6 11 3 8'/%3E%3C/svg%3E");
+}
+.sheriff-checkbox:checked:hover:not(:disabled):not([readonly]) {
+  background-color: var(--sheriff-checkbox-checked-hover-bg);
+  box-shadow: 0 0 0 1px var(--sheriff-checkbox-focus-ring);
+}
+.sheriff-checkbox:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--sheriff-charcoal), 0 0 0 4px var(--sheriff-gold);
+}
+.sheriff-checkbox:disabled,
+.sheriff-checkbox[readonly] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.sheriff-checkbox.sheriff-checkbox--disabled-only {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Scrollbars globaux — couleurs et épaisseur selon le thème (dark : piste sombre, light : piste claire) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sheriff-scroll-thumb) var(--sheriff-scroll-track);
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--sheriff-scroll-track);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--sheriff-scroll-thumb);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--sheriff-scroll-thumb-hover);
+}
+*::-webkit-scrollbar-corner {
+  background: var(--sheriff-scroll-track);
+}
+
+/* Alias pour zones tableaux (réutilise les mêmes variables) */
+.sheriff-table-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sheriff-scroll-thumb) var(--sheriff-scroll-track);
+}
+.sheriff-table-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.sheriff-table-scroll::-webkit-scrollbar-track {
+  background: var(--sheriff-scroll-track);
+  border-radius: 4px;
+}
+.sheriff-table-scroll::-webkit-scrollbar-thumb {
+  background: var(--sheriff-scroll-thumb);
+  border-radius: 4px;
+}
+.sheriff-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--sheriff-scroll-thumb-hover);
+}
+.sheriff-table-scroll::-webkit-scrollbar-corner {
+  background: var(--sheriff-scroll-track);
+}
+
+/* Masquer la scrollbar tout en gardant le défilement (ex. onglets) */
+.sheriff-scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sheriff-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Bouton action destructive (licenciement, suppression) — adapté dark/light */
+.sheriff-btn-destructive {
+  background-color: var(--sheriff-destructive-bg);
+  color: var(--sheriff-destructive-text);
+  transition: background-color 0.2s ease, filter 0.2s ease;
+}
+.sheriff-btn-destructive:hover:not(:disabled) {
+  background-color: var(--sheriff-destructive-hover);
+}
+
+/* Bouton icône destructive (supprimer ligne, etc.) — hover adapté dark/light */
+.sheriff-btn-destructive-icon {
+  color: var(--sheriff-paper-muted);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.sheriff-btn-destructive-icon:hover {
+  background-color: var(--sheriff-destructive-bg);
+  color: var(--sheriff-destructive-text);
+}
+
+/* Bloc message d’erreur inline (formulaires, tableaux) — réutilise flashbag error */
+.sheriff-error-inline {
+  border-color: var(--flashbag-error-border);
+  background-color: var(--flashbag-error-bg);
+  color: var(--flashbag-error-text);
+}
+.sheriff-error-inline svg {
+  color: var(--flashbag-error-text);
+}
+
+/* Section avertissement / à apprendre (ProfilFormations) — adapté dark/light */
+.sheriff-section-warning {
+  border-color: var(--sheriff-warning-border);
+  background-color: var(--sheriff-charcoal);
+}
+.sheriff-section-warning-accent {
+  background-color: var(--sheriff-warning-icon-bg);
+}
+.sheriff-section-warning-icon {
+  color: var(--sheriff-warning-icon);
+}
+.sheriff-section-warning-head {
+  border-color: var(--sheriff-warning-border);
+  background-color: var(--sheriff-warning-bg);
+}
+.sheriff-section-warning-bar {
+  background-color: color-mix(in srgb, var(--sheriff-warning-icon) 50%, transparent);
+}
+
+/* Texte d’erreur seul (validation formulaire) */
+.sheriff-text-error {
+  color: var(--flashbag-error-text);
+}
+
+/* Badges de statut (pending / success / destructive) — adaptés dark/light */
+.sheriff-badge-warning {
+  background-color: var(--sheriff-warning-bg);
+  color: var(--sheriff-warning-icon);
+}
+.sheriff-badge-success {
+  background-color: var(--sheriff-entree-bg);
+  color: var(--sheriff-entree);
+}
+.sheriff-badge-destructive {
+  background-color: var(--sheriff-destructive-bg);
+  color: var(--sheriff-destructive-text);
+}
+
+/* Bouton action succès (validation, réussie) */
+.sheriff-btn-success {
+  border-color: var(--sheriff-entree);
+  background-color: var(--sheriff-entree-bg);
+  color: var(--sheriff-entree);
+  transition: background-color 0.2s ease, filter 0.2s ease;
+}
+.sheriff-btn-success:hover:not(:disabled) {
+  filter: brightness(1.1);
+  background-color: var(--sheriff-entree-bg);
+}
+
+/* Base */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  background: var(--sheriff-charcoal);
+  color: var(--sheriff-paper);
+  font-family: var(--font-source-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+
+/* Titres */
+.font-heading {
+  font-family: var(--font-cinzel), Georgia, serif;
+}
+
+.font-heading-display {
+  font-family: var(--font-cinzel), Georgia, serif;
+  letter-spacing: 0.08em;
+}
+
+/* Conteneur de page (aligné avec la navbar) — responsive et safe-area */
+.page-container {
+  width: 100%;
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-top: 2rem;
+  padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+}
+@media (min-width: 640px) {
+  .page-container {
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+    padding-top: 2.5rem;
+    padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+  }
+}
+@media (min-width: 1024px) {
+  .page-container {
+    padding-left: max(2rem, env(safe-area-inset-left));
+    padding-right: max(2rem, env(safe-area-inset-right));
+  }
+}
+
+/* Transitions douces pour liens et boutons (complément à sheriff-focus-ring) */
+.sheriff-transition {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+/* Animation d’entrée légère pour les sections */
+@keyframes sheriff-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.sheriff-animate-in {
+  animation: sheriff-fade-in 0.35s ease-out forwards;
+}

@@ -1,0 +1,16 @@
+export const PLANNING_COLUMNS: { key: string; label: string }[] = [
+  { key: "monDay", label: "Lun (J)" },
+  { key: "monNight", label: "Lun (S)" },
+  { key: "tueDay", label: "Mar (J)" },
+  { key: "tueNight", label: "Mar (S)" },
+  { key: "wedDay", label: "Mer (J)" },
+  { key: "wedNight", label: "Mer (S)" },
+  { key: "thuDay", label: "Jeu (J)" },
+  { key: "thuNight", label: "Jeu (S)" },
+  { key: "friDay", label: "Ven (J)" },
+  { key: "friNight", label: "Ven (S)" },
+  { key: "satDay", label: "Sam (J)" },
+  { key: "satNight", label: "Sam (S)" },
+  { key: "sunDay", label: "Dim (J)" },
+  { key: "sunNight", label: "Dim (S)" },
+];
