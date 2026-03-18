@@ -184,6 +184,9 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
     setModalOpen(true);
   }, []);
 
+  const sumEntrees = entreesRaw.reduce((a, r) => a + r.somme, 0);
+  const sumSorties = sortiesRaw.reduce((a, r) => a + r.somme, 0);
+  const soldeTotal = sumEntrees - sumSorties;
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -250,12 +253,8 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
         setFormError("Erreur réseau. Réessayez.");
       }
     },
-    [form, modalType, closeModalAndRestoreFocus]
+    [form, modalType, soldeTotal, closeModalAndRestoreFocus]
   );
-
-  const sumEntrees = entreesRaw.reduce((a, r) => a + r.somme, 0);
-  const sumSorties = sortiesRaw.reduce((a, r) => a + r.somme, 0);
-  const soldeTotal = sumEntrees - sumSorties;
 
   const soldePremierMois =
     entreesRaw.filter((r) => isCurrentMonth(r.dateIso)).reduce((a, r) => a + r.somme, 0) -

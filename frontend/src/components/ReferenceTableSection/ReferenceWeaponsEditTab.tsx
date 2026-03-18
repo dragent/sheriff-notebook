@@ -2,7 +2,6 @@
 
 import type { ReferenceData } from "@/lib/reference";
 import { EditCard, WEAPON_TYPES, TABLE_HEAD_CLASS } from "./shared";
-import type { WeaponKeys } from "./shared";
 
 const INPUT_CLASS =
   "w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal/50 px-3 py-2 text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted/60 focus:border-sheriff-gold/60 focus:outline-none focus:ring-1 focus:ring-sheriff-gold/30";

@@ -51,6 +51,7 @@ export function ReferenceTableSection({
   updatedAt?: string | null;
 }) {
   const normalized = normalizeReferenceData(data as Record<string, unknown>);
+  const updatedAtKey = updatedAt ?? "";
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [viewTab, setViewTab] = useState<ViewTabId>("effectif");
@@ -71,7 +72,7 @@ export function ReferenceTableSection({
 
   useEffect(() => {
     if (!editing) setDraft(normalized);
-  }, [updatedAt ?? "", editing]);
+  }, [updatedAtKey, editing, normalized]);
 
   useEffect(() => {
     const firstItemId = normalized.itemCategories[0]?.id;

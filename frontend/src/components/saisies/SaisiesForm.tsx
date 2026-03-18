@@ -142,13 +142,13 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
   const itemTriggerRef = useRef<HTMLButtonElement>(null);
   const weaponTriggerRef = useRef<HTMLButtonElement>(null);
 
-  /** Ferme le modal et rend le focus au bouton déclencheur. Déclaration de fonction pour éviter une TDZ au chargement (lien Saisies). */
-  function closeModal() {
+  /** Ferme le modal et rend le focus au bouton déclencheur. */
+  const closeModal = useCallback(() => {
     setModalOpen(false);
     const trigger = openModalType === 'item' ? itemTriggerRef.current : weaponTriggerRef.current;
     setOpenModalType(null);
     requestAnimationFrame(() => trigger?.focus());
-  }
+  }, [openModalType]);
 
   useEffect(() => {
     setMounted(true);
