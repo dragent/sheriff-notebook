@@ -8,3 +8,9 @@ nelmio_cors:
         max_age: 3600
     paths:
         '^/': null
+
+when@test:
+    nelmio_cors:
+        defaults:
+            # In test/CI we don't require CORS_ALLOW_ORIGIN to be defined.
+            allow_origin: ['.*']
