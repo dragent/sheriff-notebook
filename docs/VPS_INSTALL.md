@@ -65,11 +65,7 @@ git checkout main
 
 Create `.env.local` at the repo root (never commit it).
 
-**Docker Compose note:** variables like `POSTGRES_PASSWORD` and `APP_SECRET` are used in **`docker-compose.prod.yml` itself** (the `db` service, etc.). Compose only substitutes them from your **shell** or from a default **`.env`** file — **`env_file: .env.local` on services does not feed `${VAR}` in the YAML**.  
-So either:
-
-- pass the same file explicitly: `docker compose --env-file .env.local -f docker-compose.prod.yml ...` (recommended), or  
-- copy the interpolation keys into a root `.env`.
+**Docker Compose:** `docker-compose.prod.yml` loads `.env.local` via **`env_file`** on `db`, `backend`, and `frontend`. You do **not** need `--env-file .env.local` for normal `up` / `exec` (only for debugging Compose’s own `${VAR}` substitution in the YAML, e.g. if you override `POSTGRES_DB`).
 
 ### 3.1. Database engine (important)
 
@@ -99,8 +95,8 @@ Minimal required variables for production:
 - `DATABASE_URL=postgresql://sheriff:<your-strong-password>@db:5432/sheriff?serverVersion=16&charset=utf8`
 - (Optional) if you change defaults: `POSTGRES_DB=...`, `POSTGRES_USER=...` and update `DATABASE_URL` accordingly
 - `CORS_ALLOW_ORIGIN=^https://sheriffnotebook\.dragent\.fr$` (adjust if you use multiple origins)
-- `BACKEND_BASE_URL=http://backend` (recommended with Docker Compose: internal service name)
-  - Alternative (if you run frontend outside Docker): `BACKEND_BASE_URL=https://api.sheriffnotebook.dragent.fr`
+- `BACKEND_BASE_URL` — in Docker prod the compose file sets **`http://backend`** for the frontend service (you can omit it in `.env.local` unless you need to override).
+  - If you run the frontend **outside** Docker: use `BACKEND_BASE_URL=https://api.sheriffnotebook.dragent.fr` in your local env instead.
 
 Optional:
 
@@ -164,18 +160,18 @@ Notes:
 From the repo root on the VPS:
 
 ```bash
-docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 
 # Migrations
-docker compose --env-file .env.local -f docker-compose.prod.yml exec backend \
+docker compose -f docker-compose.prod.yml exec backend \
   php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
 Optional (initial data):
 
 ```bash
-docker compose --env-file .env.local -f docker-compose.prod.yml exec backend php bin/console app:import-services
-docker compose --env-file .env.local -f docker-compose.prod.yml exec backend php bin/console app:link-service-records-to-users
+docker compose -f docker-compose.prod.yml exec backend php bin/console app:import-services
+docker compose -f docker-compose.prod.yml exec backend php bin/console app:link-service-records-to-users
 ```
 
 Checks:
@@ -202,21 +198,21 @@ Checks:
 Logs:
 
 ```bash
-docker compose --env-file .env.local -f docker-compose.prod.yml logs -f --tail=200 backend
-docker compose --env-file .env.local -f docker-compose.prod.yml logs -f --tail=200 frontend
-docker compose --env-file .env.local -f docker-compose.prod.yml logs -f --tail=200 db
+docker compose -f docker-compose.prod.yml logs -f --tail=200 backend
+docker compose -f docker-compose.prod.yml logs -f --tail=200 frontend
+docker compose -f docker-compose.prod.yml logs -f --tail=200 db
 ```
 
 Restart:
 
 ```bash
-docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 Stop:
 
 ```bash
-docker compose --env-file .env.local -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml down
 ```
 
 ---
@@ -230,8 +226,8 @@ Once the manual deployment works, follow `docs/CI_CD.md` to deploy via GitHub Ac
 ```bash
 cd /var/www/sheriff-annesburg
 git pull --ff-only origin main
-docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build
-docker compose --env-file .env.local -f docker-compose.prod.yml exec backend \
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec backend \
   php bin/console doctrine:migrations:migrate --no-interaction
 ```
 

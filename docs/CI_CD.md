@@ -126,15 +126,15 @@ On the VPS, to validate everything **before CI/CD**:
 cd /var/www/sheriff-annesburg
 
 # Start services in background (prod stack; .env.local feeds ${VAR} in compose + containers)
-docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 
 # Run migrations
-docker compose --env-file .env.local -f docker-compose.prod.yml exec backend \
+docker compose -f docker-compose.prod.yml exec backend \
   php bin/console doctrine:migrations:migrate --no-interaction
 
 # (Optional) import business data
-docker compose --env-file .env.local -f docker-compose.prod.yml exec backend php bin/console app:import-services
-docker compose --env-file .env.local -f docker-compose.prod.yml exec backend php bin/console app:link-service-records-to-users
+docker compose -f docker-compose.prod.yml exec backend php bin/console app:import-services
+docker compose -f docker-compose.prod.yml exec backend php bin/console app:link-service-records-to-users
 ```
 
 Verify:
@@ -168,7 +168,7 @@ Create a file `.github/workflows/deploy.yml` (or equivalent) that:
 2. Connects to the VPS via SSH.
 3. Runs:
    - `git fetch` / `git pull` on `main`;
-   - `docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build`;
+   - `docker compose -f docker-compose.prod.yml up -d --build`;
    - `doctrine:migrations:migrate`.
 
 ### 5.1. Minimal workflow example
@@ -208,18 +208,18 @@ jobs:
             git pull --ff-only origin main
 
             echo "[Deploy] Build and restart containers"
-            docker compose --env-file .env.local -f docker-compose.prod.yml pull || true
-            docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml pull || true
+            docker compose -f docker-compose.prod.yml up -d --build
 
             echo "[Deploy] Run database migrations"
-            docker compose --env-file .env.local -f docker-compose.prod.yml exec backend \
+            docker compose -f docker-compose.prod.yml exec backend \
               php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
 **Notes**:
 
 - `docker compose ... pull || true` allows later switching to a registry-based strategy (useful when `image:` is set in `docker-compose.prod.yml`).
-- **`--env-file .env.local`** is required so variables like `POSTGRES_PASSWORD` used in the compose file are interpolated (see `docs/VPS_INSTALL.md`).
+- Ensure `.env.local` exists on the VPS: `docker-compose.prod.yml` loads it via `env_file` for `db`, `backend`, and `frontend` (see `docs/VPS_INSTALL.md`).
 - `set -e` makes the script fail on first error (the GitHub job will fail).
 - The workflow assumes the repo is at `/var/www/sheriff-annesburg` on the VPS and `docker compose` is available.
 
