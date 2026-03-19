@@ -5,8 +5,17 @@
 # - Runs Symfony with APP_ENV=prod
 # - Binds frontend/backend to localhost only (Nginx terminates TLS)
 #
+# Interpolation (${POSTGRES_PASSWORD}, ${APP_SECRET}, etc.):
+#   Docker Compose reads the DEFAULT `.env` file only — not `.env.local`.
+#   Either run with an explicit env file (recommended, same as backend/frontend):
+#     docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build
+#   Or duplicate the needed keys into a root `.env` file.
+#
+# The Postgres container REQUIRES POSTGRES_PASSWORD (do not remove it). Use the same
+# password inside DATABASE_URL for Symfony.
+#
 # Usage:
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build
 #
 services:
   db:

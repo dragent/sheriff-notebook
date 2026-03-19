@@ -11,7 +11,7 @@ This document lists items to validate or put in place **before going to producti
 | **Secrets in env** | Todo | In prod: all secrets (NEXTAUTH_SECRET, BACKEND_JWT_SECRET, DISCORD_*, APP_SECRET) must come from environment variables or a vault (e.g. provider secrets), never hardcoded. |
 | **BACKEND_JWT_SECRET** | Todo | Generate a strong value (≥ 32 chars), identical on frontend and backend. Do not reuse the dev value. |
 | **APP_SECRET (Symfony)** | Todo | Replace `change_me` (current docker-compose) with a strong random value in prod. |
-| **Database** | Todo | In prod: use a dedicated `DATABASE_URL` and a strong PostgreSQL password (not `sheriff`/`sheriff`). |
+| **Database** | Todo | **PostgreSQL only** for this repo (migrations + Docker + `pdo_pgsql`). MySQL is **not** supported out of the box. Use a dedicated `DATABASE_URL` and a strong password (not `sheriff`/`sheriff`). |
 | **Backend debug routes** | Done | In prod (`APP_ENV=prod`), routes `/api/debug/jwt-secret`, `/api/debug/discord`, and `/api/debug/headers` return 404. No diagnostic info is exposed. |
 
 ---
@@ -91,7 +91,7 @@ The project is intended for deployment on **OVH**. Things to plan for:
 | **Reverse proxy** | Nginx or Apache in front of the frontend (port 3000) and optionally the backend if exposed. Configure proxy to `http://127.0.0.1:3000` (front) and, if needed, to the backend. |
 | **TLS / domain** | Use OVH SSL certificate (included depending on offer) or Let’s Encrypt. Set `NEXTAUTH_URL` and Discord URIs with the final domain (e.g. `https://sheriff.your-domain.fr`). |
 | **Env variables** | On VPS: protected `.env` or `.env.production`, or OVH panel env vars if available. Never commit secrets. |
-| **Database** | PostgreSQL: either on the same VPS (Docker container) or OVH managed (Web Cloud Databases). Set `DATABASE_URL` accordingly. |
+| **Database** | **PostgreSQL** on the same VPS (Docker) or OVH managed (Web Cloud Databases — choose **PostgreSQL**, not MySQL). Set `DATABASE_URL` accordingly. |
 | **Backups** | Use OVH automatic backups (VPS snapshots or DB backups) in addition to `pg_dump` if the DB is self-hosted. |
 | **DNS** | Point the subdomain (e.g. `sheriff`) to the VPS IP or OVH load balancer. |
 

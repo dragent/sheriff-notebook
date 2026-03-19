@@ -13,11 +13,11 @@ This repo provides:
 ## 0. DNS and Discord prerequisites
 
 - DNS:
-  - `sheriffnotebook.dragent` → VPS public IP
-  - `api.sheriffnotebook.dragent` → same VPS public IP
+  - `sheriffnotebook.dragent.fr` → VPS public IP (A record)
+  - `api.sheriffnotebook.dragent.fr` → same VPS public IP
 - Discord Developer Portal:
   - Add the production redirect URI:
-    - `https://sheriffnotebook.dragent/api/auth/callback/discord`
+    - `https://sheriffnotebook.dragent.fr/api/auth/callback/discord`
 
 ---
 
@@ -65,9 +65,31 @@ git checkout main
 
 Create `.env.local` at the repo root (never commit it).
 
+**Docker Compose note:** variables like `POSTGRES_PASSWORD` and `APP_SECRET` are used in **`docker-compose.prod.yml` itself** (the `db` service, etc.). Compose only substitutes them from your **shell** or from a default **`.env`** file — **`env_file: .env.local` on services does not feed `${VAR}` in the YAML**.  
+So either:
+
+- pass the same file explicitly: `docker compose --env-file .env.local -f docker-compose.prod.yml ...` (recommended), or  
+- copy the interpolation keys into a root `.env`.
+
+### 3.1. Database engine (important)
+
+**This application is designed for PostgreSQL**, not MySQL:
+
+- Symfony’s `DATABASE_URL` must be a **PostgreSQL** DSN (bundled Docker image: `postgres:16-alpine`).
+- Doctrine migrations in `backend/migrations/` contain **PostgreSQL-specific SQL** (e.g. `TIMESTAMP … WITHOUT TIME ZONE`, quoted `"user"`, `JSONB` in places). They are **not** guaranteed to run on MySQL.
+- The backend Docker image installs **`pdo_pgsql` only** (no `pdo_mysql`).
+
+If your OVH offer only provides **MySQL**, use one of:
+
+1. **PostgreSQL** from the same provider (e.g. OVH Web Cloud Databases — **PostgreSQL**), or  
+2. **PostgreSQL in Docker** on the VPS (this repo’s `db` service in `docker-compose.prod.yml`), or  
+3. A **dedicated effort** to port migrations / schema for MySQL (not supported out of the box).
+
+---
+
 Minimal required variables for production:
 
-- `NEXTAUTH_URL=https://sheriffnotebook.dragent`
+- `NEXTAUTH_URL=https://sheriffnotebook.dragent.fr`
 - `NEXTAUTH_SECRET=<strong-random>`
 - `DISCORD_CLIENT_ID=...`
 - `DISCORD_CLIENT_SECRET=...`
@@ -76,9 +98,9 @@ Minimal required variables for production:
 - `APP_SECRET=<strong-random>` (Symfony)
 - `DATABASE_URL=postgresql://sheriff:<your-strong-password>@db:5432/sheriff?serverVersion=16&charset=utf8`
 - (Optional) if you change defaults: `POSTGRES_DB=...`, `POSTGRES_USER=...` and update `DATABASE_URL` accordingly
-- `CORS_ALLOW_ORIGIN=^https://sheriffnotebook\.dragent$` (adjust if you use multiple origins)
+- `CORS_ALLOW_ORIGIN=^https://sheriffnotebook\.dragent\.fr$` (adjust if you use multiple origins)
 - `BACKEND_BASE_URL=http://backend` (recommended with Docker Compose: internal service name)
-  - Alternative (if you run frontend outside Docker): `BACKEND_BASE_URL=https://api.sheriffnotebook.dragent`
+  - Alternative (if you run frontend outside Docker): `BACKEND_BASE_URL=https://api.sheriffnotebook.dragent.fr`
 
 Optional:
 
@@ -103,7 +125,7 @@ sudo apt install -y nginx certbot python3-certbot-nginx
 ```bash
 sudo mkdir -p /var/www/certbot
 
-# Copy the HTTP-only config for sheriffnotebook.dragent + api.sheriffnotebook.dragent
+# Copy the HTTP-only config for sheriffnotebook.dragent.fr + api.sheriffnotebook.dragent.fr
 sudo cp docs/nginx/sheriffnotebook.dragent.http-only.conf /etc/nginx/sites-available/sheriffnotebook.dragent
 sudo ln -sf /etc/nginx/sites-available/sheriffnotebook.dragent /etc/nginx/sites-enabled/
 
@@ -111,7 +133,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 # One certificate for both names
 sudo certbot certonly --webroot -w /var/www/certbot \
-  -d sheriffnotebook.dragent -d api.sheriffnotebook.dragent
+  -d sheriffnotebook.dragent.fr -d api.sheriffnotebook.dragent.fr
 ```
 
 ### 4.2 Enable the HTTPS reverse proxy config
@@ -142,25 +164,36 @@ Notes:
 From the repo root on the VPS:
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build
 
 # Migrations
-docker compose -f docker-compose.prod.yml exec backend \
+docker compose --env-file .env.local -f docker-compose.prod.yml exec backend \
   php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
 Optional (initial data):
 
 ```bash
-docker compose -f docker-compose.prod.yml exec backend php bin/console app:import-services
-docker compose -f docker-compose.prod.yml exec backend php bin/console app:link-service-records-to-users
+docker compose --env-file .env.local -f docker-compose.prod.yml exec backend php bin/console app:import-services
+docker compose --env-file .env.local -f docker-compose.prod.yml exec backend php bin/console app:link-service-records-to-users
 ```
 
 Checks:
 
 - `curl -s http://127.0.0.1:3000/ | head` (frontend reachable locally)
 - `curl -s http://127.0.0.1:8080/api/health` (backend healthy locally)
-- Open `https://sheriff.<your-domain>` in the browser and login with Discord
+- Open `https://sheriffnotebook.dragent.fr` in the browser and login with Discord
+- Public API (optional): `curl -sSf https://api.sheriffnotebook.dragent.fr/api/health`
+
+---
+
+## 5.1. After first run (checklist)
+
+1. **Discord Developer Portal**: redirect URI exactly `https://sheriffnotebook.dragent.fr/api/auth/callback/discord`.
+2. **`.env.local`**: `NEXTAUTH_URL` and `CORS_ALLOW_ORIGIN` match `https://sheriffnotebook.dragent.fr`; `BACKEND_JWT_SECRET` is strong and unchanged after go-live (or users must re-login).
+3. **Firewall** (if `ufw` is enabled): allow `22/tcp`, `80/tcp`, `443/tcp` — you do **not** need to publish `3000`/`8080` publicly (Nginx talks to `127.0.0.1`).
+4. **Backups**: schedule `pg_dump` of the Postgres volume / DB (see `docs/DEPLOYMENT_CHECKLIST.md`).
+5. **Sentry** (optional): set DSN + `SENTRY_ENVIRONMENT=production`.
 
 ---
 
@@ -169,26 +202,38 @@ Checks:
 Logs:
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f --tail=200 backend
-docker compose -f docker-compose.prod.yml logs -f --tail=200 frontend
-docker compose -f docker-compose.prod.yml logs -f --tail=200 db
+docker compose --env-file .env.local -f docker-compose.prod.yml logs -f --tail=200 backend
+docker compose --env-file .env.local -f docker-compose.prod.yml logs -f --tail=200 frontend
+docker compose --env-file .env.local -f docker-compose.prod.yml logs -f --tail=200 db
 ```
 
 Restart:
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build
 ```
 
 Stop:
 
 ```bash
-docker compose -f docker-compose.prod.yml down
+docker compose --env-file .env.local -f docker-compose.prod.yml down
 ```
 
 ---
 
 ## 7. CI/CD (automated deploy)
 
-Once the manual deployment works, follow `docs/CI_CD.md` to deploy via GitHub Actions (SSH → `git pull` → `docker compose up -d --build` → migrations).
+Once the manual deployment works, follow `docs/CI_CD.md` to deploy via GitHub Actions.
+
+**Important:** on the VPS, use the **prod** compose file in your deploy script (not the dev `docker-compose.yml`):
+
+```bash
+cd /var/www/sheriff-annesburg
+git pull --ff-only origin main
+docker compose --env-file .env.local -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.local -f docker-compose.prod.yml exec backend \
+  php bin/console doctrine:migrations:migrate --no-interaction
+```
+
+See `docs/CI_CD.md` for GitHub Actions secrets and the full SSH job.
 
