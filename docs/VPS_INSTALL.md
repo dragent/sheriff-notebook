@@ -134,12 +134,23 @@ sudo certbot certonly --webroot -w /var/www/certbot \
 
 ### 4.2 Enable the HTTPS reverse proxy config
 
-Copy the full config and edit domains if required:
+**TLS snippet:** `certbot certonly --webroot` often **does not** create `/etc/letsencrypt/options-ssl-nginx.conf`. Install the copy shipped in this repo **before** enabling the full HTTPS vhost:
+
+```bash
+cd ~/projet/sheriff-notebook   # repository root on the VPS
+git pull
+sudo mkdir -p /etc/letsencrypt
+sudo cp docs/nginx/letsencrypt-options-ssl-nginx.conf /etc/letsencrypt/options-ssl-nginx.conf
+```
+
+Then install the full site config (cert paths use `…/live/sheriffnotebook.dragent.fr/`):
 
 ```bash
 sudo cp docs/nginx/sheriffnotebook.dragent.conf /etc/nginx/sites-available/sheriffnotebook.dragent
 sudo nginx -t && sudo systemctl reload nginx
 ```
+
+(Optional, for older DHE clients): `sudo openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 2048` then add `ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;` inside each `server { listen 443 … }` block — not required for most TLS 1.2+/1.3 setups.
 
 Test renewal:
 

@@ -2,8 +2,8 @@
 
 - **sheriff.dragent.fr** → frontend (Next.js, port 3000)
 - **api.sheriff.dragent.fr** → backend (Symfony, port 8080)
-- **sheriffnotebook.dragent** → frontend (Next.js, port 3000)
-- **api.sheriffnotebook.dragent** → backend (Symfony, port 8080)
+- **sheriffnotebook.dragent.fr** → frontend (Next.js, port 3000)
+- **api.sheriffnotebook.dragent.fr** → backend (Symfony, port 8080)
 
 Assumes Docker Compose prod is running and exposing `3000` (frontend) and `8080` (backend) on the host.
 
@@ -49,14 +49,18 @@ Certbot installs a timer. Test renewal:
 sudo certbot renew --dry-run
 ```
 
-### sheriffnotebook.dragent variant
+### sheriffnotebook.dragent.fr variant
+
+`certbot certonly --webroot` may **not** create `/etc/letsencrypt/options-ssl-nginx.conf`. Copy `docs/nginx/letsencrypt-options-ssl-nginx.conf` there **before** the full HTTPS vhost (see `docs/VPS_INSTALL.md` §4.2).
 
 ```bash
-sudo mkdir -p /var/www/certbot
+sudo mkdir -p /var/www/certbot/.well-known/acme-challenge
 sudo cp docs/nginx/sheriffnotebook.dragent.http-only.conf /etc/nginx/sites-available/sheriffnotebook.dragent
 sudo ln -sf /etc/nginx/sites-available/sheriffnotebook.dragent /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot certonly --webroot -w /var/www/certbot -d sheriffnotebook.dragent -d api.sheriffnotebook.dragent
+sudo certbot certonly --webroot -w /var/www/certbot -d sheriffnotebook.dragent.fr -d api.sheriffnotebook.dragent.fr
+sudo mkdir -p /etc/letsencrypt
+sudo cp docs/nginx/letsencrypt-options-ssl-nginx.conf /etc/letsencrypt/options-ssl-nginx.conf
 sudo cp docs/nginx/sheriffnotebook.dragent.conf /etc/nginx/sites-available/sheriffnotebook.dragent
 sudo nginx -t && sudo systemctl reload nginx
 ```
