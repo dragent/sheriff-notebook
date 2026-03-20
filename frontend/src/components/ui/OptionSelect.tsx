@@ -6,9 +6,16 @@ import {
   SHERIFF_COMBOBOX_TRIGGER_DENSE,
   SHERIFF_COMBOBOX_LIST,
 } from "@/lib/formFieldClasses";
-const OPTION_BASE = "px-3 py-2 text-sm text-sheriff-paper cursor-pointer transition-colors";
-const OPTION_HOVER = "bg-sheriff-gold/20 text-sheriff-gold";
-const OPTION_SELECTED = "bg-sheriff-gold/25 text-sheriff-gold";
+
+function optionRowClass(highlight: boolean, selected: boolean) {
+  return [
+    "sheriff-registry-option",
+    highlight && "sheriff-registry-option--highlight",
+    selected && !highlight && "sheriff-registry-option--selected",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
 export type OptionSelectItem = { value: string; label: string };
 
@@ -25,8 +32,7 @@ type OptionSelectProps = {
 };
 
 /**
- * Sélecteur pour liste simple (value/label), même style que WeaponSelect.
- * Utilisé pour listes plates : shérifs, types, etc.
+ * Liste value/label — même charte que WeaponSelect / champs profil.
  */
 export function OptionSelect({
   id,
@@ -151,7 +157,10 @@ export function OptionSelect({
             role="option"
             id={`${id}-opt-none`}
             aria-selected={!value}
-            className={`${OPTION_BASE} ${highlightIndex === -1 ? OPTION_SELECTED : ""} ${highlightIndex === -1 ? "" : "hover:" + OPTION_HOVER}`}
+            className={optionRowClass(
+              highlightIndex === -1,
+              !value && highlightIndex !== -1
+            )}
             onClick={() => {
               onChange("");
               setOpen(false);
@@ -169,7 +178,7 @@ export function OptionSelect({
                 role="option"
                 id={`${id}-opt-${idx}`}
                 aria-selected={isSelected}
-                className={`${OPTION_BASE} ${isHighlight ? OPTION_HOVER : ""} ${isSelected && !isHighlight ? "bg-sheriff-gold/10 text-sheriff-gold/90" : ""}`}
+                className={optionRowClass(isHighlight, isSelected)}
                 onClick={() => {
                   onChange(opt.value);
                   setOpen(false);

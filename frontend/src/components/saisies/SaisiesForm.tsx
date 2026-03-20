@@ -1117,7 +1117,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                   type="button"
                   onClick={closeModal}
                   disabled={saving}
-                  className="sheriff-focus-ring rounded-md border border-sheriff-gold/30 px-4 py-1.5 text-xs text-sheriff-paper-muted transition hover:bg-sheriff-gold/10 disabled:opacity-60 sm:text-sm"
+                  className="sheriff-focus-ring sheriff-btn-secondary rounded-md px-4 py-1.5 text-xs font-medium disabled:opacity-60 sm:text-sm"
                 >
                   Annuler
                 </button>
@@ -1132,7 +1132,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                     }
                     handleSubmitModal(e as unknown as React.FormEvent, true);
                   }}
-                  className="sheriff-focus-ring rounded-md border border-sheriff-gold/40 bg-sheriff-charcoal/60 px-4 py-1.5 text-xs font-medium text-sheriff-paper transition hover:bg-sheriff-gold/15 disabled:opacity-60 sm:text-sm"
+                  className="sheriff-focus-ring sheriff-btn-save-soft rounded-md px-4 py-1.5 text-xs font-medium disabled:opacity-60 sm:text-sm"
                 >
                   {saving ? 'Enregistrement…' : 'Enregistrer et ajouter une autre'}
                 </button>

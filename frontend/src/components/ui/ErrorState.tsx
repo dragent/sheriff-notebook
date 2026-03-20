@@ -82,7 +82,7 @@ export function ErrorState({
       </div>
       <Link
         href={href}
-        className="sheriff-focus-ring mt-2 inline-flex items-center gap-2 rounded-md border border-sheriff-gold/50 bg-sheriff-charcoal/50 px-4 py-2.5 text-sm font-medium text-sheriff-gold transition hover:bg-sheriff-gold/10 active:scale-[0.98]"
+        className="sheriff-focus-ring sheriff-btn-secondary mt-2 inline-flex items-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium active:scale-[0.98]"
       >
         <span aria-hidden>←</span>
         {actionLabel}

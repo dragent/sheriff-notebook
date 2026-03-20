@@ -187,6 +187,7 @@ export function ProfilForm({
                   onChange={setPrimaryWeapon}
                   options={weaponOptionsByCategory}
                   aria-label="Arme principale"
+                  variant="comfortable"
                   customValue={primaryWeapon && !flatWeapons.includes(primaryWeapon) ? primaryWeapon : undefined}
                 />
               ) : (
@@ -238,6 +239,7 @@ export function ProfilForm({
                   onChange={setSecondaryWeapon}
                   options={weaponOptionsByCategory}
                   aria-label="Arme secondaire"
+                  variant="comfortable"
                   customValue={secondaryWeapon && !flatWeapons.includes(secondaryWeapon) ? secondaryWeapon : undefined}
                 />
               ) : (
@@ -370,7 +372,7 @@ export function ProfilForm({
         <button
           type="submit"
           disabled={saving || !isDirty}
-          className="sheriff-focus-ring sheriff-btn-save-soft inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="sheriff-focus-ring sheriff-btn-save inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving && (
             <svg

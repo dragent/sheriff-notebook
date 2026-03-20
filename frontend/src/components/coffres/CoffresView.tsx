@@ -399,7 +399,7 @@ export function CoffresView({
             <button
               type="button"
               onClick={() => setModalRecensement(true)}
-              className="sheriff-focus-ring rounded-md border border-sheriff-gold/50 bg-sheriff-gold/10 px-3 py-2 text-sm font-medium text-sheriff-gold transition hover:bg-sheriff-gold/20"
+              className="sheriff-focus-ring sheriff-btn-save inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold"
             >
               Ajouter une arme
             </button>
@@ -636,10 +636,10 @@ function ModalRecensement({
             )}
           </div>
           <div className="mt-2 flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="sheriff-focus-ring rounded-md border border-sheriff-gold/30 px-4 py-2 text-sm text-sheriff-paper-muted transition hover:bg-sheriff-gold/10">
+            <button type="button" onClick={onClose} className="sheriff-focus-ring sheriff-btn-secondary rounded-md px-4 py-2 text-sm font-medium">
               Annuler
             </button>
-            <button type="submit" className="sheriff-focus-ring rounded-md border border-sheriff-gold/50 bg-sheriff-gold/20 px-4 py-2 text-sm font-medium text-sheriff-gold transition hover:bg-sheriff-gold/30">
+            <button type="submit" className="sheriff-focus-ring sheriff-btn-save rounded-md px-4 py-2 text-sm font-semibold">
               Ajouter
             </button>
           </div>

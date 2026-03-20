@@ -251,7 +251,7 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
             <button
               type="button"
               onClick={() => signOut({ callbackUrl: ROUTES.HOME })}
-              className="sheriff-focus-ring flex items-center rounded-md border border-sheriff-gold/40 bg-sheriff-gold/15 px-3 py-2 text-sm font-medium text-sheriff-gold transition-all duration-200 hover:bg-sheriff-gold/25 hover:border-sheriff-gold/60 active:scale-[0.98]"
+              className="sheriff-focus-ring sheriff-btn-secondary flex items-center rounded-md px-3 py-2 text-sm font-medium active:scale-[0.98]"
               aria-label="Se déconnecter"
             >
               Déconnexion
@@ -416,7 +416,7 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
                   setMobileOpen(false);
                   signOut({ callbackUrl: ROUTES.HOME });
                 }}
-                className="sheriff-focus-ring mt-2 flex min-h-[48px] w-full items-center justify-center rounded-lg border border-sheriff-gold/50 bg-sheriff-gold/10 px-4 py-3 text-sm font-medium text-sheriff-gold transition-colors duration-200 hover:bg-sheriff-gold/20 active:scale-[0.98]"
+                className="sheriff-focus-ring sheriff-btn-secondary mt-2 flex min-h-[48px] w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-medium active:scale-[0.98]"
                 aria-label="Se déconnecter"
               >
                 Déconnexion

@@ -49,8 +49,13 @@
   --sheriff-checkbox-checked-hover-bg: #3a4859;
   --sheriff-checkbox-checked-icon: #e6e8ec;
   --sheriff-checkbox-focus-ring: rgba(197, 199, 204, 0.28);
+  /* Champs formulaire (profil = référence) — surface mine + bordure acier */
+  --sheriff-field-surface: color-mix(in srgb, var(--sheriff-charcoal) 48%, var(--sheriff-tab-track) 52%);
+  --sheriff-field-border: color-mix(in srgb, var(--sheriff-gold) 36%, transparent);
+  --sheriff-field-hover-border: color-mix(in srgb, var(--sheriff-gold) 52%, transparent);
+  --sheriff-field-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.28);
   /* Native <select> dropdown list (where supported) */
-  --sheriff-select-option-bg: #1a1f28;
+  --sheriff-select-option-bg: var(--sheriff-field-surface);
   /* Flashbag (dark) */
   --flashbag-default-border: rgba(245, 158, 11, 0.5);
   --flashbag-default-bg: rgba(245, 158, 11, 0.1);
@@ -74,10 +79,16 @@
   --sheriff-btn-save-text: #0c0e12;
   --sheriff-btn-save-border: #b8bec9;
   --sheriff-btn-save-hover-bg: #e6e8ec;
-  --sheriff-btn-save-soft-bg: rgba(207, 211, 219, 0.22);
-  --sheriff-btn-save-soft-text: #c5c7cc;
-  --sheriff-btn-save-soft-border: rgba(197, 199, 204, 0.55);
-  --sheriff-btn-save-soft-hover-bg: rgba(207, 211, 219, 0.32);
+  --sheriff-btn-save-soft-bg: rgba(207, 211, 219, 0.18);
+  --sheriff-btn-save-soft-text: #e6e8ec;
+  --sheriff-btn-save-soft-border: rgba(197, 199, 204, 0.48);
+  --sheriff-btn-save-soft-hover-bg: rgba(207, 211, 219, 0.34);
+  /* Secondaire : annuler, déconnexion, actions outline (même langage que tab rail) */
+  --sheriff-secondary-btn-border: color-mix(in srgb, var(--sheriff-gold) 40%, transparent);
+  --sheriff-secondary-btn-bg: color-mix(in srgb, var(--sheriff-tab-track) 72%, var(--sheriff-charcoal) 28%);
+  --sheriff-secondary-btn-text: var(--sheriff-paper-muted);
+  --sheriff-secondary-btn-hover-bg: color-mix(in srgb, var(--sheriff-gold) 16%, transparent);
+  --sheriff-secondary-btn-hover-border: color-mix(in srgb, var(--sheriff-gold) 55%, transparent);
   /* Actions destructives (licenciement, suppression) */
   --sheriff-destructive-bg: rgba(127, 29, 29, 0.6);
   --sheriff-destructive-text: #fecaca;
@@ -132,7 +143,11 @@
   --sheriff-checkbox-checked-hover-bg: #2a3849;
   --sheriff-checkbox-checked-icon: #f2f6fa;
   --sheriff-checkbox-focus-ring: rgba(30, 42, 56, 0.3);
-  --sheriff-select-option-bg: #ffffff;
+  --sheriff-field-surface: var(--sheriff-wood);
+  --sheriff-field-border: color-mix(in srgb, var(--sheriff-gold) 30%, transparent);
+  --sheriff-field-hover-border: color-mix(in srgb, var(--sheriff-gold) 44%, transparent);
+  --sheriff-field-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 1px 3px rgba(15, 24, 40, 0.07);
+  --sheriff-select-option-bg: var(--sheriff-field-surface);
   /* Flashbag */
   --flashbag-default-border: rgba(61, 74, 92, 0.45);
   --flashbag-default-bg: rgba(61, 74, 92, 0.07);
@@ -156,10 +171,15 @@
   --sheriff-btn-save-text: #f2f6fa;
   --sheriff-btn-save-border: #16202a;
   --sheriff-btn-save-hover-bg: #2a3849;
-  --sheriff-btn-save-soft-bg: rgba(30, 42, 56, 0.1);
+  --sheriff-btn-save-soft-bg: rgba(30, 42, 56, 0.12);
   --sheriff-btn-save-soft-text: #0d1015;
-  --sheriff-btn-save-soft-border: rgba(30, 42, 56, 0.35);
-  --sheriff-btn-save-soft-hover-bg: rgba(30, 42, 56, 0.16);
+  --sheriff-btn-save-soft-border: rgba(30, 42, 56, 0.42);
+  --sheriff-btn-save-soft-hover-bg: rgba(30, 42, 56, 0.2);
+  --sheriff-secondary-btn-border: color-mix(in srgb, var(--sheriff-gold) 38%, transparent);
+  --sheriff-secondary-btn-bg: color-mix(in srgb, var(--sheriff-tab-track) 88%, var(--sheriff-wood) 12%);
+  --sheriff-secondary-btn-text: var(--sheriff-paper-muted);
+  --sheriff-secondary-btn-hover-bg: color-mix(in srgb, var(--sheriff-gold) 12%, transparent);
+  --sheriff-secondary-btn-hover-border: color-mix(in srgb, var(--sheriff-gold) 48%, transparent);
   /* Actions destructives */
   --sheriff-destructive-bg: rgba(185, 28, 28, 0.2);
   --sheriff-destructive-text: #991b1b;
@@ -319,6 +339,23 @@
   background-color: var(--sheriff-btn-save-soft-hover-bg);
 }
 
+/* Annuler, déconnexion, actions secondaires — rail + bordure ardoise (pas gris neutre) */
+.sheriff-btn-secondary {
+  border: 1px solid var(--sheriff-secondary-btn-border);
+  background-color: var(--sheriff-secondary-btn-bg);
+  color: var(--sheriff-secondary-btn-text);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.sheriff-btn-secondary:hover:not(:disabled) {
+  background-color: var(--sheriff-secondary-btn-hover-bg);
+  border-color: var(--sheriff-secondary-btn-hover-border);
+  color: var(--sheriff-paper);
+}
+.sheriff-btn-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 /* Accueil : connexion Discord — light = surface claire + contour ardoise ; dark = pastille acier (tokens --sheriff-gold) */
 .sheriff-btn-home-discord {
   display: inline-flex;
@@ -366,6 +403,92 @@
   outline-offset: 2px;
 }
 
+/*
+ * Registry form fields — reference: page profil (WeaponSelect comfortable + inputs).
+ * Inputs, native <select>, and combobox triggers share --sheriff-field-* tokens.
+ */
+.sheriff-registry-field {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 0.25rem;
+  border: 1px solid var(--sheriff-field-border);
+  background-color: var(--sheriff-field-surface);
+  color: var(--sheriff-paper);
+  box-shadow: var(--sheriff-field-shadow);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.sheriff-registry-field::placeholder {
+  color: var(--sheriff-paper-muted);
+}
+.sheriff-registry-field:hover:not(:disabled):not([readonly]) {
+  border-color: var(--sheriff-field-hover-border);
+}
+.sheriff-registry-field--comfortable {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+  min-height: 2.75rem;
+  box-sizing: border-box;
+}
+.sheriff-registry-field--dense {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  min-height: 2.25rem;
+  box-sizing: border-box;
+}
+@media (min-width: 640px) {
+  .sheriff-registry-field--dense {
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+  }
+}
+
+.sheriff-registry-listbox {
+  position: absolute;
+  z-index: 50;
+  margin-top: 0.25rem;
+  max-height: 16rem;
+  width: 100%;
+  overflow: auto;
+  border-radius: 0.25rem;
+  border: 1px solid var(--sheriff-field-border);
+  background-color: var(--sheriff-field-surface);
+  box-shadow: var(--sheriff-card-shadow);
+  padding: 0.25rem 0;
+}
+
+.sheriff-registry-option {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+  color: var(--sheriff-paper);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.sheriff-registry-option:hover,
+.sheriff-registry-option--highlight {
+  background-color: color-mix(in srgb, var(--sheriff-gold) 20%, transparent);
+}
+.sheriff-registry-option--selected:not(.sheriff-registry-option--highlight) {
+  background-color: color-mix(in srgb, var(--sheriff-gold) 11%, transparent);
+  color: color-mix(in srgb, var(--sheriff-gold-accent) 55%, var(--sheriff-paper) 45%);
+}
+
+.sheriff-registry-optgroup-label {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.35rem 0.75rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--sheriff-gold) 82%, transparent);
+  background-color: color-mix(in srgb, var(--sheriff-field-surface) 70%, var(--sheriff-tab-track) 30%);
+  border-bottom: 1px solid var(--sheriff-field-border);
+}
+
 /* Native <select> — chevron + list colors; pair with border/bg classes on the element */
 .sheriff-select {
   appearance: none;
@@ -386,8 +509,11 @@
 [data-theme="light"] .sheriff-select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath stroke='%233d4a5c' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
 }
-.sheriff-select:hover:not(:disabled) {
+.sheriff-select:not(.sheriff-registry-field):hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--sheriff-gold) 55%, transparent);
+}
+.sheriff-registry-field.sheriff-select:hover:not(:disabled) {
+  border-color: var(--sheriff-field-hover-border);
 }
 .sheriff-select:disabled {
   cursor: not-allowed;

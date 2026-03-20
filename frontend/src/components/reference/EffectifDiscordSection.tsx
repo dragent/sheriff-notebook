@@ -106,7 +106,7 @@ export function EffectifDiscordSection({ compact }: EffectifDiscordSectionProps 
         <button
           type="button"
           onClick={handleCopy}
-          className="sheriff-focus-ring inline-flex items-center gap-2 rounded-md border border-sheriff-gold/50 bg-sheriff-charcoal/50 px-4 py-2 text-sm font-medium text-sheriff-gold transition hover:bg-sheriff-gold/10"
+          className="sheriff-focus-ring sheriff-btn-save-soft inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold"
         >
           {copied ? "Copié" : "Copier le code md"}
         </button>

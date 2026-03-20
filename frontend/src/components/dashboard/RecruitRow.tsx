@@ -139,7 +139,7 @@ export function RecruitRow({
             type="button"
             disabled={isDisabled || member.grade === value}
             onClick={() => setGrade(value)}
-            className="sheriff-focus-ring rounded-lg border border-sheriff-gold/50 bg-sheriff-gold/10 px-3 py-2 text-xs font-medium text-sheriff-gold transition hover:bg-sheriff-gold/20 disabled:opacity-50"
+            className="sheriff-focus-ring sheriff-btn-save-soft rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
           >
             {loading === value ? "…" : label}
           </button>

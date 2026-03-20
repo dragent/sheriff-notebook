@@ -104,7 +104,7 @@ export function RecruitPopup({ trigger }: RecruitPopupProps) {
       <button
         type="button"
         onClick={handleOpen}
-        className="sheriff-focus-ring rounded-md border border-sheriff-gold/50 bg-sheriff-gold/10 px-3 py-2 text-sm font-medium text-sheriff-gold transition hover:bg-sheriff-gold/20 hover:border-sheriff-gold/70"
+        className="sheriff-focus-ring sheriff-btn-save-soft rounded-md px-3 py-2 text-sm font-semibold"
       >
         {trigger ?? "Recrutement"}
       </button>

@@ -349,7 +349,7 @@ export function DestructionSaisieForm({
           <button
             type="button"
             onClick={addRow}
-            className="sheriff-focus-ring inline-flex items-center gap-2 rounded-lg border border-dashed border-sheriff-gold/50 bg-sheriff-charcoal/50 px-4 py-2.5 text-sm font-medium text-sheriff-gold transition hover:border-sheriff-gold hover:bg-sheriff-gold/10"
+            className="sheriff-focus-ring sheriff-btn-save-soft inline-flex items-center gap-2 rounded-lg border-dashed px-4 py-2.5 text-sm font-semibold"
           >
             <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
               <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -367,7 +367,7 @@ export function DestructionSaisieForm({
                   ? 'Réduisez les quantités au maximum disponible pour pouvoir enregistrer.'
                   : undefined
             }
-            className="sheriff-focus-ring sheriff-btn-save-soft inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="sheriff-focus-ring sheriff-btn-save inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? (
               <>

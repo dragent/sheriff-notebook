@@ -463,7 +463,7 @@ export function ReferenceTableSection({
               type="button"
               onClick={handleCancel}
               disabled={saving}
-              className="sheriff-focus-ring rounded border border-sheriff-gold/50 bg-transparent px-4 py-2 text-sm font-medium text-sheriff-gold transition hover:bg-sheriff-gold/10 disabled:opacity-70"
+              className="sheriff-focus-ring sheriff-btn-secondary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-70"
             >
               Annuler
             </button>

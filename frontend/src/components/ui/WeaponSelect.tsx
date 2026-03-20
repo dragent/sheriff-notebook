@@ -7,10 +7,16 @@ import {
   SHERIFF_COMBOBOX_TRIGGER_DENSE,
   SHERIFF_COMBOBOX_LIST,
 } from "@/lib/formFieldClasses";
-const OPTION_BASE = "px-3 py-2 text-sm text-sheriff-paper cursor-pointer transition-colors";
-const OPTION_HOVER = "bg-sheriff-gold/20 text-sheriff-gold";
-const OPTION_SELECTED = "bg-sheriff-gold/25 text-sheriff-gold";
-const CATEGORY_HEADER = "px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-sheriff-gold/80 bg-sheriff-charcoal/80 sticky top-0";
+
+function optionRowClass(highlight: boolean, selected: boolean) {
+  return [
+    "sheriff-registry-option",
+    highlight && "sheriff-registry-option--highlight",
+    selected && !highlight && "sheriff-registry-option--selected",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
 type WeaponSelectProps = {
   id: string;
@@ -20,14 +26,13 @@ type WeaponSelectProps = {
   "aria-label": string;
   /** Valeur affichée quand une arme n'est pas dans la liste (ex. ancienne ref). */
   customValue?: string;
-  /** Dense = tableaux ; comfortable = profil / modales (aligné sur les champs texte). */
+  /** Dense = tableaux ; comfortable = charte profil / modales. */
   variant?: "dense" | "comfortable";
   className?: string;
 };
 
 /**
- * Sélecteur d'arme personnalisé : couleurs thème (or/charbon), pas de bleu natif.
- * Liste déroulante avec catégories (optgroup) et états hover/sélection en sheriff-gold.
+ * Sélecteur d’arme : même charte que les champs registre (profil = référence).
  */
 export function WeaponSelect({
   id,
@@ -153,7 +158,10 @@ export function WeaponSelect({
             role="option"
             id={`${id}-opt-none`}
             aria-selected={!value}
-            className={`${OPTION_BASE} ${highlightIndex === -1 ? OPTION_SELECTED : ""} ${highlightIndex === -1 ? "" : "hover:" + OPTION_HOVER}`}
+            className={optionRowClass(
+              highlightIndex === -1,
+              !value && highlightIndex !== -1
+            )}
             onClick={() => {
               onChange("");
               setOpen(false);
@@ -164,7 +172,7 @@ export function WeaponSelect({
           </li>
           {options.map((cat) => (
             <li key={cat.label}>
-              <div className={CATEGORY_HEADER}>{cat.label}</div>
+              <div className="sheriff-registry-optgroup-label">{cat.label}</div>
               <ul className="py-0.5">
                 {cat.weapons.map((name, _idx) => {
                   const flatIdx = flatOptions.findIndex((o) => o.value === name && o.category === cat.label);
@@ -176,7 +184,7 @@ export function WeaponSelect({
                       role="option"
                       id={flatIdx >= 0 ? `${id}-opt-${flatIdx}` : undefined}
                       aria-selected={isSelected}
-                      className={`${OPTION_BASE} ${isHighlight ? OPTION_HOVER : ""} ${isSelected && !isHighlight ? "bg-sheriff-gold/10 text-sheriff-gold/90" : ""}`}
+                      className={optionRowClass(isHighlight, isSelected)}
                       onClick={() => {
                         onChange(name);
                         setOpen(false);
@@ -192,13 +200,16 @@ export function WeaponSelect({
           ))}
           {customValue && customValue.trim() && !options.some((c) => c.weapons.includes(customValue)) && (
             <li>
-              <div className={CATEGORY_HEADER}>Autre</div>
+              <div className="sheriff-registry-optgroup-label">Autre</div>
               <ul className="py-0.5">
                 <li
                   role="option"
                   id={`${id}-opt-${flatOptions.length - 1}`}
                   aria-selected={value === customValue}
-                  className={`${OPTION_BASE} ${highlightIndex === flatOptions.length - 1 ? OPTION_HOVER : ""} ${value === customValue ? "bg-sheriff-gold/10 text-sheriff-gold/90" : ""}`}
+                  className={optionRowClass(
+                    highlightIndex === flatOptions.length - 1,
+                    value === customValue && highlightIndex !== flatOptions.length - 1
+                  )}
                   onClick={() => {
                     onChange(customValue);
                     setOpen(false);

@@ -508,13 +508,13 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
                 <button
                   type="button"
                   onClick={closeModalAndRestoreFocus}
-                  className="sheriff-focus-ring rounded-md border border-sheriff-gold/30 px-4 py-2 text-sm text-sheriff-paper-muted transition hover:bg-sheriff-gold/10"
+                  className="sheriff-focus-ring sheriff-btn-secondary rounded-md px-4 py-2 text-sm font-medium"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="sheriff-focus-ring sheriff-btn-save-soft rounded-md px-4 py-2 text-sm font-medium"
+                  className="sheriff-focus-ring sheriff-btn-save rounded-md px-4 py-2 text-sm font-semibold"
                 >
                   Enregistrer
                 </button>
