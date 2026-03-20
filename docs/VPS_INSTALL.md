@@ -208,6 +208,18 @@ Checks:
 
 ## 6. Operations (common commands)
 
+**Prod images embed the app code** (`docker-compose.prod.yml` has no `./backend` bind-mount). After `git pull`, you **must** rebuild and recreate containers or the backend still runs old migrations / PHP:
+
+```bash
+git pull --ff-only origin main
+docker compose -f docker-compose.prod.yml up -d --build
+# then, if needed:
+docker compose -f docker-compose.prod.yml exec backend \
+  php bin/console doctrine:migrations:migrate --no-interaction
+```
+
+Running `exec … migrate` **without** `--build` only uses whatever code is already inside the image.
+
 Logs:
 
 ```bash
