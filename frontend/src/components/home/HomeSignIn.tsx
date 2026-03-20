@@ -23,11 +23,9 @@ type Props = {
 export function HomeSignIn({ compact = false }: Props) {
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") ?? ROUTES.HOME;
-  const errorParam = params.get("error");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(
-    errorParam ? (AUTH_ERROR_MESSAGES[errorParam] ?? AUTH_ERROR_MESSAGES.Default) : null
-  );
+  /** Inline sign-in errors only (?error= is shown once by UnifiedFlashbag in the layout). */
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSignIn() {
     setError(null);

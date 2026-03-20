@@ -18,11 +18,11 @@ export const AUTH_ERROR_MESSAGES: Record<string, string> = {
   OAuthSignin:
     "Impossible de démarrer la connexion Discord. Vérifie que DISCORD_CLIENT_ID et DISCORD_CLIENT_SECRET sont bien renseignés dans frontend/.env.local (portail Discord → ton application → OAuth2).",
   OAuthCallback:
-    "Erreur de redirection Discord. Vérifie que l'URI de redirection dans le portail Discord est bien celle de ton site (ex. http://localhost:3000/api/auth/callback/discord).",
+    "Erreur de redirection Discord (OAuth). Dans le portail Discord → OAuth2 → Redirections, l’URI doit correspondre exactement à : https://<ton-domaine>/api/auth/callback/discord (dev : http://localhost:3000/api/auth/callback/discord). Sur le serveur, NEXTAUTH_URL doit être la même base (https, sans slash final). Même application Discord pour Client ID / Secret et pour les redirections. Rebuild le conteneur frontend après changement d’env.",
   OAuthCreateAccount: "Impossible de créer le compte.",
   OAuthAccountNotLinked: "Ce compte Discord est déjà lié à un autre compte.",
   discord:
-    "La connexion Discord a échoué. Vérifie dans le portail Discord (OAuth2) que l'URI de redirection est exactement celle de ton site (ex. http://localhost:3000/api/auth/callback/discord) et que Client ID / Client Secret sont corrects.",
+    "La connexion Discord a échoué. Vérifie OAuth2 → Redirections (https://<ton-domaine>/api/auth/callback/discord) et que Client ID / Secret sont ceux de la même application Discord.",
   Default: "Une erreur est survenue lors de la connexion.",
 };
 
