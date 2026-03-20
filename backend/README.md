@@ -23,7 +23,13 @@ composer install
 symfony serve -d
 ```
 
-Configure environment variables in `backend/.env.local` (use `.env` as a base):
+Copy defaults, then override locally (`.env` is gitignored):
+
+```bash
+cp .env.example .env
+```
+
+Configure secrets and overrides in `backend/.env.local`:
 
 - `DATABASE_URL`: PostgreSQL or SQLite URL for dev;
 - `BACKEND_JWT_SECRET`: same value as the frontend;

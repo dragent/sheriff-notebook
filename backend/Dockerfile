@@ -25,3 +25,7 @@ RUN if [ "$APP_ENV" = "prod" ]; then \
     fi
 
 COPY . .
+
+# Symfony Runtime requires a readable .env file. backend/.env is gitignored and absent in CI / VPS clones.
+# If no .env was copied (clean build), bootstrap from the committed example; Docker env_file still overrides at runtime.
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
