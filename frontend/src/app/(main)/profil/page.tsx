@@ -255,9 +255,7 @@ export default async function ProfilPage() {
                 {myRecord.name || "Shérif"}
               </p>
               {me?.grade && (
-                <span className="inline-block rounded-md border border-sheriff-gold/40 bg-sheriff-gold/10 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-sheriff-gold">
-                  {me.grade}
-                </span>
+                <span className="sheriff-grade-tag">{me.grade}</span>
               )}
               {me?.recruitedAt && (
                 <p className="text-xs text-sheriff-paper-muted">

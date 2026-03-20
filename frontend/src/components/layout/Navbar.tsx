@@ -31,11 +31,12 @@ function canSeeReferenceByRoles(roles: string[] | null | undefined): boolean {
 const MAIN_LINKS: { href: string; label: string; short?: string; auth?: boolean }[] = [];
 
 const NAV_LINK_BASE =
-  "block shrink-0 rounded-lg px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-200 ease-out focus-visible:outline-2 focus-visible:outline-sheriff-gold focus-visible:outline-offset-2 min-h-[44px] min-w-[44px] flex items-center justify-center lg:min-h-0 lg:min-w-0 lg:justify-start active:scale-[0.98]";
+  "block shrink-0 rounded-md px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-200 ease-out focus-visible:outline-2 focus-visible:outline-sheriff-gold focus-visible:outline-offset-2 min-h-[44px] min-w-[44px] flex items-center justify-center lg:min-h-0 lg:min-w-0 lg:justify-start active:scale-[0.98]";
+/** Same tokens as dashboard tabs — galvanized pill (dark) / slate pill (light), no heavy bottom bar */
 const NAV_LINK_ACTIVE =
-  "bg-sheriff-gold-accent/25 text-sheriff-gold-accent border-b-2 border-sheriff-gold-accent shadow-[0_1px_0_0_var(--sheriff-gold-accent)] font-semibold";
+  "bg-sheriff-tab-active-bg text-sheriff-tab-active-text shadow-sm ring-1 ring-inset ring-sheriff-gold/18 font-semibold";
 const NAV_LINK_INACTIVE =
-  "text-sheriff-paper-muted border-b-2 border-transparent hover:bg-sheriff-gold/10 hover:text-sheriff-paper active:bg-sheriff-gold/15";
+  "text-sheriff-paper-muted hover:bg-sheriff-gold/10 hover:text-sheriff-paper active:bg-sheriff-gold/15";
 
 /**
  * Lien de navigation avec style actif/inactif.

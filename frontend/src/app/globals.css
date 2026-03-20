@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
-/* ========== Palette Annesburg (gris, noir, blanc) ========== */
-/* Light et dark partagent la même identité visuelle Annesburg. */
+/* ========== Annesburg design tokens (dark + light share one cool-slate identity) ========== */
+/* Dark: mine charcoal + steel. Light: same hue family, inverted (frost paper + slate ink). */
 
 /* ========== Dark mode (défaut) ========== */
 :root,
 [data-theme="dark"] {
-  /* Annesburg : gris / noir / blanc (charbon et acier) */
   --sheriff-charcoal: #0f1012;
-  --sheriff-wood: #1a1b1e;
+  /* Panel / page (token name legacy): lifted cool slate, not warm brown */
+  --sheriff-wood: #13151c;
   --sheriff-gold: #c5c7cc;
   --sheriff-gold-hover: #dedfe3;
   --sheriff-gold-accent: #f5f5f7;
   --sheriff-paper: #e6e7ea;
   --sheriff-paper-muted: rgba(230, 231, 234, 0.86);
-  --sheriff-leather: #3a3b3f;
+  --sheriff-leather: #363d4a;
   /* Contraste accessibilité */
   --sheriff-ink: #070809;
   --sheriff-ink-on-gold: #111218;
@@ -23,27 +23,34 @@
   --sheriff-header-shadow: 0 2px 20px rgba(0, 0, 0, 0.35);
   --sheriff-table-head-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   --sheriff-panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  /* Scrollbars dark — piste sombre (wood), curseur clair (gold) pour rester discret */
-  --sheriff-scroll-track: #252525;
-  --sheriff-scroll-thumb: #6a6a6a;
-  --sheriff-scroll-thumb-hover: #b8b8b8;
+  /*
+   * Tab rail: cold slate (#1e242e) — blue-biased charcoal reads as mine steel / slag, not warm UI gray.
+   * Active pill: galvanized light (#e6e8ec) on dark rail; text stays near-ink for crisp registry look.
+   */
+  --sheriff-tab-track: #1e242e;
+  --sheriff-tab-active-bg: #e6e8ec;
+  --sheriff-tab-active-text: #0c0e12;
+  /* Scrollbars dark — track matches tab rail; thumb stays neutral grey */
+  --sheriff-scroll-track: var(--sheriff-tab-track);
+  --sheriff-scroll-thumb: #6a7484;
+  --sheriff-scroll-thumb-hover: #9aa3b2;
   /* Sémantique comptabilité (entrée = recette, sortie = dépense) */
   --sheriff-entree: #7a9e7a;
   --sheriff-entree-bg: rgba(122, 158, 122, 0.15);
   --sheriff-sortie: #c49a7a;
   --sheriff-sortie-bg: rgba(196, 154, 122, 0.15);
-  /* Barre d’onglets (dark) */
-  --sheriff-tab-track: #252525;
-  --sheriff-tab-active-bg: #b8b8b8;
-  --sheriff-tab-active-text: #1a1814;
-  /* Checkbox (dark) */
-  --sheriff-checkbox-border: rgba(184, 184, 184, 0.5);
-  --sheriff-checkbox-bg: #1b1b1b;
-  --sheriff-checkbox-hover-bg: rgba(27, 27, 27, 0.95);
-  --sheriff-checkbox-checked-bg: rgba(184, 184, 184, 0.18);
-  --sheriff-checkbox-checked-hover-bg: rgba(184, 184, 184, 0.25);
-  --sheriff-checkbox-checked-icon: #b8b8b8;
-  --sheriff-checkbox-focus-ring: rgba(184, 184, 184, 0.2);
+  /* Checkbox — slate box; checked = filled steel + light mark (same language as tab active) */
+  --sheriff-checkbox-border: rgba(197, 199, 204, 0.42);
+  --sheriff-checkbox-bg: #1a1f28;
+  --sheriff-checkbox-hover-bg: #222a36;
+  --sheriff-checkbox-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --sheriff-checkbox-checked-bg: #2f3b4a;
+  --sheriff-checkbox-checked-border: rgba(230, 232, 238, 0.5);
+  --sheriff-checkbox-checked-hover-bg: #3a4859;
+  --sheriff-checkbox-checked-icon: #e6e8ec;
+  --sheriff-checkbox-focus-ring: rgba(197, 199, 204, 0.28);
+  /* Native <select> dropdown list (where supported) */
+  --sheriff-select-option-bg: #1a1f28;
   /* Flashbag (dark) */
   --flashbag-default-border: rgba(245, 158, 11, 0.5);
   --flashbag-default-bg: rgba(245, 158, 11, 0.1);
@@ -62,15 +69,15 @@
   --flashbag-success-text: #a7f3d0;
   --flashbag-success-btn-hover: rgba(16, 185, 129, 0.3);
   --flashbag-code-bg: rgba(0, 0, 0, 0.2);
-  /* Bouton Enregistrer (dark) */
-  --sheriff-btn-save-bg: #b8b8b8;
-  --sheriff-btn-save-text: #1a1814;
-  --sheriff-btn-save-border: #b8b8b8;
-  --sheriff-btn-save-hover-bg: #d0d0d0;
-  --sheriff-btn-save-soft-bg: rgba(184, 184, 184, 0.25);
-  --sheriff-btn-save-soft-text: #b8b8b8;
-  --sheriff-btn-save-soft-border: rgba(184, 184, 184, 0.6);
-  --sheriff-btn-save-soft-hover-bg: rgba(184, 184, 184, 0.35);
+  /* Primary action — galvanized steel, matches active tab */
+  --sheriff-btn-save-bg: #cfd3db;
+  --sheriff-btn-save-text: #0c0e12;
+  --sheriff-btn-save-border: #b8bec9;
+  --sheriff-btn-save-hover-bg: #e6e8ec;
+  --sheriff-btn-save-soft-bg: rgba(207, 211, 219, 0.22);
+  --sheriff-btn-save-soft-text: #c5c7cc;
+  --sheriff-btn-save-soft-border: rgba(197, 199, 204, 0.55);
+  --sheriff-btn-save-soft-hover-bg: rgba(207, 211, 219, 0.32);
   /* Actions destructives (licenciement, suppression) */
   --sheriff-destructive-bg: rgba(127, 29, 29, 0.6);
   --sheriff-destructive-text: #fecaca;
@@ -84,51 +91,53 @@
   --sheriff-code-bg: rgba(0, 0, 0, 0.2);
 }
 
-/* ========== Light mode — Annesburg (gris, noir, blanc, très doux) ========== */
+/* ========== Light mode — same slate hue family as dark (inverted) ========== */
 [data-theme="light"] {
-  /* Fonds : gris clair très doux (presque papier, non éblouissant) */
-  --sheriff-charcoal: #e7eaee;
-  --sheriff-wood: #f6f7fb;
-  --sheriff-gold: #4a4b4f;
-  --sheriff-gold-hover: #36373a;
-  /* Accent actif / hover : brun doré pour rappeler l’identité shérif */
-  --sheriff-gold-accent: #2c2d30;
-  /* Texte moins dur : gris foncé au lieu de noir pur */
-  --sheriff-paper: #0f1012;
-  --sheriff-paper-muted: rgba(15, 16, 18, 0.78);
-  --sheriff-leather: #9a9ba0;
+  /* Body chrome: cool blue-gray (pairs with dark charcoal) */
+  --sheriff-charcoal: #e4e9f2;
+  /* Cards / paper-bg: frost white */
+  --sheriff-wood: #f5f8fc;
+  /* Borders & secondary UI strokes */
+  --sheriff-gold: #3d4a5c;
+  --sheriff-gold-hover: #2f3a4a;
+  --sheriff-gold-accent: #1e2a38;
+  /* Primary text: blue-black slate */
+  --sheriff-paper: #0d1015;
+  --sheriff-paper-muted: rgba(13, 16, 21, 0.78);
+  --sheriff-leather: #8892a3;
   --sheriff-ink: #070809;
-  --sheriff-ink-on-gold: #e6e7ea;
-  /* Barre d’onglets (light) : piste très claire, onglet actif gris chaud foncé */
-  --sheriff-tab-track: #e0e1e4;
-  --sheriff-tab-active-bg: #3a3b3f;
-  --sheriff-tab-active-text: #e6e7ea;
-  /* Ombres légères */
-  --sheriff-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --sheriff-header-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  --sheriff-table-head-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
-  --sheriff-panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  /* Scrollbars */
-  --sheriff-scroll-track: #e0e1e4;
-  --sheriff-scroll-thumb: #6a6b6f;
-  --sheriff-scroll-thumb-hover: #4a4b4f;
+  --sheriff-ink-on-gold: #f0f4fa;
+  /* Tabs: light rail + dark active pill (mirror of dark theme) */
+  --sheriff-tab-track: #d9e0ea;
+  --sheriff-tab-active-bg: #1e2a38;
+  --sheriff-tab-active-text: #f2f6fa;
+  --sheriff-card-shadow: 0 2px 8px rgba(15, 24, 40, 0.08);
+  --sheriff-header-shadow: 0 2px 12px rgba(15, 24, 40, 0.06);
+  --sheriff-table-head-shadow: 0 2px 4px rgba(15, 24, 40, 0.06);
+  --sheriff-panel-shadow: 0 1px 3px rgba(15, 24, 40, 0.06);
+  --sheriff-scroll-track: var(--sheriff-tab-track);
+  --sheriff-scroll-thumb: #8b96a8;
+  --sheriff-scroll-thumb-hover: #5c6a7d;
   --sheriff-entree: #2d6b2d;
   --sheriff-entree-bg: rgba(45, 107, 45, 0.1);
   --sheriff-sortie: #8b5a3c;
   --sheriff-sortie-bg: rgba(139, 90, 60, 0.1);
-  /* Checkbox */
-  --sheriff-checkbox-border: rgba(58, 59, 63, 0.5);
+  /* Checkbox — white tile; checked = slate pill + light mark */
+  --sheriff-checkbox-border: rgba(30, 42, 56, 0.4);
   --sheriff-checkbox-bg: #ffffff;
-  --sheriff-checkbox-hover-bg: #f0f0f2;
-  --sheriff-checkbox-checked-bg: rgba(58, 59, 63, 0.2);
-  --sheriff-checkbox-checked-hover-bg: rgba(58, 59, 63, 0.28);
-  --sheriff-checkbox-checked-icon: #2c2d30;
-  --sheriff-checkbox-focus-ring: rgba(58, 59, 63, 0.3);
+  --sheriff-checkbox-hover-bg: #eef2f8;
+  --sheriff-checkbox-inset: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --sheriff-checkbox-checked-bg: #1e2a38;
+  --sheriff-checkbox-checked-border: #16202a;
+  --sheriff-checkbox-checked-hover-bg: #2a3849;
+  --sheriff-checkbox-checked-icon: #f2f6fa;
+  --sheriff-checkbox-focus-ring: rgba(30, 42, 56, 0.3);
+  --sheriff-select-option-bg: #ffffff;
   /* Flashbag */
-  --flashbag-default-border: rgba(90, 90, 95, 0.5);
-  --flashbag-default-bg: rgba(90, 90, 95, 0.08);
-  --flashbag-default-text: #1a1b1e;
-  --flashbag-default-btn-hover: rgba(90, 90, 95, 0.15);
+  --flashbag-default-border: rgba(61, 74, 92, 0.45);
+  --flashbag-default-bg: rgba(61, 74, 92, 0.07);
+  --flashbag-default-text: #1a2330;
+  --flashbag-default-btn-hover: rgba(61, 74, 92, 0.12);
   --flashbag-warning-border: rgba(180, 83, 9, 0.55);
   --flashbag-warning-bg: rgba(253, 224, 71, 0.2);
   --flashbag-warning-text: #78350f;
@@ -141,16 +150,16 @@
   --flashbag-success-bg: rgba(167, 243, 208, 0.4);
   --flashbag-success-text: #065f46;
   --flashbag-success-btn-hover: rgba(4, 120, 87, 0.12);
-  --flashbag-code-bg: rgba(58, 59, 63, 0.1);
-  /* Bouton Enregistrer : gris foncé, texte clair */
-  --sheriff-btn-save-bg: #3a3b3f;
-  --sheriff-btn-save-text: #e6e7ea;
-  --sheriff-btn-save-border: #2c2d30;
-  --sheriff-btn-save-hover-bg: #4a4b4f;
-  --sheriff-btn-save-soft-bg: rgba(58, 59, 63, 0.15);
-  --sheriff-btn-save-soft-text: #0f1012;
-  --sheriff-btn-save-soft-border: rgba(58, 59, 63, 0.4);
-  --sheriff-btn-save-soft-hover-bg: rgba(58, 59, 63, 0.22);
+  --flashbag-code-bg: rgba(30, 42, 56, 0.08);
+  /* Primary action — same slate as active tab */
+  --sheriff-btn-save-bg: #1e2a38;
+  --sheriff-btn-save-text: #f2f6fa;
+  --sheriff-btn-save-border: #16202a;
+  --sheriff-btn-save-hover-bg: #2a3849;
+  --sheriff-btn-save-soft-bg: rgba(30, 42, 56, 0.1);
+  --sheriff-btn-save-soft-text: #0d1015;
+  --sheriff-btn-save-soft-border: rgba(30, 42, 56, 0.35);
+  --sheriff-btn-save-soft-hover-bg: rgba(30, 42, 56, 0.16);
   /* Actions destructives */
   --sheriff-destructive-bg: rgba(185, 28, 28, 0.2);
   --sheriff-destructive-text: #991b1b;
@@ -161,7 +170,7 @@
   --sheriff-warning-icon-bg: rgba(245, 158, 11, 0.25);
   --sheriff-warning-icon: #b45309;
   /* Code */
-  --sheriff-code-bg: rgba(58, 59, 63, 0.12);
+  --sheriff-code-bg: rgba(30, 42, 56, 0.1);
 }
 
 @theme inline {
@@ -316,58 +325,89 @@
   outline-offset: 2px;
 }
 
-/* Select natif — style shérif (flèche, focus) ; à combiner avec les classes input (border, bg, etc.) */
+/* Native <select> — chevron + list colors; pair with border/bg classes on the element */
 .sheriff-select {
   appearance: none;
   cursor: pointer;
-  padding-right: 2.25rem;
+  padding-right: 2.35rem;
+  color: var(--sheriff-paper);
+  caret-color: var(--sheriff-gold);
   background-repeat: no-repeat;
-  background-position: right 0.5rem center;
+  background-position: right 0.55rem center;
   background-size: 1.125rem 1.125rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease,
+    color 0.15s ease;
 }
-/* Flèche du select : couleur gold selon le thème (dark / light) */
+/* Stroke chevron (sharper than filled triangle; matches steel accents) */
 .sheriff-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23b8b8b8'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0L5.21 8.28a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath stroke='%23c5c7cc' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
 }
 [data-theme="light"] .sheriff-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235c554d'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0L5.21 8.28a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath stroke='%233d4a5c' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
 }
-/* Cases à cocher tableaux — thème shérif, variables pour dark/light */
+.sheriff-select:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--sheriff-gold) 55%, transparent);
+}
+.sheriff-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.sheriff-select option,
+.sheriff-select optgroup {
+  background-color: var(--sheriff-select-option-bg);
+  color: var(--sheriff-paper);
+}
+.sheriff-select optgroup {
+  font-weight: 600;
+}
+
+/* Table / form checkboxes — registry tile + clear checked state */
 .sheriff-checkbox {
   appearance: none;
   width: 1.25rem;
   height: 1.25rem;
   flex-shrink: 0;
   border: 2px solid var(--sheriff-checkbox-border);
-  border-radius: 0.25rem;
+  border-radius: 0.2rem;
   background-color: var(--sheriff-checkbox-bg);
+  box-shadow: var(--sheriff-checkbox-inset);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 0.75rem;
+  background-size: 0.7rem;
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 .sheriff-checkbox:hover:not(:disabled):not([readonly]) {
-  border-color: var(--sheriff-gold);
+  border-color: color-mix(in srgb, var(--sheriff-gold) 65%, transparent);
   background-color: var(--sheriff-checkbox-hover-bg);
-  box-shadow: 0 0 0 1px var(--sheriff-checkbox-focus-ring);
+  box-shadow: var(--sheriff-checkbox-inset), 0 0 0 1px var(--sheriff-checkbox-focus-ring);
 }
 .sheriff-checkbox:checked {
-  border-color: var(--sheriff-gold);
+  border-color: var(--sheriff-checkbox-checked-border);
   background-color: var(--sheriff-checkbox-checked-bg);
-  /* Coche : gris en dark (défaut), brun en light (voir override ci‑dessous) */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23b8b8b8' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 4L6 11 3 8'/%3E%3C/svg%3E");
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23e6e8ec' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 4L6 11 3 8'/%3E%3C/svg%3E");
 }
 [data-theme="light"] .sheriff-checkbox:checked {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235c4a38' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 4L6 11 3 8'/%3E%3C/svg%3E");
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23f2f6fa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 4L6 11 3 8'/%3E%3C/svg%3E");
 }
 .sheriff-checkbox:checked:hover:not(:disabled):not([readonly]) {
+  border-color: var(--sheriff-checkbox-checked-border);
   background-color: var(--sheriff-checkbox-checked-hover-bg);
-  box-shadow: 0 0 0 1px var(--sheriff-checkbox-focus-ring);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 0 1px var(--sheriff-checkbox-focus-ring);
 }
 .sheriff-checkbox:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--sheriff-charcoal), 0 0 0 4px var(--sheriff-gold);
+}
+.sheriff-checkbox:focus-visible:checked {
+  box-shadow: 0 0 0 2px var(--sheriff-charcoal), 0 0 0 4px var(--sheriff-gold),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+[data-theme="light"] .sheriff-checkbox:focus-visible:checked {
+  box-shadow: 0 0 0 2px var(--sheriff-charcoal), 0 0 0 4px var(--sheriff-gold),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 .sheriff-checkbox:disabled,
 .sheriff-checkbox[readonly] {
@@ -466,28 +506,73 @@
   color: var(--flashbag-error-text);
 }
 
-/* Section avertissement / à apprendre (ProfilFormations) — adapté dark/light */
-.sheriff-section-warning {
-  border-color: var(--sheriff-warning-border);
-  background-color: var(--sheriff-charcoal);
+/*
+ * Formations « à apprendre » — slate / steel (not amber warning tokens).
+ * Keeps --sheriff-warning-* free for ErrorState / badges.
+ */
+.sheriff-section-pending {
+  border-color: color-mix(in srgb, var(--sheriff-gold) 26%, transparent);
+  background-color: color-mix(in srgb, var(--sheriff-charcoal) 88%, var(--sheriff-gold) 12%);
 }
-.sheriff-section-warning-accent {
-  background-color: var(--sheriff-warning-icon-bg);
+.sheriff-section-pending-accent {
+  background-color: color-mix(in srgb, var(--sheriff-gold) 12%, transparent);
 }
-.sheriff-section-warning-icon {
-  color: var(--sheriff-warning-icon);
+.sheriff-section-pending-icon {
+  color: var(--sheriff-gold);
 }
-.sheriff-section-warning-head {
-  border-color: var(--sheriff-warning-border);
-  background-color: var(--sheriff-warning-bg);
+.sheriff-section-pending-head {
+  border-color: color-mix(in srgb, var(--sheriff-gold) 20%, transparent);
+  background-color: color-mix(in srgb, var(--sheriff-tab-track) 50%, var(--sheriff-charcoal) 50%);
 }
-.sheriff-section-warning-bar {
-  background-color: color-mix(in srgb, var(--sheriff-warning-icon) 50%, transparent);
+.sheriff-section-pending-bar {
+  background-color: color-mix(in srgb, var(--sheriff-gold) 38%, transparent);
+}
+
+/* Formations « validées » — muted success (entree), mirrors pending layout */
+.sheriff-section-validated {
+  border-color: color-mix(in srgb, var(--sheriff-entree) 28%, transparent);
+  background-color: color-mix(in srgb, var(--sheriff-charcoal) 88%, var(--sheriff-entree) 12%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sheriff-entree) 12%, transparent);
+}
+.sheriff-section-validated-accent {
+  background-color: color-mix(in srgb, var(--sheriff-entree) 14%, transparent);
+}
+.sheriff-section-validated-icon {
+  color: var(--sheriff-entree);
+}
+.sheriff-section-validated-head {
+  border-color: color-mix(in srgb, var(--sheriff-entree) 18%, transparent);
+  background-color: color-mix(in srgb, var(--sheriff-tab-track) 50%, var(--sheriff-charcoal) 50%);
+}
+.sheriff-section-validated-bar {
+  background-color: color-mix(in srgb, var(--sheriff-entree) 40%, transparent);
 }
 
 /* Texte d’erreur seul (validation formulaire) */
 .sheriff-text-error {
   color: var(--flashbag-error-text);
+}
+
+/* Grade pill (profil, etc.) — slate rail + paper text; avoids gold-on-gold fringe / “chromatic” smear */
+.sheriff-grade-tag {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--sheriff-gold) 32%, transparent);
+  background-color: color-mix(in srgb, var(--sheriff-tab-track) 65%, var(--sheriff-charcoal) 35%);
+  padding: 0.2rem 0.65rem;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  color: var(--sheriff-paper);
+  white-space: nowrap;
+  text-rendering: geometricPrecision;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sheriff-gold) 8%, transparent);
 }
 
 /* Badges de statut (pending / success / destructive) — adaptés dark/light */

@@ -99,6 +99,12 @@ type ComptabiliteSectionProps = {
   sheriffs: SheriffOption[];
 };
 
+/** Native inputs in the transaction modal */
+const MODAL_FIELD_BASE =
+  "w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal px-3 py-2 text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted focus:border-sheriff-gold focus:outline-none focus:ring-1 focus:ring-sheriff-gold";
+/** `<select>`: same chrome + chevron / options (`globals.css` `.sheriff-select`) */
+const MODAL_SELECT_BASE = `${MODAL_FIELD_BASE} sheriff-select`;
+
 /**
  * Section Comptabilité : liste des entrées/sorties, formulaire d’écriture et toasts.
  */
@@ -439,7 +445,7 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
                   required
                   value={form.date}
                   onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                  className="w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal px-3 py-2 text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted focus:border-sheriff-gold focus:outline-none focus:ring-1 focus:ring-sheriff-gold"
+                  className={MODAL_FIELD_BASE}
                 />
               </div>
               <div>
@@ -451,7 +457,7 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
                   required
                   value={form.sheriff}
                   onChange={(e) => setForm((f) => ({ ...f, sheriff: e.target.value }))}
-                  className="w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal px-3 py-2 text-sm text-sheriff-paper focus:border-sheriff-gold focus:outline-none focus:ring-1 focus:ring-sheriff-gold"
+                  className={MODAL_SELECT_BASE}
                 >
                   <option value="">Choisir un sheriff</option>
                   {sheriffs.map((s) => (
@@ -472,7 +478,7 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
                   value={form.raison}
                   onChange={(e) => setForm((f) => ({ ...f, raison: e.target.value }))}
                   placeholder={modalType === "entree" ? "Primes, dons, …" : "Achat, prime, …"}
-                  className="w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal px-3 py-2 text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted focus:border-sheriff-gold focus:outline-none focus:ring-1 focus:ring-sheriff-gold"
+                  className={MODAL_FIELD_BASE}
                 />
               </div>
               <div>
@@ -492,7 +498,7 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
                   placeholder="0,00"
                   aria-invalid={!!formError}
                   aria-describedby={formError ? "tx-somme-error" : undefined}
-                  className="w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal px-3 py-2 text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted focus:border-sheriff-gold focus:outline-none focus:ring-1 focus:ring-sheriff-gold"
+                  className={MODAL_FIELD_BASE}
                 />
                 {formError && (
                   <p id="tx-somme-error" className="mt-1.5 text-xs text-sheriff-sortie" role="alert">

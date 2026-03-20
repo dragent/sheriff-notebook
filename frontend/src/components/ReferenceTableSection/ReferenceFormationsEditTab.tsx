@@ -130,7 +130,7 @@ export function ReferenceFormationsEditTab({
                           <label className="inline-flex cursor-pointer items-center justify-center">
                             <input
                               type="checkbox"
-                              className="sheriff-checkbox h-4 w-4 rounded border-sheriff-gold/40 bg-sheriff-charcoal text-sheriff-gold focus:ring-sheriff-gold"
+                              className="sheriff-checkbox focus:ring-0"
                               checked={checked}
                               onChange={(e) => {
                                 const isChecked = e.target.checked;

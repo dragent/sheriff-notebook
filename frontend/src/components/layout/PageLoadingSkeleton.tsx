@@ -2,14 +2,14 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
 
 /**
- * Squelette affiché pendant le chargement de la page Saisies.
+ * Skeleton shown while a page segment loads (navigation / streaming).
  */
-export default function SaisiesLoading() {
+export function PageLoadingSkeleton() {
   return (
     <div
       className="sheriff-paper-bg flex min-h-[60vh] flex-1 flex-col"
       aria-busy="true"
-      aria-label="Chargement de la page Saisies"
+      aria-label="Chargement de la page"
     >
       <section className="page-container flex flex-1 flex-col">
         <header className="mb-8">

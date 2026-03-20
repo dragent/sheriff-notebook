@@ -89,10 +89,10 @@ export function ProfilFormations({
       </div>
 
     <div className="grid gap-6 sm:grid-cols-2">
-      <div className="sheriff-section-warning relative overflow-hidden rounded-lg border bg-sheriff-charcoal/30 shadow-[inset_0_0_0_1px_var(--sheriff-gold)]">
-        <div className="sheriff-section-warning-bar absolute left-0 top-0 h-full w-1" aria-hidden />
-        <div className="sheriff-section-warning-head flex items-center gap-2 border-b px-4 py-3">
-          <span className="sheriff-section-warning-accent sheriff-section-warning-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-(--sheriff-warning-border)">
+      <div className="sheriff-section-pending relative overflow-hidden rounded-lg border shadow-[inset_0_0_0_1px_rgba(197,199,204,0.1)]">
+        <div className="sheriff-section-pending-bar absolute left-0 top-0 h-full w-1" aria-hidden />
+        <div className="sheriff-section-pending-head flex items-center gap-2 border-b px-4 py-3">
+          <span className="sheriff-section-pending-accent sheriff-section-pending-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-sheriff-gold/35">
             <IconToLearn className="h-4 w-4" />
           </span>
           <div>
@@ -116,10 +116,10 @@ export function ProfilFormations({
               {toLearn.map((f) => (
                 <li
                   key={f.id}
-                  className="flex items-center gap-3 rounded-md border border-(--sheriff-warning-border) bg-sheriff-charcoal/40 py-2 pl-3 pr-3"
+                  className="flex items-center gap-3 rounded-md border border-sheriff-gold/25 bg-sheriff-charcoal/35 py-2 pl-3 pr-3"
                 >
                   <span
-                    className="sheriff-section-warning-icon flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-(--sheriff-warning-border) bg-(--sheriff-warning-icon-bg)"
+                    className="sheriff-section-pending-icon flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-sheriff-gold/30 bg-sheriff-gold/10"
                     aria-hidden
                   >
                     <IconToLearn className="h-3 w-3" />
@@ -134,12 +134,11 @@ export function ProfilFormations({
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-lg border border-emerald-700/30 bg-sheriff-charcoal/30 shadow-[inset_0_0_0_1px_rgba(184,184,184,0.06)]">
-        {/* Bandeau d’accent « validé » — charte sheriff-gold */}
-        <div className="absolute left-0 top-0 h-full w-1 bg-emerald-500/60" aria-hidden />
-        <div className="flex items-center gap-2 border-b border-emerald-700/20 bg-emerald-500/10 px-4 py-3">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/20">
-            <IconValidated className="h-4 w-4 text-emerald-400" />
+      <div className="sheriff-section-validated relative overflow-hidden rounded-lg border">
+        <div className="sheriff-section-validated-bar absolute left-0 top-0 h-full w-1" aria-hidden />
+        <div className="sheriff-section-validated-head flex items-center gap-2 border-b px-4 py-3">
+          <span className="sheriff-section-validated-accent sheriff-section-validated-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-sheriff-entree/35">
+            <IconValidated className="h-4 w-4" />
           </span>
           <div>
             <h3 className="text-sm font-semibold text-sheriff-paper">
@@ -162,10 +161,10 @@ export function ProfilFormations({
               {validated.map((f) => (
                 <li
                   key={f.id}
-                  className="flex items-center gap-3 rounded-md border border-emerald-600/15 bg-sheriff-charcoal/40 py-2 pl-3 pr-3"
+                  className="flex items-center gap-3 rounded-md border border-sheriff-entree/25 bg-sheriff-charcoal/35 py-2 pl-3 pr-3"
                 >
                   <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/15 text-emerald-400"
+                    className="sheriff-section-validated-icon flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-sheriff-entree/30 bg-sheriff-entree/10"
                     aria-hidden
                   >
                     <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">

@@ -60,6 +60,8 @@ type SaisiesFormProps = {
 
 const INPUT_BASE =
   'w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal px-2.5 py-1.5 text-xs sm:text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted focus:border-sheriff-gold focus:outline-none focus:ring-1 focus:ring-sheriff-gold';
+/** Native `<select>`: same chrome as inputs + chevron / option colors (see `globals.css` `.sheriff-select`). */
+const SELECT_BASE = `${INPUT_BASE} sheriff-select`;
 const CELL_BASE =
   'border-b border-sheriff-gold/15 px-2.5 py-2 align-middle text-xs sm:text-sm text-sheriff-paper-muted';
 const CELL_HEADER =
@@ -950,7 +952,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                     required
                     value={form.sheriff}
                     onChange={(e) => setForm((f) => ({ ...f, sheriff: e.target.value }))}
-                    className={INPUT_BASE}
+                    className={SELECT_BASE}
                   >
                     <option value="">Choisir</option>
                     {sheriffs.map((s) => (
@@ -1011,7 +1013,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                     required
                     value={form.itemName}
                     onChange={(e) => setForm((f) => ({ ...f, itemName: e.target.value }))}
-                    className={INPUT_BASE}
+                    className={SELECT_BASE}
                   >
                     <option value="">Choisir un item</option>
                     {itemCategories.map((cat) => (
@@ -1040,7 +1042,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                         required
                         value={form.weaponModel}
                         onChange={(e) => setForm((f) => ({ ...f, weaponModel: e.target.value }))}
-                        className={INPUT_BASE}
+                        className={SELECT_BASE}
                       >
                         <option value="">Choisir</option>
                         {weaponCategories.map((cat) => (
