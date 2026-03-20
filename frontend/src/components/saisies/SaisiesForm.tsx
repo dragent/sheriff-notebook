@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SheriffOption } from "@/components/comptabilite/ComptabiliteSection";
+import {
+  SHERIFF_FIELD_DENSE as INPUT_BASE,
+  SHERIFF_NATIVE_SELECT_DENSE as SELECT_BASE,
+} from "@/lib/formFieldClasses";
 
 const TOAST_DURATION_MS = 2500;
 const INVENTORY_MAX_ITEMS = 50;
@@ -58,10 +62,6 @@ type SaisiesFormProps = {
   initialRows?: InitialRowInput[];
 };
 
-const INPUT_BASE =
-  'w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal px-2.5 py-1.5 text-xs sm:text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted focus:border-sheriff-gold focus:outline-none focus:ring-1 focus:ring-sheriff-gold';
-/** Native `<select>`: same chrome as inputs + chevron / option colors (see `globals.css` `.sheriff-select`). */
-const SELECT_BASE = `${INPUT_BASE} sheriff-select`;
 const CELL_BASE =
   'border-b border-sheriff-gold/15 px-2.5 py-2 align-middle text-xs sm:text-sm text-sheriff-paper-muted';
 const CELL_HEADER =

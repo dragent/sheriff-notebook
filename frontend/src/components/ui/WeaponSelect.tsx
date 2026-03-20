@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { WeaponCategoryOption } from "@/lib/reference";
-
-const INPUT_BASE =
-  "w-full rounded-md border border-sheriff-gold/40 bg-sheriff-charcoal/60 px-3 py-2 text-sheriff-paper sheriff-focus-ring";
-const LIST_BG = "bg-sheriff-charcoal border border-sheriff-gold/30 shadow-lg";
+import {
+  SHERIFF_COMBOBOX_TRIGGER_COMFORTABLE,
+  SHERIFF_COMBOBOX_TRIGGER_DENSE,
+  SHERIFF_COMBOBOX_LIST,
+} from "@/lib/formFieldClasses";
 const OPTION_BASE = "px-3 py-2 text-sm text-sheriff-paper cursor-pointer transition-colors";
 const OPTION_HOVER = "bg-sheriff-gold/20 text-sheriff-gold";
 const OPTION_SELECTED = "bg-sheriff-gold/25 text-sheriff-gold";
@@ -19,6 +20,8 @@ type WeaponSelectProps = {
   "aria-label": string;
   /** Valeur affichée quand une arme n'est pas dans la liste (ex. ancienne ref). */
   customValue?: string;
+  /** Dense = tableaux ; comfortable = profil / modales (aligné sur les champs texte). */
+  variant?: "dense" | "comfortable";
   className?: string;
 };
 
@@ -33,8 +36,11 @@ export function WeaponSelect({
   options,
   "aria-label": ariaLabel,
   customValue,
+  variant = "comfortable",
   className = "",
 }: WeaponSelectProps) {
+  const triggerBase =
+    variant === "dense" ? SHERIFF_COMBOBOX_TRIGGER_DENSE : SHERIFF_COMBOBOX_TRIGGER_COMFORTABLE;
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -117,18 +123,22 @@ export function WeaponSelect({
         aria-activedescendant={open ? (highlightIndex === -1 ? `${id}-opt-none` : `${id}-opt-${highlightIndex}`) : undefined}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={handleKeyDown}
-        className={`${INPUT_BASE} flex items-center justify-between text-left ${className}`}
+        className={`${triggerBase} ${className}`}
       >
         <span className={value ? "text-sheriff-paper" : "text-sheriff-paper-muted/70"}>
           {displayValue}
         </span>
         <svg
-          className={`h-4 w-4 shrink-0 text-sheriff-gold/70 transition-transform ${open ? "rotate-180" : ""}`}
-          viewBox="0 0 16 16"
-          fill="currentColor"
+          className={`h-4 w-4 shrink-0 text-sheriff-gold/80 transition-transform ${open ? "rotate-180" : ""}`}
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.75}
+          strokeLinecap="round"
+          strokeLinejoin="round"
           aria-hidden
         >
-          <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+          <path d="M6 8l4 4 4-4" />
         </svg>
       </button>
 
@@ -137,7 +147,7 @@ export function WeaponSelect({
           id={`${id}-listbox`}
           role="listbox"
           aria-label={ariaLabel}
-          className={`absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md py-1 ${LIST_BG}`}
+          className={SHERIFF_COMBOBOX_LIST}
         >
           <li
             role="option"

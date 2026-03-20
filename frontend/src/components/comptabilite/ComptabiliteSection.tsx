@@ -7,6 +7,10 @@ import {
   type EntreeRow,
 } from "./ComptabiliteView";
 import { Flashbag } from "@/components/feedback/Flashbag";
+import {
+  SHERIFF_FIELD_COMFORTABLE as MODAL_FIELD_BASE,
+  SHERIFF_NATIVE_SELECT_COMFORTABLE as MODAL_SELECT_BASE,
+} from "@/lib/formFieldClasses";
 
 /**
  * Formate un montant en $ avec virgule décimale.
@@ -98,12 +102,6 @@ export type SheriffOption = { id: string; username: string };
 type ComptabiliteSectionProps = {
   sheriffs: SheriffOption[];
 };
-
-/** Native inputs in the transaction modal */
-const MODAL_FIELD_BASE =
-  "w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal px-3 py-2 text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted focus:border-sheriff-gold focus:outline-none focus:ring-1 focus:ring-sheriff-gold";
-/** `<select>`: same chrome + chevron / options (`globals.css` `.sheriff-select`) */
-const MODAL_SELECT_BASE = `${MODAL_FIELD_BASE} sheriff-select`;
 
 /**
  * Section Comptabilité : liste des entrées/sorties, formulaire d’écriture et toasts.

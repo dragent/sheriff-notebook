@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { SHERIFF_NATIVE_SELECT_COMFORTABLE } from "@/lib/formFieldClasses";
 
 export type Member = {
   id: string;
@@ -118,7 +119,7 @@ export function RecruitRow({
             const v = e.target.value;
             if (v) setGrade(v);
           }}
-          className="sheriff-focus-ring w-full rounded-lg border border-sheriff-gold/50 bg-sheriff-charcoal/80 px-3 py-2 text-sm text-sheriff-paper focus:border-sheriff-gold/70 disabled:opacity-50"
+          className={`${SHERIFF_NATIVE_SELECT_COMFORTABLE} disabled:opacity-55`}
         >
           <option value="">Choisir un grade</option>
           {GRADES.map(({ value, label }) => (

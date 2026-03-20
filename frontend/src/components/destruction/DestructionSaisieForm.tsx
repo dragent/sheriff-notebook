@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
 import { Flashbag } from "@/components/feedback/Flashbag";
-
-const INPUT_BASE =
-  'w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal px-2.5 py-1.5 text-xs sm:text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted focus:border-sheriff-gold focus:outline-none focus:ring-1 focus:ring-sheriff-gold';
+import {
+  SHERIFF_FIELD_DENSE as INPUT_BASE,
+  SHERIFF_NATIVE_SELECT_DENSE,
+} from "@/lib/formFieldClasses";
 const CELL_HEADER =
   'border-b border-sheriff-gold/40 bg-sheriff-charcoal/90 px-2.5 py-2 text-left font-heading text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-sheriff-gold sticky top-0 z-10';
 
@@ -317,7 +318,7 @@ export function DestructionSaisieForm({
                     <select
                       value={row.destruction}
                       onChange={(e) => updateRow(row.id, 'destruction', e.target.value)}
-                      className={`${INPUT_BASE} sheriff-select`}
+                      className={SHERIFF_NATIVE_SELECT_DENSE}
                       aria-label="Type de destruction"
                     >
                       <option value="">— Choisir —</option>

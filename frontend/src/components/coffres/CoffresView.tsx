@@ -7,6 +7,7 @@ import { WeaponSelect } from "@/components/ui/WeaponSelect";
 import { OptionSelect } from "@/components/ui/OptionSelect";
 import type { WeaponCategoryOption } from "@/lib/reference";
 import type { SheriffOption } from "@/components/comptabilite/ComptabiliteSection";
+import { SHERIFF_FIELD_COMFORTABLE, SHERIFF_FIELD_DENSE } from "@/lib/formFieldClasses";
 
 type CoffresTabId = "munitions" | "accessoires" | "recensement";
 export type InventaireMunition = { type: string; quantite: number };
@@ -33,9 +34,6 @@ const TABLE_HEAD =
   "border-b border-sheriff-gold/40 bg-sheriff-charcoal/90 px-3 py-2.5 text-left font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-gold";
 const TABLE_CELL = "px-3 py-2.5 text-sm text-sheriff-paper-muted";
 const TABLE_ROW_ALT = "bg-sheriff-charcoal/25";
-const INPUT_CLASS =
-  "w-full rounded border border-sheriff-gold/30 bg-sheriff-charcoal px-2 py-1.5 text-sm text-sheriff-paper focus:border-sheriff-gold focus:outline-none focus:ring-1 focus:ring-sheriff-gold";
-
 const TYPES_MUNITION = [
   "Munition de revolver",
   "Munition de pistolet",
@@ -305,7 +303,7 @@ export function CoffresView({
                       value={row.quantite}
                       onChange={(e) => setInventaireQuantite(row.type, e.target.valueAsNumber || 0)}
                       onBlur={() => saveInventaireQuantite(row.type, row.quantite)}
-                      className={`${INPUT_CLASS} w-20 text-right`}
+                      className={`${SHERIFF_FIELD_DENSE} w-20 text-right`}
                       aria-label={`Quantité ${row.type}`}
                     />
                   </td>
@@ -345,7 +343,7 @@ export function CoffresView({
                       value={row.bureau}
                       onChange={(e) => setAccessoiresBureauCount(row.type, e.target.valueAsNumber || 0)}
                       onBlur={() => saveAccessoireBureau(row.type, row.bureau)}
-                      className={`${INPUT_CLASS} w-20 text-right`}
+                      className={`${SHERIFF_FIELD_DENSE} w-20 text-right`}
                       aria-label={`Bureau ${row.type}`}
                     />
                   </td>
@@ -470,6 +468,7 @@ export function CoffresView({
                   options={sheriffs.map((s) => ({ value: s.username, label: s.username }))}
                   placeholder="Non assignée"
                   aria-label="Assigné à"
+                  variant="dense"
                   className="min-w-0 max-w-[180px]"
                 />
               ) : (
@@ -478,7 +477,7 @@ export function CoffresView({
                   value={row.assigne}
                   onChange={(e) => updateRecensement(row.id, { assigne: e.target.value })}
                   placeholder="Nom"
-                  className={`${INPUT_CLASS} min-w-0 max-w-[140px]`}
+                  className={`${SHERIFF_FIELD_DENSE} min-w-0 max-w-[140px]`}
                   aria-label="Assigné à"
                 />
               )}
@@ -591,14 +590,14 @@ function ModalRecensement({
                 required
                 value={modele}
                 onChange={(e) => setModele(e.target.value)}
-                className={INPUT_CLASS}
+                className={SHERIFF_FIELD_COMFORTABLE}
                 placeholder="Ex. Evans, Henry"
               />
             )}
           </div>
           <div>
             <label htmlFor="rec-serie" className="mb-1 block text-xs font-medium text-sheriff-paper-muted">N° série</label>
-            <input id="rec-serie" type="text" required value={numeroSerie} onChange={(e) => setNumeroSerie(e.target.value)} className={INPUT_CLASS} placeholder="Ex. 1729815374-6859" />
+            <input id="rec-serie" type="text" required value={numeroSerie} onChange={(e) => setNumeroSerie(e.target.value)} className={SHERIFF_FIELD_COMFORTABLE} placeholder="Ex. 1729815374-6859" />
           </div>
           <div className="flex flex-wrap gap-4">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-sheriff-paper-muted">
@@ -631,7 +630,7 @@ function ModalRecensement({
                 type="text"
                 value={assigne}
                 onChange={(e) => setAssigne(e.target.value)}
-                className={INPUT_CLASS}
+                className={SHERIFF_FIELD_COMFORTABLE}
                 placeholder="Nom du sheriff"
               />
             )}

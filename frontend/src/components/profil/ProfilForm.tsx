@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Flashbag, BACKEND_ERROR_SHORT } from "@/components/feedback/Flashbag";
 import { WeaponSelect } from "@/components/ui/WeaponSelect";
 import type { WeaponCategoryOption } from "@/lib/reference";
+import { SHERIFF_FIELD_COMFORTABLE } from "@/lib/formFieldClasses";
 
 export type ProfilRecord = {
   id: string;
@@ -130,8 +131,7 @@ export function ProfilForm({
     }
   }
 
-  const inputClass =
-    "w-full rounded-md border border-sheriff-gold/40 bg-sheriff-charcoal/60 px-3 py-2 text-sheriff-paper placeholder:text-sheriff-paper-muted/70 sheriff-focus-ring";
+  const inputClass = `${SHERIFF_FIELD_COMFORTABLE} placeholder:text-sheriff-paper-muted/70`;
   const labelClass = "mb-1 block text-sm font-medium text-sheriff-paper-muted";
 
   function SectionTitle({ children }: { children: React.ReactNode }) {
