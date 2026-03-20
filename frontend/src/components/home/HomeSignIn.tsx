@@ -84,12 +84,12 @@ export function HomeSignIn({ compact = false }: Props) {
           type="button"
           onClick={handleSignIn}
           disabled={loading}
-          className="sheriff-focus-ring sheriff-transition inline-flex min-w-40 items-center justify-center gap-2 rounded-md border-2 border-sheriff-gold bg-sheriff-gold px-6 py-3.5 font-medium text-sheriff-ink shadow-md transition hover:border-sheriff-gold-hover hover:bg-sheriff-gold-hover hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
+          className="sheriff-focus-ring sheriff-transition sheriff-btn-home-discord"
         >
           {loading ? (
             <>
               <span
-                className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-sheriff-ink/30 border-t-sheriff-ink"
+                className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current/25 border-t-current"
                 aria-hidden
               />
               Redirection vers Discord…
