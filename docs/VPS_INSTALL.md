@@ -81,6 +81,8 @@ If your OVH offer only provides **MySQL**, use one of:
 2. **PostgreSQL in Docker** on the VPS (this repo’s `db` service in `docker-compose.prod.yml`), or  
 3. A **dedicated effort** to port migrations / schema for MySQL (not supported out of the box).
 
+**Personal / single VPS:** use the bundled **`db`** service (Postgres 16 in Docker). Set `POSTGRES_PASSWORD` and matching `DATABASE_URL` with host `db` in `.env.local`. You can keep **MySQL elsewhere** for other apps; this stack does not use it. Occasional `pg_dump` of the volume is enough for backups.
+
 ---
 
 Minimal required variables for production:
