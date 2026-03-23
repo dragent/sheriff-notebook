@@ -199,6 +199,7 @@ final class ServiceRecordController
     {
         return [
             'id' => $record->getId()->toRfc4122(),
+            'userId' => $record->getUser()?->getId()?->toRfc4122(),
             'name' => $record->getName(),
             'grade' => $record->getUser()?->getGrade(),
             'telegramPrimary' => $record->getTelegramPrimary(),

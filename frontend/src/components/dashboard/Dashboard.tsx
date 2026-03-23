@@ -16,6 +16,8 @@ import {
 
 export type ServiceRecordFull = {
   id: string;
+  /** Linked user id (same as sheriff id in /api/sheriffs) when the fiche is attached to a user. */
+  userId?: string | null;
   name: string;
   /** Grade du joueur (table user), exposé par l'API services. */
   grade: string | null;
@@ -114,10 +116,29 @@ export function Dashboard({
   type DashboardTab = "planning" | "weapons" | "formations";
   const [activeTab, setActiveTab] = useState<DashboardTab>("planning");
   const displayFormations = allFormations?.length ? allFormations : allowedFormations;
+
+  /** Match fiche ↔ sheriff: prefer stable user UUID, then exact name, then case-insensitive name (CSV import vs Discord). */
+  const recordsByUserId = new Map(
+    records.filter((r) => r.userId).map((r) => [r.userId as string, r])
+  );
   const recordsByName = new Map(records.map((r) => [r.name, r]));
+  function recordForSheriff(sheriff: SheriffRef): ServiceRecordFull | null {
+    const byId = recordsByUserId.get(sheriff.id);
+    if (byId) return byId;
+    const byExact = recordsByName.get(sheriff.username);
+    if (byExact) return byExact;
+    return (
+      records.find(
+        (r) =>
+          r.name.localeCompare(sheriff.username, undefined, {
+            sensitivity: "base",
+          }) === 0
+      ) ?? null
+    );
+  }
   const bureauRows = sheriffs.map((sheriff) => ({
     sheriff,
-    record: recordsByName.get(sheriff.username) ?? null,
+    record: recordForSheriff(sheriff),
   }));
 
   function isOwnRecord(recordName: string): boolean {
