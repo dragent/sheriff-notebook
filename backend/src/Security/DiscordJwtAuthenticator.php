@@ -7,6 +7,7 @@ namespace App\Security;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\DiscordGuildMemberResolver;
+use App\Service\UserServiceRecordProvisioner;
 use Doctrine\ORM\EntityManagerInterface;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -30,6 +31,7 @@ final class DiscordJwtAuthenticator extends AbstractAuthenticator implements Aut
         private readonly EntityManagerInterface $entityManager,
         string $jwtSecret,
         private readonly DiscordGuildMemberResolver $discordGuildMemberResolver,
+        private readonly UserServiceRecordProvisioner $userServiceRecordProvisioner,
     ) {
         $this->jwtSecret = trim($jwtSecret);
     }
@@ -89,6 +91,7 @@ final class DiscordJwtAuthenticator extends AbstractAuthenticator implements Aut
                     $user = new User($discordId, $displayUsername);
                     $user->setAvatarUrl($avatarUrl);
                     $this->entityManager->persist($user);
+                    $this->userServiceRecordProvisioner->provisionForNewUser($user);
                     $this->entityManager->flush();
                     return $user;
                 }

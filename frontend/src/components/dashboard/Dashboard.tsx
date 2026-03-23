@@ -13,6 +13,7 @@ import {
   GRADE_ORDER,
   resolveRowGrade,
 } from "@/lib/grades";
+import { normalizeUuidString } from "@/lib/uuidNormalize";
 
 export type ServiceRecordFull = {
   id: string;
@@ -117,14 +118,19 @@ export function Dashboard({
   const [activeTab, setActiveTab] = useState<DashboardTab>("planning");
   const displayFormations = allFormations?.length ? allFormations : allowedFormations;
 
-  /** Match fiche ↔ sheriff: prefer stable user UUID, then exact name, then case-insensitive name (CSV import vs Discord). */
-  const recordsByUserId = new Map(
-    records.filter((r) => r.userId).map((r) => [r.userId as string, r])
-  );
+  /** Match fiche ↔ sheriff: prefer stable Symfony user UUID (not Discord id), then exact name, then case-insensitive name. */
+  const recordsByUserId = new Map<string, ServiceRecordFull>();
+  for (const r of records) {
+    const uid = normalizeUuidString(r.userId);
+    if (uid) recordsByUserId.set(uid, r);
+  }
   const recordsByName = new Map(records.map((r) => [r.name, r]));
   function recordForSheriff(sheriff: SheriffRef): ServiceRecordFull | null {
-    const byId = recordsByUserId.get(sheriff.id);
-    if (byId) return byId;
+    const sheriffUid = normalizeUuidString(sheriff.id);
+    if (sheriffUid) {
+      const byId = recordsByUserId.get(sheriffUid);
+      if (byId) return byId;
+    }
     const byExact = recordsByName.get(sheriff.username);
     if (byExact) return byExact;
     return (

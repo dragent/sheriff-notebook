@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\DiscordGuildMemberResolver;
+use App\Service\UserServiceRecordProvisioner;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -32,6 +33,7 @@ final class UserController
         private readonly UserRepository $userRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly DiscordGuildMemberResolver $discordGuildMemberResolver,
+        private readonly UserServiceRecordProvisioner $userServiceRecordProvisioner,
         private readonly Security $security,
     ) {
     }
@@ -81,6 +83,7 @@ final class UserController
                 $user = new User($discordId, $username);
                 $user->setAvatarUrl($avatarUrl);
                 $this->entityManager->persist($user);
+                $this->userServiceRecordProvisioner->provisionForNewUser($user);
             }
         } else {
             try {

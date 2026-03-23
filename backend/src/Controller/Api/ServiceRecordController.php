@@ -37,7 +37,12 @@ final class ServiceRecordController
     #[Route('', name: 'api_services_list', methods: ['GET'])]
     public function list(): JsonResponse
     {
-        $records = $this->repository->findBy([], ['name' => 'ASC']);
+        // Eager-load user so toArray() always has userId / grade (avoids lazy-load gaps in list context).
+        $records = $this->repository->createQueryBuilder('sr')
+            ->leftJoin('sr.user', 'u')->addSelect('u')
+            ->orderBy('sr.name', 'ASC')
+            ->getQuery()
+            ->getResult();
 
         return new JsonResponse(array_map(self::toArray(...), $records));
     }
