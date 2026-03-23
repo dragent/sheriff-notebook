@@ -11,6 +11,7 @@ import {
   ALL_SHERIFF_GRADES,
   COMTE_ADJOINT_GRADES,
   GRADE_ORDER,
+  resolveRowGrade,
 } from "@/lib/grades";
 
 export type ServiceRecordFull = {
@@ -364,7 +365,9 @@ export function Dashboard({
                         {r.name}
                       </td>
                       <td className="whitespace-nowrap px-2 py-2 text-sheriff-paper-muted">{r.telegramPrimary ?? "—"}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-center text-sheriff-gold">{r.grade ?? sheriff.grade ?? "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-2 text-center text-sheriff-gold">
+                        {resolveRowGrade(r.grade, sheriff.grade) ?? "—"}
+                      </td>
                       <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper-muted">
                         {sheriff.recruitedAt
                           ? new Date(sheriff.recruitedAt).toLocaleDateString("fr-FR", {
@@ -399,7 +402,7 @@ export function Dashboard({
                       })}
                       <td className="whitespace-nowrap px-2 py-2 text-center">
                         {(() => {
-                          const targetGrade = r.grade ?? sheriff.grade ?? null;
+                          const targetGrade = resolveRowGrade(r.grade, sheriff.grade);
                           const nextGrade = getNextPromotionGrade(targetGrade);
                           if (!nextGrade) {
                             return <span className="text-sheriff-paper-muted text-xs">—</span>;
@@ -419,7 +422,7 @@ export function Dashboard({
                       </td>
                       <td className="whitespace-nowrap px-2 py-2 text-center">
                         {(() => {
-                          const targetGrade = r.grade ?? sheriff.grade ?? null;
+                          const targetGrade = resolveRowGrade(r.grade, sheriff.grade);
                           const previousGrade = getNextDemotionGrade(targetGrade);
                           if (!previousGrade || !currentGrade) {
                             return <span className="text-sheriff-paper-muted text-xs">—</span>;
@@ -448,9 +451,9 @@ export function Dashboard({
                         })()}
                       </td>
                       <td className="whitespace-nowrap px-2 py-2 text-center">
-                        {canDeleteSheriffRow(r.grade ?? sheriff.grade ?? null, sheriff.username) &&
+                        {canDeleteSheriffRow(resolveRowGrade(r.grade, sheriff.grade), sheriff.username) &&
                           (() => {
-                            const targetGrade = r.grade ?? sheriff.grade ?? null;
+                            const targetGrade = resolveRowGrade(r.grade, sheriff.grade);
                             const isComte = targetGrade === "Sheriff de comté";
                             const label = isComte ? "Remercier" : "Licencier";
                             return (
@@ -560,7 +563,9 @@ export function Dashboard({
                         {r.name}
                       </td>
                       <td className="whitespace-nowrap px-2 py-2 text-sheriff-paper-muted">{r.telegramPrimary ?? "—"}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-center text-sheriff-gold">{r.grade ?? sheriff.grade ?? "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-2 text-center text-sheriff-gold">
+                        {resolveRowGrade(r.grade, sheriff.grade) ?? "—"}
+                      </td>
                       <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{r.primaryWeapon ?? "—"}</td>
                       <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{r.primaryWeaponSerial ?? "—"}</td>
                       <td className="px-2 py-2 text-center text-sheriff-paper">{r.hasScope ? "Oui" : "—"}</td>
@@ -631,7 +636,9 @@ export function Dashboard({
                   {sheriff.username}
                 </td>
                 {displayFormations.map((f) => {
-                  const targetGrade = r?.grade ?? sheriff.grade ?? null;
+                  const targetGrade = r
+                    ? resolveRowGrade(r.grade, sheriff.grade)
+                    : resolveRowGrade(undefined, sheriff.grade);
                   const targetGradeOrder = targetGrade != null ? GRADE_ORDER[targetGrade] ?? null : null;
                   const currentUserOrder = currentGrade != null ? GRADE_ORDER[currentGrade] ?? null : null;
                   const maxGradeOrder =

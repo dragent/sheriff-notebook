@@ -46,3 +46,20 @@ export function compareGrades(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "base" });
 }
 
+/**
+ * Grade used for a bureau row: service record first, then sheriff list.
+ * Empty strings are ignored so `"" ?? sheriffGrade` does not block the fallback (JS ?? only skips null/undefined).
+ */
+export function resolveRowGrade(
+  recordGrade: string | null | undefined,
+  sheriffGrade: string
+): string | null {
+  const candidates = [recordGrade, sheriffGrade];
+  for (const c of candidates) {
+    if (c == null) continue;
+    const t = typeof c === "string" ? c.trim() : String(c).trim();
+    if (t !== "") return t;
+  }
+  return null;
+}
+

@@ -5,6 +5,7 @@ import {
   GRADE_ORDER,
   isSheriffGrade,
   compareGrades,
+  resolveRowGrade,
 } from "./grades";
 
 describe("grades (matrice grades/formations côté frontend)", () => {
@@ -43,5 +44,12 @@ describe("grades (matrice grades/formations côté frontend)", () => {
     const list = ["Inconnu 2", "Sheriff Deputy", "Inconnu 1"];
     const sorted = [...list].sort(compareGrades);
     expect(sorted[0]).toBe("Sheriff Deputy");
+  });
+
+  it("resolveRowGrade ignore les chaînes vides et retombe sur le grade sheriff", () => {
+    expect(resolveRowGrade("", "Deputy")).toBe("Deputy");
+    expect(resolveRowGrade("   ", "Sheriff Deputy")).toBe("Sheriff Deputy");
+    expect(resolveRowGrade(null, "Deputy")).toBe("Deputy");
+    expect(resolveRowGrade("Deputy", "Sheriff")).toBe("Deputy");
   });
 });
