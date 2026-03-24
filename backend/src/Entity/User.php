@@ -127,7 +127,12 @@ class User implements UserInterface
     /** @return list<string> */
     public function getRoles(): array
     {
-        $roles = $this->roles;
+        // Persisted roles may contain legacy sheriff roles. Access control must rely
+        // on the current grade mapping for sheriff roles, not on stale stored values.
+        $roles = array_values(array_filter(
+            $this->roles,
+            fn (string $role): bool => !\in_array($role, self::SHERIFF_ROLES, true)
+        ));
         $roles[] = 'ROLE_USER';
         if ($this->grade !== null && isset(self::GRADE_TO_ROLE[$this->grade])) {
             $roles[] = self::GRADE_TO_ROLE[$this->grade];

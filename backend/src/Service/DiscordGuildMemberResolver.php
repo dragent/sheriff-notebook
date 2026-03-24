@@ -15,6 +15,18 @@ final class DiscordGuildMemberResolver
 {
     private const API_BASE = 'https://discord.com/api/v10';
     private const CDN_AVATAR_BASE = 'https://cdn.discordapp.com/avatars';
+    private const SHERIFF_PAPIER_ROLE_ID = '1479909556044697700';
+    /** Stable Discord role IDs to exclude from recruitment. */
+    private const SHERIFF_HIERARCHY_ROLE_IDS = [
+        '1478333880925819014', // Sheriff de comté
+        '1478334122404483215', // Sheriff Adjoint
+        '1478334176695685213', // Sheriff en chef
+        '1478334303619514419', // Sheriff
+        '1478334349072928808', // Sheriff Deputy
+        '1482747651668574218', // Deputy
+    ];
+    /** Discord Developer Portal -> Bot -> Privileged Gateway Intents. */
+    private const REQUIRED_PRIVILEGED_INTENTS = ['GUILD_MEMBERS'];
 
     private const TIMEOUT_GET = 5.0;
     private const TIMEOUT_PUT_BODY = 10.0;
@@ -25,6 +37,12 @@ final class DiscordGuildMemberResolver
         private readonly string $botToken,
         private readonly string $appEnv = 'prod',
     ) {
+    }
+
+    /** @return list<string> */
+    public function getRequiredPrivilegedIntents(): array
+    {
+        return self::REQUIRED_PRIVILEGED_INTENTS;
     }
 
     /** @return array<string, string> */
@@ -85,6 +103,43 @@ final class DiscordGuildMemberResolver
                     $ids[] = $role['id'];
                     break;
                 }
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Roles excluded from recruitment list:
+     * - sheriff hierarchy roles (Deputy -> Sheriff de comté),
+     * - special "Sheriff Papier" role.
+     *
+     * @return list<string>
+     */
+    public function getRecruitmentExcludedRoleIds(): array
+    {
+        $ids = [
+            ...self::SHERIFF_HIERARCHY_ROLE_IDS,
+            self::SHERIFF_PAPIER_ROLE_ID,
+        ];
+
+        if ($this->guildId === '' || $this->botToken === '') {
+            return array_values(array_unique($ids));
+        }
+
+        // Keep dynamic matching as fallback safety when role IDs change.
+        $ids = [...$ids, ...$this->getSheriffRoleIds()];
+        $guildRoles = $this->listGuildRoles();
+        foreach ($guildRoles as $role) {
+            $name = mb_strtolower(trim($role['name']));
+            // Be tolerant to naming variants in Discord (e.g. accents/casing/custom labels).
+            if (
+                str_contains($name, 'sheriff')
+                || str_contains($name, 'shérif')
+                || str_contains($name, 'deputy')
+                || str_contains($name, 'papier')
+            ) {
+                $ids[] = $role['id'];
             }
         }
 
@@ -277,8 +332,8 @@ final class DiscordGuildMemberResolver
 
     /**
      * Adds user to guild using OAuth access token.
-     * - New user (no grade in app): assigns Deputy role; caller should persist it in DB.
-     * - Existing user (already has grade in DB): only assigns Discord role if the member was not yet on the server.
+     * - New user (no grade in app): only joins the guild, no automatic role assignment.
+     * - Existing user (already has grade in DB): assigns Discord role only if the member was not yet on the server.
      */
     public function addMemberToGuildWithSheriffDeputyRole(string $discordUserId, string $accessToken, ?string $gradeInDb = null): ?string
     {
@@ -289,22 +344,10 @@ final class DiscordGuildMemberResolver
         $isNewUser = $gradeInDb === null || $gradeInDb === '';
         $url = self::API_BASE . '/guilds/' . $this->guildId . '/members/' . $discordUserId;
 
-        if ($isNewUser) {
-            // First app login: create member with Deputy role directly.
-            $roleId = $this->getRoleIdForGrade('Deputy');
-            if ($roleId === null) {
-                return 'Aucun rôle Deputy trouvé sur le serveur Discord.';
-            }
-            $body = json_encode([
-                'access_token' => $accessToken,
-                'roles' => [$roleId],
-            ], \JSON_THROW_ON_ERROR);
-        } else {
-            // Existing user in DB: just ensure they are in the guild; roles handled only if they were not yet present.
-            $body = json_encode([
-                'access_token' => $accessToken,
-            ], \JSON_THROW_ON_ERROR);
-        }
+        // Join guild only; role management is explicit and handled elsewhere.
+        $body = json_encode([
+            'access_token' => $accessToken,
+        ], \JSON_THROW_ON_ERROR);
 
         $result = $this->sendPutWithBody($url, $body);
         if ($result['error'] !== null) {
@@ -324,34 +367,11 @@ final class DiscordGuildMemberResolver
         }
         if ($status === 204) {
             // Member was already on the server.
-            if ($isNewUser) {
-                // First app login but member already in guild (invited manually, etc.): ensure Deputy role.
-                return $this->addSheriffRoleToMember($discordUserId, 'Deputy');
-            }
-            // Existing user and already on the server: do not touch roles.
+            // Do not touch roles when member is already in guild.
             return null;
         }
 
         return 'Erreur API Discord (status ' . $status . ') lors de l\'ajout au serveur.';
-    }
-
-    /**
-     * Returns the Discord role ID for the given grade name (exact match first, else first role containing "sheriff").
-     */
-    private function getRoleIdForGrade(string $grade): ?string
-    {
-        $roles = $this->listGuildRoles();
-        foreach ($roles as $role) {
-            if (strcasecmp($role['name'], $grade) === 0) {
-                return $role['id'];
-            }
-        }
-        foreach ($roles as $role) {
-            if (stripos($role['name'], 'sheriff') !== false) {
-                return $role['id'];
-            }
-        }
-        return null;
     }
 
     /** @return array{status: int, error: string|null} */

@@ -76,12 +76,6 @@ final class MeController
             return new JsonResponse(['error' => $error], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        if ($grade === null) {
-            $user->setGrade('Deputy');
-            $user->setRoles($user->getRoles());
-            $this->entityManager->flush();
-        }
-
         return new JsonResponse(['ok' => true], Response::HTTP_OK);
     }
 

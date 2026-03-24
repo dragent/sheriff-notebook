@@ -35,6 +35,7 @@ final class DiscordDebugController
             'connected' => $result['ok'],
             'guildId' => $this->guildId !== '' ? $this->guildId : null,
             'guildName' => $result['guildName'],
+            'requiredPrivilegedIntents' => $this->discordGuildMemberResolver->getRequiredPrivilegedIntents(),
             'message' => $result['ok']
                 ? 'Le backend peut accéder au serveur Discord. Les pseudos du serveur (nicknames) seront utilisés. Le recrutement liste les membres de ce même serveur (sans grade Deputy…Sheriff de comté).'
                 : $result['error'],

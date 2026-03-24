@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\DiscordGuildMemberResolver;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,7 +18,7 @@ final class RecruitController
     ) {
     }
 
-    /** Guild members without a Deputy…Sheriff de comté Discord role (API only; no DB fallback). */
+    /** Guild members without excluded recruitment roles (Deputy…Sheriff de comté + Sheriff Papier). */
     #[Route('', name: 'api_recruits_list', methods: ['GET'])]
     public function list(): JsonResponse
     {
@@ -35,18 +34,13 @@ final class RecruitController
      */
     private function buildListFromDiscord(): array
     {
-        $sheriffGradeRoleIds = $this->discordGuildMemberResolver->getSheriffRoleIds();
-        $members = $this->discordGuildMemberResolver->listGuildMembersWithoutRoles($sheriffGradeRoleIds);
+        $excludedRoleIds = $this->discordGuildMemberResolver->getRecruitmentExcludedRoleIds();
+        $members = $this->discordGuildMemberResolver->listGuildMembersWithoutRoles($excludedRoleIds);
 
-        $sheriffGrades = User::getSheriffGradeValues();
         $list = [];
         foreach ($members as $m) {
             $user = $this->userRepository->findOneBy(['discordId' => $m['discord_id']]);
             if ($user !== null) {
-                $grade = $user->getGrade();
-                if ($grade !== null && $grade !== '' && \in_array($grade, $sheriffGrades, true)) {
-                    continue;
-                }
                 $list[] = [
                     'id' => $user->getId()->toRfc4122(),
                     'username' => $user->getUsername(),
