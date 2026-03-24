@@ -516,7 +516,7 @@ export function Dashboard({
                               type="button"
                               onClick={() => promoteSheriff(sheriff.id, nextGrade)}
                               disabled={promotingId === sheriff.id}
-                              className="sheriff-focus-ring inline-flex w-full items-center justify-center rounded bg-sheriff-gold/20 px-2 py-1 text-xs font-semibold text-sheriff-gold hover:bg-sheriff-gold/30 disabled:opacity-50"
+                              className="sheriff-focus-ring sheriff-btn-promote inline-flex w-full items-center justify-center rounded px-2 py-1 text-xs font-semibold disabled:opacity-50"
                               title={`Promouvoir en ${nextGrade}`}
                             >
                               {promotingId === sheriff.id ? "…" : "Promouvoir"}
@@ -546,7 +546,7 @@ export function Dashboard({
                               type="button"
                               onClick={() => promoteSheriff(sheriff.id, previousGrade)}
                               disabled={promotingId === sheriff.id}
-                              className="sheriff-focus-ring inline-flex w-full items-center justify-center rounded bg-sheriff-charcoal/60 px-2 py-1 text-xs font-semibold text-sheriff-paper hover:bg-sheriff-charcoal/80 disabled:opacity-50"
+                              className="sheriff-focus-ring sheriff-btn-demote inline-flex w-full items-center justify-center rounded px-2 py-1 text-xs font-semibold disabled:opacity-50"
                               title={`Rétrograder en ${previousGrade}`}
                             >
                               {promotingId === sheriff.id ? "…" : "Rétrograder"}

@@ -89,10 +89,20 @@
   --sheriff-secondary-btn-text: var(--sheriff-paper-muted);
   --sheriff-secondary-btn-hover-bg: color-mix(in srgb, var(--sheriff-gold) 16%, transparent);
   --sheriff-secondary-btn-hover-border: color-mix(in srgb, var(--sheriff-gold) 55%, transparent);
-  /* Actions destructives (licenciement, suppression) */
-  --sheriff-destructive-bg: rgba(127, 29, 29, 0.6);
-  --sheriff-destructive-text: #fecaca;
-  --sheriff-destructive-hover: rgba(153, 27, 27, 0.8);
+  /* Actions destructives — rouille / minerai (lisible, pas rouge UI pur) */
+  --sheriff-destructive-bg: rgba(95, 42, 38, 0.62);
+  --sheriff-destructive-text: #f2cbcb;
+  --sheriff-destructive-hover: rgba(115, 48, 42, 0.82);
+  /* RH — promotion (lanterne / bronze sur charbon) */
+  --sheriff-hr-promote-bg: rgba(181, 142, 88, 0.22);
+  --sheriff-hr-promote-text: #e8d4b4;
+  --sheriff-hr-promote-border: rgba(214, 180, 120, 0.2);
+  --sheriff-hr-promote-hover: rgba(198, 158, 100, 0.38);
+  /* RH — rétrogradation (fer forgé / rail) */
+  --sheriff-hr-demote-bg: color-mix(in srgb, var(--sheriff-tab-track) 86%, var(--sheriff-gold) 14%);
+  --sheriff-hr-demote-text: var(--sheriff-paper-muted);
+  --sheriff-hr-demote-border: rgba(197, 199, 204, 0.16);
+  --sheriff-hr-demote-hover: color-mix(in srgb, var(--sheriff-tab-track) 74%, var(--sheriff-gold) 26%);
   /* Avertissement / config (ErrorState warning) */
   --sheriff-warning-bg: rgba(180, 83, 9, 0.2);
   --sheriff-warning-border: rgba(180, 83, 9, 0.5);
@@ -180,10 +190,20 @@
   --sheriff-secondary-btn-text: var(--sheriff-paper-muted);
   --sheriff-secondary-btn-hover-bg: color-mix(in srgb, var(--sheriff-gold) 12%, transparent);
   --sheriff-secondary-btn-hover-border: color-mix(in srgb, var(--sheriff-gold) 48%, transparent);
-  /* Actions destructives */
-  --sheriff-destructive-bg: rgba(185, 28, 28, 0.2);
-  --sheriff-destructive-text: #991b1b;
-  --sheriff-destructive-hover: rgba(185, 28, 28, 0.3);
+  /* Actions destructives — brique / registre (sur papier vieilli) */
+  --sheriff-destructive-bg: rgba(130, 48, 40, 0.18);
+  --sheriff-destructive-text: #7a1f1a;
+  --sheriff-destructive-hover: rgba(130, 48, 40, 0.28);
+  /* RH — promotion (encre sépia / bronze sur registre) */
+  --sheriff-hr-promote-bg: rgba(120, 83, 38, 0.12);
+  --sheriff-hr-promote-text: #4a3418;
+  --sheriff-hr-promote-border: rgba(120, 83, 38, 0.24);
+  --sheriff-hr-promote-hover: rgba(120, 83, 38, 0.2);
+  /* RH — rétrogradation (ardoise, même famille que l’onglet) */
+  --sheriff-hr-demote-bg: color-mix(in srgb, var(--sheriff-tab-track) 92%, var(--sheriff-gold) 8%);
+  --sheriff-hr-demote-text: var(--sheriff-paper-muted);
+  --sheriff-hr-demote-border: rgba(61, 74, 92, 0.22);
+  --sheriff-hr-demote-hover: color-mix(in srgb, var(--sheriff-tab-track) 82%, var(--sheriff-gold) 18%);
   /* Avertissement */
   --sheriff-warning-bg: rgba(251, 191, 36, 0.2);
   --sheriff-warning-border: rgba(180, 83, 9, 0.45);
@@ -651,6 +671,26 @@
 }
 .sheriff-btn-destructive:hover:not(:disabled) {
   background-color: var(--sheriff-destructive-hover);
+}
+
+/* RH — promotion / rétrogradation (thème mine + registre) */
+.sheriff-btn-promote {
+  background-color: var(--sheriff-hr-promote-bg);
+  color: var(--sheriff-hr-promote-text);
+  border: 1px solid var(--sheriff-hr-promote-border);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.sheriff-btn-promote:hover:not(:disabled) {
+  background-color: var(--sheriff-hr-promote-hover);
+}
+.sheriff-btn-demote {
+  background-color: var(--sheriff-hr-demote-bg);
+  color: var(--sheriff-hr-demote-text);
+  border: 1px solid var(--sheriff-hr-demote-border);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.sheriff-btn-demote:hover:not(:disabled) {
+  background-color: var(--sheriff-hr-demote-hover);
 }
 
 /* Bouton icône destructive (supprimer ligne, etc.) — hover adapté dark/light */
