@@ -2,7 +2,6 @@
 
 export type ReferenceItem = {
   name: string;
-  value?: string;
   destructionValue?: string;
 };
 

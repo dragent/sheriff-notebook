@@ -108,9 +108,6 @@ export function ReferenceItemsEditTab({
                             Item
                           </th>
                           <th scope="col" className={TABLE_HEAD_CLASS}>
-                            Valeur
-                          </th>
-                          <th scope="col" className={TABLE_HEAD_CLASS}>
                             Valeur destruction ($)
                           </th>
                           <th
@@ -145,31 +142,6 @@ export function ReferenceItemsEditTab({
                                 }}
                                 placeholder="Nom de l'item"
                                 className={INPUT_CLASS + " min-w-[140px]"}
-                              />
-                            </td>
-                            <td className="py-1.5 pr-2">
-                              <input
-                                type="text"
-                                value={item.value ?? ""}
-                                onChange={(e) => {
-                                  const v = e.target.value.trim();
-                                  const next = [...draft.itemCategories];
-                                  const items = [...next[catIndex].items];
-                                  items[index] = {
-                                    ...items[index],
-                                    value: v || undefined,
-                                  };
-                                  next[catIndex] = {
-                                    ...next[catIndex],
-                                    items,
-                                  };
-                                  setDraft((d) => ({
-                                    ...d,
-                                    itemCategories: next,
-                                  }));
-                                }}
-                                placeholder="Optionnel"
-                                className={INPUT_CLASS + " min-w-[80px]"}
                               />
                             </td>
                             <td className="py-1.5 pr-2">

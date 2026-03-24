@@ -144,7 +144,6 @@ export function ReferenceTableSection({
         name: c.name,
         items: (c.items ?? []).map((i) => ({
           name: i.name,
-          value: i.value,
           destructionValue: i.destructionValue,
         })),
       })),

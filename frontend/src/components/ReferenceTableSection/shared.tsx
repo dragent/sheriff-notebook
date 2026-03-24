@@ -282,9 +282,6 @@ export function ItemsTable({
               Item
             </th>
             <th scope="col" className={TABLE_HEAD_CLASS}>
-              Valeur
-            </th>
-            <th scope="col" className={TABLE_HEAD_CLASS}>
               Valeur destruction ($)
             </th>
           </tr>
@@ -294,7 +291,7 @@ export function ItemsTable({
             <tr>
               <td
                 className={TABLE_CELL_CLASS + " " + TABLE_CELL_LAST}
-                colSpan={3}
+                colSpan={2}
               >
                 {emptyLabel}
               </td>
@@ -309,14 +306,6 @@ export function ItemsTable({
                   }
                 >
                   {row.name}
-                </td>
-                <td
-                  className={
-                    TABLE_CELL_CLASS +
-                    (i === items.length - 1 ? " " + TABLE_CELL_LAST : "")
-                  }
-                >
-                  {row.value ?? "—"}
                 </td>
                 <td
                   className={

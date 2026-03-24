@@ -47,7 +47,7 @@ class CountyReference
      *   revolver: list<string>,
      *   pistolet: list<string>,
      *   armeBlanche: list<string>,
-     *   itemCategories: list<array{id: string, name: string, items: list<array{name: string, value?: string, destructionValue?: string}>}>,
+     *   itemCategories: list<array{id: string, name: string, items: list<array{name: string, destructionValue?: string}>}>,
      *   contraventions: list<array{label: string, amende: string, prisonTime: string}>,
      *   homeInfoCategories: list<array{id: string, name: string, order?: int, infos: list<array{id: string, title: string, content: string, order?: int}>}>,
      *   formations: list<array{id: string, label: string}>,
@@ -97,6 +97,9 @@ class CountyReference
             if (isset($result[$wk]) && \is_array($result[$wk])) {
                 $result[$wk] = $this->normalizeWeaponArray($result[$wk]);
             }
+        }
+        if (isset($result['itemCategories']) && \is_array($result['itemCategories'])) {
+            $result['itemCategories'] = $this->sanitizeItemCategories($result['itemCategories']);
         }
         $keys = [
             'fusil',
@@ -161,7 +164,7 @@ class CountyReference
      *   revolver?: list<string>,
      *   pistolet?: list<string>,
      *   armeBlanche?: list<string>,
-     *   itemCategories?: list<array{id: string, name: string, items: list<array{name: string, value?: string, destructionValue?: string}>}>,
+     *   itemCategories?: list<array{id: string, name: string, items: list<array{name: string, destructionValue?: string}>}>,
      *   contraventions?: list<array{label: string, amende: string, prisonTime: string}>,
      *   homeInfoCategories?: list<array{id: string, name: string, order?: int, infos: list<array{id: string, title: string, content: string, order?: int}>}>,
      *   formations?: list<array{id: string, label: string}>,
@@ -189,9 +192,13 @@ class CountyReference
         foreach ($keys as $key) {
             if (isset($data[$key]) && \is_array($data[$key]) && $data[$key] !== []) {
                 // Tableau non vide : enregistrer les données reçues (normaliser les armes).
-                $newData[$key] = \in_array($key, $weaponKeysList, true)
-                    ? $this->normalizeWeaponArray($data[$key])
-                    : $data[$key];
+                if (\in_array($key, $weaponKeysList, true)) {
+                    $newData[$key] = $this->normalizeWeaponArray($data[$key]);
+                } elseif ($key === 'itemCategories') {
+                    $newData[$key] = $this->sanitizeItemCategories($data[$key]);
+                } else {
+                    $newData[$key] = $data[$key];
+                }
             } elseif (isset($data[$key]) && \is_array($data[$key]) && $data[$key] === []) {
                 // Ne pas écraser par des tableaux vides (garder l’existant ou défaut).
                 $newData[$key] = $this->data[$key] ?? $default[$key];
@@ -219,7 +226,7 @@ class CountyReference
      *   revolver: list<string>,
      *   pistolet: list<string>,
      *   armeBlanche: list<string>,
-     *   itemCategories: list<array{id: string, name: string, items: list<array{name: string, value?: string, destructionValue?: string}>}>,
+     *   itemCategories: list<array{id: string, name: string, items: list<array{name: string, destructionValue?: string}>}>,
      *   contraventions: list<array{label: string, amende: string, prisonTime: string}>,
      *   homeInfoCategories: list<array{id: string, name: string, order?: int, infos: list<array{id: string, title: string, content: string, order?: int}>}>,
      *   formations: list<array{id: string, label: string}>,
@@ -241,5 +248,38 @@ class CountyReference
             'formations' => [],
             'formationsByGrade' => [],
         ];
+    }
+
+    /**
+     * Remove deprecated "value" key from reference items.
+     *
+     * @param list<array<string, mixed>> $categories
+     * @return list<array<string, mixed>>
+     */
+    private function sanitizeItemCategories(array $categories): array
+    {
+        $cleaned = [];
+        foreach ($categories as $category) {
+            if (!\is_array($category)) {
+                continue;
+            }
+
+            $items = $category['items'] ?? [];
+            if (\is_array($items)) {
+                $cleanItems = [];
+                foreach ($items as $item) {
+                    if (!\is_array($item)) {
+                        continue;
+                    }
+                    unset($item['value']);
+                    $cleanItems[] = $item;
+                }
+                $category['items'] = $cleanItems;
+            }
+
+            $cleaned[] = $category;
+        }
+
+        return $cleaned;
     }
 }
