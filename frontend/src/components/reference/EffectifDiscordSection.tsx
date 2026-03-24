@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import Image from "next/image";
 import { discordMarkdownToHtml } from "@/lib/discordMarkdown";
 
 type EffectifResponse = {
@@ -77,10 +78,10 @@ export function EffectifDiscordSection({
 }: EffectifDiscordSectionProps = {}) {
   const [data, setData] = useState<EffectifResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
+  const [copiedImage, setCopiedImage] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     fetch("/api/discord/effectif", { cache: "no-store" })
       .then(async (res) => {
         const body = (await res.json().catch(() => ({}))) as EffectifResponse;
@@ -97,15 +98,6 @@ export function EffectifDiscordSection({
       .finally(() => setLoading(false));
   }, [variant]);
 
-  const handleCopy = useCallback(() => {
-    const text = data?.markdown ?? "";
-    if (!text) return;
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [data?.markdown]);
-
   const recruitmentTelegrams = useMemo(() => {
     const list = data?.recruitmentTelegrams;
     if (!Array.isArray(list)) return [];
@@ -116,10 +108,8 @@ export function EffectifDiscordSection({
     if (recruitmentTelegrams.length === 0) return "2327";
     return recruitmentTelegrams.join(" ou ");
   }, [recruitmentTelegrams]);
-  const availablePlaces = useMemo(() => {
-    const currentEffectif = typeof data?.effectif === "number" ? data.effectif : 0;
-    return Math.max(0, RECRUITMENT_MAX_EFFECTIF - currentEffectif);
-  }, [data?.effectif]);
+  const currentEffectif = typeof data?.effectif === "number" ? data.effectif : 0;
+  const availablePlaces = Math.max(0, RECRUITMENT_MAX_EFFECTIF - currentEffectif);
 
   const markdown = useMemo(() => {
     if (variant === "recruitment") {
@@ -129,6 +119,47 @@ export function EffectifDiscordSection({
     }
     return data?.markdown ?? "";
   }, [availablePlaces, data?.markdown, recruitmentContactLabel, variant]);
+
+  const handleCopyText = useCallback(() => {
+    if (!markdown) return;
+
+    const copy = async () => {
+      await navigator.clipboard.writeText(markdown);
+      setCopiedText(true);
+      setTimeout(() => setCopiedText(false), 2000);
+    };
+
+    void copy();
+  }, [markdown]);
+
+  const handleCopyImage = useCallback(() => {
+    if (variant !== "recruitment") return;
+
+    const copy = async () => {
+      if (
+        typeof window === "undefined" ||
+        !("ClipboardItem" in window) ||
+        typeof navigator.clipboard?.write !== "function"
+      ) {
+        return;
+      }
+      try {
+        const res = await fetch("/annonce.png", { cache: "no-store" });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const item = new ClipboardItem({
+          [blob.type || "image/png"]: blob,
+        });
+        await navigator.clipboard.write([item]);
+        setCopiedImage(true);
+        setTimeout(() => setCopiedImage(false), 2000);
+      } catch {
+        // Ignore clipboard errors (permissions/browser support).
+      }
+    };
+
+    void copy();
+  }, [variant]);
 
   const discordHtml = useMemo(() => discordMarkdownToHtml(markdown), [markdown]);
   const date = data?.date;
@@ -187,10 +218,19 @@ export function EffectifDiscordSection({
           ? "Effectif a l'instant t, date du jour."
           : "Modele de message pour annoncer le recrutement sur Discord."}
       </p>
-      <div
-        className="discord-message-preview rounded-lg border border-[#3f4147] bg-[#2b2d31] p-4 font-sans text-[15px] leading-relaxed text-[#f2f3f5] [&_.discord-h1]:mb-2 [&_.discord-h1]:mt-0 [&_.discord-h1]:text-lg [&_.discord-h1]:font-semibold [&_.discord-h1]:text-[#f2f3f5] [&_.discord-h3]:mb-1 [&_.discord-h3]:mt-3 [&_.discord-h3]:text-base [&_.discord-h3]:font-semibold [&_.discord-h3]:text-[#f2f3f5] [&_.discord-ul]:my-2 [&_.discord-ul]:list-disc [&_.discord-ul]:pl-5 [&_.discord-li]:my-0.5 [&_.discord-p]:my-1 [&_.discord-p]:text-[#b5bac1] [&_.discord-separator]:my-3 [&_.discord-separator]:h-px [&_.discord-separator]:bg-[#4e5058]"
-        dangerouslySetInnerHTML={{ __html: discordHtml }}
-      />
+      <div className="discord-message-preview rounded-lg border border-[#3f4147] bg-[#2b2d31] p-4 font-sans text-[15px] leading-relaxed text-[#f2f3f5] [&_.discord-h1]:mb-2 [&_.discord-h1]:mt-0 [&_.discord-h1]:text-lg [&_.discord-h1]:font-semibold [&_.discord-h1]:text-[#f2f3f5] [&_.discord-h3]:mb-1 [&_.discord-h3]:mt-3 [&_.discord-h3]:text-base [&_.discord-h3]:font-semibold [&_.discord-h3]:text-[#f2f3f5] [&_.discord-ul]:my-2 [&_.discord-ul]:list-disc [&_.discord-ul]:pl-5 [&_.discord-li]:my-0.5 [&_.discord-p]:my-1 [&_.discord-p]:text-[#b5bac1] [&_.discord-separator]:my-3 [&_.discord-separator]:h-px [&_.discord-separator]:bg-[#4e5058]">
+        {variant === "recruitment" && (
+          <Image
+            src="/annonce.png"
+            alt="Annonce de recrutement"
+            className="mb-3 mx-auto block w-full max-w-xl rounded-md border border-[#4e5058] object-cover"
+            width={1200}
+            height={628}
+            priority={false}
+          />
+        )}
+        <div dangerouslySetInnerHTML={{ __html: discordHtml }} />
+      </div>
       {variant === "effectif" && data?.effectif != null && data?.maxEffectif != null && (
         <p className="text-sm text-sheriff-paper-muted">
           Effectif actuel : {data.effectif} / {data.maxEffectif} postes
@@ -200,11 +240,20 @@ export function EffectifDiscordSection({
       <div className="flex flex-wrap gap-3">
         <button
           type="button"
-          onClick={handleCopy}
+          onClick={handleCopyText}
           className="sheriff-focus-ring sheriff-btn-save-soft inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold"
         >
-          {copied ? "Copié" : "Copier le code md"}
+          {copiedText ? "Texte copié" : "Copier le texte"}
         </button>
+        {variant === "recruitment" && (
+          <button
+            type="button"
+            onClick={handleCopyImage}
+            className="sheriff-focus-ring sheriff-btn-secondary inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold"
+          >
+            {copiedImage ? "Image copiée" : "Copier l'image"}
+          </button>
+        )}
       </div>
     </section>
   );
