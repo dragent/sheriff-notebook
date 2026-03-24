@@ -137,13 +137,13 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
           aria-label="Bureau du Shérif — Annesburg, accueil"
         >
           {!logoError ? (
-            <span className="relative h-9 w-20 shrink-0 sm:h-11 sm:w-24">
+            <span className="relative h-7 w-7 shrink-0 sm:h-8 sm:w-8">
               <Image
                 src="/logo.png"
                 alt=""
                 fill
-                className="object-contain object-left"
-                sizes="96px"
+                className="object-contain"
+                sizes="32px"
                 priority
                 onError={() => setLogoError(true)}
               />
