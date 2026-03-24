@@ -44,6 +44,14 @@ const SCOPE_UNSUPPORTED_WEAPON_TOKENS = [
   "fusil à pompe",
 ];
 
+function normalizeWeaponName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function parseCartInfo(raw: string | null): string[] {
   if (!raw || !raw.trim()) return [""];
   const lines = raw.split(CART_INFO_SEP).map((s) => s.trim()).filter(Boolean);
@@ -56,9 +64,11 @@ function serializeCartInfo(vehicles: string[]): string | null {
 }
 
 function canHaveScope(weapon: string): boolean {
-  const value = weapon.trim().toLowerCase();
+  const value = normalizeWeaponName(weapon);
   if (!value) return false;
-  return !SCOPE_UNSUPPORTED_WEAPON_TOKENS.some((token) => value.includes(token));
+  return !SCOPE_UNSUPPORTED_WEAPON_TOKENS
+    .map((token) => normalizeWeaponName(token))
+    .some((token) => value.includes(token));
 }
 
 /**
