@@ -350,7 +350,7 @@ export function ReferenceTableSection({
                   setDraft(normalized);
                   setEditing(true);
                 }}
-                className="sheriff-focus-ring order-last rounded border-2 border-sheriff-gold bg-sheriff-gold/25 px-5 py-2.5 text-sm font-semibold text-sheriff-gold shadow-sm transition hover:bg-sheriff-gold/35 hover:border-sheriff-gold-hover"
+                className="sheriff-focus-ring sheriff-btn-save-soft order-last inline-flex items-center justify-center rounded-md px-5 py-2.5 text-sm font-semibold"
               >
                 Modifier les informations
               </button>
@@ -455,7 +455,7 @@ export function ReferenceTableSection({
               type="button"
               onClick={() => setTimeout(() => handleSave(), 0)}
               disabled={saving}
-              className="sheriff-focus-ring sheriff-btn-save rounded px-5 py-2.5 text-sm font-semibold disabled:opacity-70"
+              className="sheriff-focus-ring sheriff-btn-save inline-flex items-center justify-center rounded-md px-5 py-2.5 text-sm font-semibold disabled:opacity-70"
             >
               {saving ? "Enregistrement…" : "Enregistrer"}
             </button>
@@ -463,7 +463,7 @@ export function ReferenceTableSection({
               type="button"
               onClick={handleCancel}
               disabled={saving}
-              className="sheriff-focus-ring sheriff-btn-secondary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-70"
+              className="sheriff-focus-ring sheriff-btn-secondary inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium disabled:opacity-70"
             >
               Annuler
             </button>
