@@ -41,9 +41,17 @@ export type ServiceRecordFull = {
   sunNight: boolean;
   primaryWeapon: string | null;
   primaryWeaponSerial: string | null;
+  primaryHasScope: boolean;
   hasScope: boolean;
   secondaryWeapon: string | null;
   secondaryWeaponSerial: string | null;
+  secondaryHasScope: boolean;
+  thirdWeapon: string | null;
+  thirdWeaponSerial: string | null;
+  thirdHasScope: boolean;
+  tranquilizerWeapon: string | null;
+  tranquilizerWeaponSerial: string | null;
+  tranquilizerHasScope: boolean;
   cartInfo: string | null;
   boatInfo: string | null;
   /** Validations par id de formation (catalogue référentiel). */
@@ -77,6 +85,19 @@ function formatCartAndBoat(cartInfo: string | null, boatInfo: string | null): st
   if (cart) return cart;
   if (boat) return boat;
   return "—";
+}
+
+const SCOPE_UNSUPPORTED_WEAPON_TOKENS = [
+  "pistolet",
+  "revolver",
+  "fusil a pompe",
+  "fusil à pompe",
+];
+
+function canDisplayScopeForWeapon(weapon: string | null | undefined): boolean {
+  const value = weapon?.trim().toLowerCase() ?? "";
+  if (!value) return false;
+  return !SCOPE_UNSUPPORTED_WEAPON_TOKENS.some((token) => value.includes(token));
 }
 
 function LockIcon({ className }: { className?: string }) {
@@ -148,6 +169,23 @@ export function Dashboard({
     sheriff,
     record: recordForSheriff(sheriff),
   }));
+  const showPrimaryScopeColumn = bureauRows.some(
+    ({ record }) => canDisplayScopeForWeapon(record?.primaryWeapon)
+  );
+  const showSecondaryScopeColumn = bureauRows.some(
+    ({ record }) => canDisplayScopeForWeapon(record?.secondaryWeapon)
+  );
+  const showThirdScopeColumn = bureauRows.some(
+    ({ record }) => canDisplayScopeForWeapon(record?.thirdWeapon)
+  );
+  const showTranquilizerScopeColumn = bureauRows.some(
+    ({ record }) => canDisplayScopeForWeapon(record?.tranquilizerWeapon)
+  );
+  const visibleScopeColumnsCount =
+    Number(showPrimaryScopeColumn) +
+    Number(showSecondaryScopeColumn) +
+    Number(showThirdScopeColumn) +
+    Number(showTranquilizerScopeColumn);
 
   function isOwnRecord(recordName: string): boolean {
     if (currentUsername == null) return false;
@@ -640,7 +678,7 @@ export function Dashboard({
               Armes &amp; véhicules — {sheriffs.length} shérifs
             </h2>
             <p className="mt-1.5 text-xs text-sheriff-paper-muted/90">
-              Armes principales et secondaires, numéros de série, lunette, calèches et bateaux.
+              Armes principales, secondaires, tertiaires et fusil tranquillisant, avec lunettes et véhicules.
             </p>
           </div>
           <div className="sheriff-table-scroll overflow-x-auto">
@@ -654,8 +692,24 @@ export function Dashboard({
                   <th className="whitespace-nowrap px-2 py-2 text-center font-heading">Grade</th>
                   <th className="whitespace-nowrap px-2 py-2 font-heading">Arme princ.</th>
                   <th className="whitespace-nowrap px-2 py-2 font-heading">N° série</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-center font-heading">Lunette</th>
+                  {showPrimaryScopeColumn && (
+                    <th className="whitespace-nowrap px-2 py-2 text-center font-heading">Scope 1</th>
+                  )}
                   <th className="whitespace-nowrap px-2 py-2 font-heading">Arme sec.</th>
+                  <th className="whitespace-nowrap px-2 py-2 font-heading">N° série 2</th>
+                  {showSecondaryScopeColumn && (
+                    <th className="whitespace-nowrap px-2 py-2 text-center font-heading">Scope 2</th>
+                  )}
+                  <th className="whitespace-nowrap px-2 py-2 font-heading">Arme 3</th>
+                  <th className="whitespace-nowrap px-2 py-2 font-heading">N° série 3</th>
+                  {showThirdScopeColumn && (
+                    <th className="whitespace-nowrap px-2 py-2 text-center font-heading">Scope 3</th>
+                  )}
+                  <th className="whitespace-nowrap px-2 py-2 font-heading">Fusil tranqu.</th>
+                  <th className="whitespace-nowrap px-2 py-2 font-heading">N° série T</th>
+                  {showTranquilizerScopeColumn && (
+                    <th className="whitespace-nowrap px-2 py-2 text-center font-heading">Scope T</th>
+                  )}
                   <th className="whitespace-nowrap px-2 py-2 text-center font-heading">Calèche / Bateau</th>
                 </tr>
               </thead>
@@ -672,8 +726,76 @@ export function Dashboard({
                       </td>
                       <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{r.primaryWeapon ?? "—"}</td>
                       <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{r.primaryWeaponSerial ?? "—"}</td>
-                      <td className="px-2 py-2 text-center text-sheriff-paper">{r.hasScope ? "Oui" : "—"}</td>
+                      {showPrimaryScopeColumn && (
+                        <td className="px-2 py-2 text-center text-sheriff-paper">
+                          {canDisplayScopeForWeapon(r.primaryWeapon) ? (
+                            <input
+                              type="checkbox"
+                              checked={r.primaryHasScope ?? r.hasScope}
+                              disabled
+                              readOnly
+                              aria-label="Scope arme principale"
+                              className="sheriff-checkbox sheriff-checkbox--disabled-only inline-block align-middle"
+                            />
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      )}
                       <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{r.secondaryWeapon ?? "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{r.secondaryWeaponSerial ?? "—"}</td>
+                      {showSecondaryScopeColumn && (
+                        <td className="px-2 py-2 text-center text-sheriff-paper">
+                          {canDisplayScopeForWeapon(r.secondaryWeapon) ? (
+                            <input
+                              type="checkbox"
+                              checked={r.secondaryHasScope}
+                              disabled
+                              readOnly
+                              aria-label="Scope arme secondaire"
+                              className="sheriff-checkbox sheriff-checkbox--disabled-only inline-block align-middle"
+                            />
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      )}
+                      <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{r.thirdWeapon ?? "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{r.thirdWeaponSerial ?? "—"}</td>
+                      {showThirdScopeColumn && (
+                        <td className="px-2 py-2 text-center text-sheriff-paper">
+                          {canDisplayScopeForWeapon(r.thirdWeapon) ? (
+                            <input
+                              type="checkbox"
+                              checked={r.thirdHasScope}
+                              disabled
+                              readOnly
+                              aria-label="Scope arme 3"
+                              className="sheriff-checkbox sheriff-checkbox--disabled-only inline-block align-middle"
+                            />
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      )}
+                      <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{r.tranquilizerWeapon ?? "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{r.tranquilizerWeaponSerial ?? "—"}</td>
+                      {showTranquilizerScopeColumn && (
+                        <td className="px-2 py-2 text-center text-sheriff-paper">
+                          {canDisplayScopeForWeapon(r.tranquilizerWeapon) ? (
+                            <input
+                              type="checkbox"
+                              checked={r.tranquilizerHasScope}
+                              disabled
+                              readOnly
+                              aria-label="Scope fusil tranquillisant"
+                              className="sheriff-checkbox sheriff-checkbox--disabled-only inline-block align-middle"
+                            />
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      )}
                       <td className="whitespace-nowrap px-2 py-2 text-sm text-sheriff-paper">{formatCartAndBoat(r.cartInfo, r.boatInfo)}</td>
                     </tr>
                   ) : (
@@ -683,7 +805,12 @@ export function Dashboard({
                       </td>
                       <td className="whitespace-nowrap px-2 py-2 text-sheriff-paper-muted">—</td>
                       <td className="whitespace-nowrap px-2 py-2 text-center text-sheriff-gold">{sheriff.grade}</td>
-                      <td colSpan={5} className="whitespace-nowrap px-2 py-2 text-sheriff-paper-muted">—</td>
+                      <td
+                        colSpan={9 + visibleScopeColumnsCount}
+                        className="whitespace-nowrap px-2 py-2 text-sheriff-paper-muted"
+                      >
+                        —
+                      </td>
                     </tr>
                   )
                 )}

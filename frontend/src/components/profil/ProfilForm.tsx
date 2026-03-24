@@ -13,9 +13,17 @@ export type ProfilRecord = {
   telegramPrimary: string | null;
   primaryWeapon: string | null;
   primaryWeaponSerial: string | null;
+  primaryHasScope: boolean;
   hasScope: boolean;
   secondaryWeapon: string | null;
   secondaryWeaponSerial: string | null;
+  secondaryHasScope: boolean;
+  thirdWeapon: string | null;
+  thirdWeaponSerial: string | null;
+  thirdHasScope: boolean;
+  tranquilizerWeapon: string | null;
+  tranquilizerWeaponSerial: string | null;
+  tranquilizerHasScope: boolean;
   cartInfo: string | null;
   boatInfo: string | null;
 };
@@ -29,6 +37,12 @@ type ProfilFormProps = {
 
 /** Séparateur pour plusieurs calèches/véhicules (stockage backend). */
 const CART_INFO_SEP = "\n";
+const SCOPE_UNSUPPORTED_WEAPON_TOKENS = [
+  "pistolet",
+  "revolver",
+  "fusil a pompe",
+  "fusil à pompe",
+];
 
 function parseCartInfo(raw: string | null): string[] {
   if (!raw || !raw.trim()) return [""];
@@ -39,6 +53,12 @@ function parseCartInfo(raw: string | null): string[] {
 function serializeCartInfo(vehicles: string[]): string | null {
   const out = vehicles.map((s) => s.trim()).filter(Boolean);
   return out.length > 0 ? out.join(CART_INFO_SEP) : null;
+}
+
+function canHaveScope(weapon: string): boolean {
+  const value = weapon.trim().toLowerCase();
+  if (!value) return false;
+  return !SCOPE_UNSUPPORTED_WEAPON_TOKENS.some((token) => value.includes(token));
 }
 
 /**
@@ -59,11 +79,22 @@ export function ProfilForm({
   const [telegramPrimary, setTelegramPrimary] = useState(record.telegramPrimary ?? "");
   const [primaryWeapon, setPrimaryWeapon] = useState(record.primaryWeapon ?? "");
   const [primaryWeaponSerial, setPrimaryWeaponSerial] = useState(record.primaryWeaponSerial ?? "");
-  const [hasScope, setHasScope] = useState(record.hasScope);
+  const [primaryHasScope, setPrimaryHasScope] = useState(record.primaryHasScope ?? record.hasScope);
   const [secondaryWeapon, setSecondaryWeapon] = useState(record.secondaryWeapon ?? "");
   const [secondaryWeaponSerial, setSecondaryWeaponSerial] = useState(record.secondaryWeaponSerial ?? "");
+  const [secondaryHasScope, setSecondaryHasScope] = useState(record.secondaryHasScope ?? false);
+  const [thirdWeapon, setThirdWeapon] = useState(record.thirdWeapon ?? "");
+  const [thirdWeaponSerial, setThirdWeaponSerial] = useState(record.thirdWeaponSerial ?? "");
+  const [thirdHasScope, setThirdHasScope] = useState(record.thirdHasScope ?? false);
+  const [tranquilizerWeapon, setTranquilizerWeapon] = useState(record.tranquilizerWeapon ?? "");
+  const [tranquilizerWeaponSerial, setTranquilizerWeaponSerial] = useState(record.tranquilizerWeaponSerial ?? "");
+  const [tranquilizerHasScope, setTranquilizerHasScope] = useState(record.tranquilizerHasScope ?? false);
   const [vehicles, setVehicles] = useState<string[]>(() => parseCartInfo(record.cartInfo ?? null));
   const [boats, setBoats] = useState<string[]>(() => parseCartInfo(record.boatInfo ?? null));
+  const primaryScopeAllowed = canHaveScope(primaryWeapon);
+  const secondaryScopeAllowed = canHaveScope(secondaryWeapon);
+  const thirdScopeAllowed = canHaveScope(thirdWeapon);
+  const tranquilizerScopeAllowed = canHaveScope(tranquilizerWeapon);
 
   const cartInfoSerialized = useMemo(() => serializeCartInfo(vehicles), [vehicles]);
   const boatInfoSerialized = useMemo(() => serializeCartInfo(boats), [boats]);
@@ -73,9 +104,16 @@ export function ProfilForm({
       t(telegramPrimary) !== (record.telegramPrimary ?? null) ||
       t(primaryWeapon) !== (record.primaryWeapon ?? null) ||
       t(primaryWeaponSerial) !== (record.primaryWeaponSerial ?? null) ||
-      hasScope !== record.hasScope ||
+      (primaryScopeAllowed ? primaryHasScope : false) !== (record.primaryHasScope ?? record.hasScope) ||
       t(secondaryWeapon) !== (record.secondaryWeapon ?? null) ||
       t(secondaryWeaponSerial) !== (record.secondaryWeaponSerial ?? null) ||
+      (secondaryScopeAllowed ? secondaryHasScope : false) !== (record.secondaryHasScope ?? false) ||
+      t(thirdWeapon) !== (record.thirdWeapon ?? null) ||
+      t(thirdWeaponSerial) !== (record.thirdWeaponSerial ?? null) ||
+      (thirdScopeAllowed ? thirdHasScope : false) !== (record.thirdHasScope ?? false) ||
+      t(tranquilizerWeapon) !== (record.tranquilizerWeapon ?? null) ||
+      t(tranquilizerWeaponSerial) !== (record.tranquilizerWeaponSerial ?? null) ||
+      (tranquilizerScopeAllowed ? tranquilizerHasScope : false) !== (record.tranquilizerHasScope ?? false) ||
       cartInfoSerialized !== (record.cartInfo ?? null) ||
       boatInfoSerialized !== (record.boatInfo ?? null)
     );
@@ -83,13 +121,37 @@ export function ProfilForm({
     telegramPrimary,
     primaryWeapon,
     primaryWeaponSerial,
-    hasScope,
+    primaryHasScope,
     secondaryWeapon,
     secondaryWeaponSerial,
+    secondaryHasScope,
+    thirdWeapon,
+    thirdWeaponSerial,
+    thirdHasScope,
+    tranquilizerWeapon,
+    tranquilizerWeaponSerial,
+    tranquilizerHasScope,
+    primaryScopeAllowed,
+    secondaryScopeAllowed,
+    thirdScopeAllowed,
+    tranquilizerScopeAllowed,
     cartInfoSerialized,
     boatInfoSerialized,
     record,
   ]);
+
+  useEffect(() => {
+    if (!primaryScopeAllowed && primaryHasScope) setPrimaryHasScope(false);
+  }, [primaryScopeAllowed, primaryHasScope]);
+  useEffect(() => {
+    if (!secondaryScopeAllowed && secondaryHasScope) setSecondaryHasScope(false);
+  }, [secondaryScopeAllowed, secondaryHasScope]);
+  useEffect(() => {
+    if (!thirdScopeAllowed && thirdHasScope) setThirdHasScope(false);
+  }, [thirdScopeAllowed, thirdHasScope]);
+  useEffect(() => {
+    if (!tranquilizerScopeAllowed && tranquilizerHasScope) setTranquilizerHasScope(false);
+  }, [tranquilizerScopeAllowed, tranquilizerHasScope]);
 
   useEffect(() => {
     if (!success) return;
@@ -110,9 +172,17 @@ export function ProfilForm({
           telegramPrimary: telegramPrimary.trim() || null,
           primaryWeapon: primaryWeapon.trim() || null,
           primaryWeaponSerial: primaryWeaponSerial.trim() || null,
-          hasScope,
+          hasScope: primaryScopeAllowed ? primaryHasScope : false,
+          primaryHasScope: primaryScopeAllowed ? primaryHasScope : false,
           secondaryWeapon: secondaryWeapon.trim() || null,
           secondaryWeaponSerial: secondaryWeaponSerial.trim() || null,
+          secondaryHasScope: secondaryScopeAllowed ? secondaryHasScope : false,
+          thirdWeapon: thirdWeapon.trim() || null,
+          thirdWeaponSerial: thirdWeaponSerial.trim() || null,
+          thirdHasScope: thirdScopeAllowed ? thirdHasScope : false,
+          tranquilizerWeapon: tranquilizerWeapon.trim() || null,
+          tranquilizerWeaponSerial: tranquilizerWeaponSerial.trim() || null,
+          tranquilizerHasScope: tranquilizerScopeAllowed ? tranquilizerHasScope : false,
           cartInfo: cartInfoSerialized,
           boatInfo: boatInfoSerialized,
         }),
@@ -217,16 +287,18 @@ export function ProfilForm({
               />
             </div>
           </div>
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              checked={hasScope}
-              onChange={(e) => setHasScope(e.target.checked)}
-              className="sheriff-checkbox"
-              aria-label="Lunette (scope)"
-            />
-            <span className="text-sm text-sheriff-paper-muted">Lunette (scope)</span>
-          </label>
+          {primaryScopeAllowed && (
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={primaryHasScope}
+                onChange={(e) => setPrimaryHasScope(e.target.checked)}
+                className="sheriff-checkbox"
+                aria-label="Lunette arme principale"
+              />
+              <span className="text-sm text-sheriff-paper-muted">Lunette arme principale</span>
+            </label>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="secondaryWeapon" className={labelClass}>
@@ -269,6 +341,126 @@ export function ProfilForm({
               />
             </div>
           </div>
+          {secondaryScopeAllowed && (
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={secondaryHasScope}
+                onChange={(e) => setSecondaryHasScope(e.target.checked)}
+                className="sheriff-checkbox"
+                aria-label="Lunette arme secondaire"
+              />
+              <span className="text-sm text-sheriff-paper-muted">Lunette arme secondaire</span>
+            </label>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="thirdWeapon" className={labelClass}>
+                Arme 3
+              </label>
+              {hasWeaponOptions ? (
+                <WeaponSelect
+                  id="thirdWeapon"
+                  value={thirdWeapon}
+                  onChange={setThirdWeapon}
+                  options={weaponOptionsByCategory}
+                  aria-label="Arme 3"
+                  variant="comfortable"
+                  customValue={thirdWeapon && !flatWeapons.includes(thirdWeapon) ? thirdWeapon : undefined}
+                />
+              ) : (
+                <input
+                  id="thirdWeapon"
+                  type="text"
+                  value={thirdWeapon}
+                  onChange={(e) => setThirdWeapon(e.target.value)}
+                  className={inputClass}
+                  placeholder="optionnel"
+                  maxLength={64}
+                />
+              )}
+            </div>
+            <div>
+              <label htmlFor="thirdWeaponSerial" className={labelClass}>
+                N° série arme 3
+              </label>
+              <input
+                id="thirdWeaponSerial"
+                type="text"
+                value={thirdWeaponSerial}
+                onChange={(e) => setThirdWeaponSerial(e.target.value)}
+                className={inputClass}
+                placeholder="optionnel"
+                maxLength={32}
+              />
+            </div>
+          </div>
+          {thirdScopeAllowed && (
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={thirdHasScope}
+                onChange={(e) => setThirdHasScope(e.target.checked)}
+                className="sheriff-checkbox"
+                aria-label="Lunette arme 3"
+              />
+              <span className="text-sm text-sheriff-paper-muted">Lunette arme 3</span>
+            </label>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="tranquilizerWeapon" className={labelClass}>
+                Fusil tranquillisant
+              </label>
+              {hasWeaponOptions ? (
+                <WeaponSelect
+                  id="tranquilizerWeapon"
+                  value={tranquilizerWeapon}
+                  onChange={setTranquilizerWeapon}
+                  options={weaponOptionsByCategory}
+                  aria-label="Fusil tranquillisant"
+                  variant="comfortable"
+                  customValue={tranquilizerWeapon && !flatWeapons.includes(tranquilizerWeapon) ? tranquilizerWeapon : undefined}
+                />
+              ) : (
+                <input
+                  id="tranquilizerWeapon"
+                  type="text"
+                  value={tranquilizerWeapon}
+                  onChange={(e) => setTranquilizerWeapon(e.target.value)}
+                  className={inputClass}
+                  placeholder="optionnel"
+                  maxLength={64}
+                />
+              )}
+            </div>
+            <div>
+              <label htmlFor="tranquilizerWeaponSerial" className={labelClass}>
+                N° série fusil tranquillisant
+              </label>
+              <input
+                id="tranquilizerWeaponSerial"
+                type="text"
+                value={tranquilizerWeaponSerial}
+                onChange={(e) => setTranquilizerWeaponSerial(e.target.value)}
+                className={inputClass}
+                placeholder="optionnel"
+                maxLength={32}
+              />
+            </div>
+          </div>
+          {tranquilizerScopeAllowed && (
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={tranquilizerHasScope}
+                onChange={(e) => setTranquilizerHasScope(e.target.checked)}
+                className="sheriff-checkbox"
+                aria-label="Lunette fusil tranquillisant"
+              />
+              <span className="text-sm text-sheriff-paper-muted">Lunette fusil tranquillisant</span>
+            </label>
+          )}
         </div>
       </div>
 

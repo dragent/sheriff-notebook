@@ -93,7 +93,10 @@ final class ServiceRecordController
         ];
         $equipmentKeys = [
             'telegramPrimary', 'primaryWeapon', 'primaryWeaponSerial',
-            'hasScope', 'secondaryWeapon', 'secondaryWeaponSerial',
+            'hasScope', 'primaryHasScope',
+            'secondaryWeapon', 'secondaryWeaponSerial', 'secondaryHasScope',
+            'thirdWeapon', 'thirdWeaponSerial', 'thirdHasScope',
+            'tranquilizerWeapon', 'tranquilizerWeaponSerial', 'tranquilizerHasScope',
             'cartInfo', 'boatInfo',
         ];
         $hasFormationUpdate = array_key_exists('formationValidations', $data);
@@ -175,11 +178,35 @@ final class ServiceRecordController
         if (array_key_exists('hasScope', $data)) {
             $record->setHasScope((bool) $data['hasScope']);
         }
+        if (array_key_exists('primaryHasScope', $data)) {
+            $record->setHasScope((bool) $data['primaryHasScope']);
+        }
         if (array_key_exists('secondaryWeapon', $data)) {
             $record->setSecondaryWeapon($data['secondaryWeapon'] !== null ? trim((string) $data['secondaryWeapon']) : null);
         }
         if (array_key_exists('secondaryWeaponSerial', $data)) {
             $record->setSecondaryWeaponSerial($data['secondaryWeaponSerial'] !== null ? trim((string) $data['secondaryWeaponSerial']) : null);
+        }
+        if (array_key_exists('secondaryHasScope', $data)) {
+            $record->setSecondaryHasScope((bool) $data['secondaryHasScope']);
+        }
+        if (array_key_exists('thirdWeapon', $data)) {
+            $record->setThirdWeapon($data['thirdWeapon'] !== null ? trim((string) $data['thirdWeapon']) : null);
+        }
+        if (array_key_exists('thirdWeaponSerial', $data)) {
+            $record->setThirdWeaponSerial($data['thirdWeaponSerial'] !== null ? trim((string) $data['thirdWeaponSerial']) : null);
+        }
+        if (array_key_exists('thirdHasScope', $data)) {
+            $record->setThirdHasScope((bool) $data['thirdHasScope']);
+        }
+        if (array_key_exists('tranquilizerWeapon', $data)) {
+            $record->setTranquilizerWeapon($data['tranquilizerWeapon'] !== null ? trim((string) $data['tranquilizerWeapon']) : null);
+        }
+        if (array_key_exists('tranquilizerWeaponSerial', $data)) {
+            $record->setTranquilizerWeaponSerial($data['tranquilizerWeaponSerial'] !== null ? trim((string) $data['tranquilizerWeaponSerial']) : null);
+        }
+        if (array_key_exists('tranquilizerHasScope', $data)) {
+            $record->setTranquilizerHasScope((bool) $data['tranquilizerHasScope']);
         }
         if (array_key_exists('cartInfo', $data)) {
             $record->setCartInfo($data['cartInfo'] !== null ? trim((string) $data['cartInfo']) : null);
@@ -238,8 +265,16 @@ final class ServiceRecordController
             'primaryWeapon' => $record->getPrimaryWeapon(),
             'primaryWeaponSerial' => $record->getPrimaryWeaponSerial(),
             'hasScope' => $record->isHasScope(),
+            'primaryHasScope' => $record->isHasScope(),
             'secondaryWeapon' => $record->getSecondaryWeapon(),
             'secondaryWeaponSerial' => $record->getSecondaryWeaponSerial(),
+            'secondaryHasScope' => $record->isSecondaryHasScope(),
+            'thirdWeapon' => $record->getThirdWeapon(),
+            'thirdWeaponSerial' => $record->getThirdWeaponSerial(),
+            'thirdHasScope' => $record->isThirdHasScope(),
+            'tranquilizerWeapon' => $record->getTranquilizerWeapon(),
+            'tranquilizerWeaponSerial' => $record->getTranquilizerWeaponSerial(),
+            'tranquilizerHasScope' => $record->isTranquilizerHasScope(),
             'cartInfo' => $record->getCartInfo(),
             'boatInfo' => $record->getBoatInfo(),
             'formationValidations' => $record->getFormationValidations(),

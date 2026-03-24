@@ -80,7 +80,7 @@ class ServiceRecord
     #[ORM\Column(length: 32, nullable: true)]
     private ?string $primaryWeaponSerial = null;
 
-    /** Lunette (scope) */
+    /** Lunette (scope) pour l'arme principale */
     #[ORM\Column(type: 'boolean')]
     private bool $hasScope = false;
 
@@ -91,6 +91,34 @@ class ServiceRecord
     /** Numéro de série arme secondaire */
     #[ORM\Column(length: 32, nullable: true)]
     private ?string $secondaryWeaponSerial = null;
+
+    /** Lunette (scope) pour l'arme secondaire */
+    #[ORM\Column(type: 'boolean')]
+    private bool $secondaryHasScope = false;
+
+    /** Arme tertiaire */
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $thirdWeapon = null;
+
+    /** Numéro de série arme tertiaire */
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $thirdWeaponSerial = null;
+
+    /** Lunette (scope) pour l'arme tertiaire */
+    #[ORM\Column(type: 'boolean')]
+    private bool $thirdHasScope = false;
+
+    /** Fusil tranquillisant */
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $tranquilizerWeapon = null;
+
+    /** Numéro de série fusil tranquillisant */
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $tranquilizerWeaponSerial = null;
+
+    /** Lunette (scope) pour le fusil tranquillisant */
+    #[ORM\Column(type: 'boolean')]
+    private bool $tranquilizerHasScope = false;
 
     /** Calèches / véhicules (un par ligne, ex: Blindé 4ch, Carriole) */
     #[ORM\Column(length: 512, nullable: true)]
@@ -497,6 +525,108 @@ class ServiceRecord
             return;
         }
         $this->secondaryWeaponSerial = $secondaryWeaponSerial;
+        $this->touch();
+    }
+
+    public function isSecondaryHasScope(): bool
+    {
+        return $this->secondaryHasScope;
+    }
+
+    public function setSecondaryHasScope(bool $secondaryHasScope): void
+    {
+        if ($secondaryHasScope === $this->secondaryHasScope) {
+            return;
+        }
+        $this->secondaryHasScope = $secondaryHasScope;
+        $this->touch();
+    }
+
+    public function getThirdWeapon(): ?string
+    {
+        return $this->thirdWeapon;
+    }
+
+    public function setThirdWeapon(?string $thirdWeapon): void
+    {
+        $thirdWeapon = self::normalizeNullableString($thirdWeapon);
+        if ($thirdWeapon === $this->thirdWeapon) {
+            return;
+        }
+        $this->thirdWeapon = $thirdWeapon;
+        $this->touch();
+    }
+
+    public function getThirdWeaponSerial(): ?string
+    {
+        return $this->thirdWeaponSerial;
+    }
+
+    public function setThirdWeaponSerial(?string $thirdWeaponSerial): void
+    {
+        $thirdWeaponSerial = self::normalizeNullableString($thirdWeaponSerial);
+        if ($thirdWeaponSerial === $this->thirdWeaponSerial) {
+            return;
+        }
+        $this->thirdWeaponSerial = $thirdWeaponSerial;
+        $this->touch();
+    }
+
+    public function isThirdHasScope(): bool
+    {
+        return $this->thirdHasScope;
+    }
+
+    public function setThirdHasScope(bool $thirdHasScope): void
+    {
+        if ($thirdHasScope === $this->thirdHasScope) {
+            return;
+        }
+        $this->thirdHasScope = $thirdHasScope;
+        $this->touch();
+    }
+
+    public function getTranquilizerWeapon(): ?string
+    {
+        return $this->tranquilizerWeapon;
+    }
+
+    public function setTranquilizerWeapon(?string $tranquilizerWeapon): void
+    {
+        $tranquilizerWeapon = self::normalizeNullableString($tranquilizerWeapon);
+        if ($tranquilizerWeapon === $this->tranquilizerWeapon) {
+            return;
+        }
+        $this->tranquilizerWeapon = $tranquilizerWeapon;
+        $this->touch();
+    }
+
+    public function getTranquilizerWeaponSerial(): ?string
+    {
+        return $this->tranquilizerWeaponSerial;
+    }
+
+    public function setTranquilizerWeaponSerial(?string $tranquilizerWeaponSerial): void
+    {
+        $tranquilizerWeaponSerial = self::normalizeNullableString($tranquilizerWeaponSerial);
+        if ($tranquilizerWeaponSerial === $this->tranquilizerWeaponSerial) {
+            return;
+        }
+        $this->tranquilizerWeaponSerial = $tranquilizerWeaponSerial;
+        $this->touch();
+    }
+
+    public function isTranquilizerHasScope(): bool
+    {
+        return $this->tranquilizerHasScope;
+    }
+
+    public function setTranquilizerHasScope(bool $tranquilizerHasScope): void
+    {
+        if ($tranquilizerHasScope === $this->tranquilizerHasScope) {
+            return;
+        }
+        $this->tranquilizerHasScope = $tranquilizerHasScope;
         $this->touch();
     }
 
