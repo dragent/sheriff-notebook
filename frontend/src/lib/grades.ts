@@ -37,6 +37,18 @@ export const COMTE_ADJOINT_GRADES = new Set<string>([
 ]);
 
 /**
+ * Réinitialiser la grille de présences pour tout le bureau (action « clean » planning).
+ * Aligné sur ServiceRecordController::canEditOthersPlanning (ordre ≤ 2).
+ */
+export function canPlanningAdminActions(
+  grade: string | null | undefined
+): boolean {
+  if (!grade) return false;
+  if (COMTE_ADJOINT_GRADES.has(grade)) return true;
+  return grade === "Sheriff en chef";
+}
+
+/**
  * Compare deux grades pour le tri (plus gradé en premier).
  */
 export function compareGrades(a: string, b: string): number {

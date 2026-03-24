@@ -3,6 +3,7 @@ import {
   ALL_SHERIFF_GRADES,
   COMTE_ADJOINT_GRADES,
   GRADE_ORDER,
+  canPlanningAdminActions,
   isSheriffGrade,
   compareGrades,
   resolveRowGrade,
@@ -32,6 +33,16 @@ describe("grades (matrice grades/formations côté frontend)", () => {
     expect(COMTE_ADJOINT_GRADES.has("Sheriff de comté")).toBe(true);
     expect(COMTE_ADJOINT_GRADES.has("Sheriff Adjoint")).toBe(true);
     expect(COMTE_ADJOINT_GRADES.has("Sheriff adjoint")).toBe(true);
+  });
+
+  it("canPlanningAdminActions — comté, adjoint, en chef uniquement", () => {
+    expect(canPlanningAdminActions("Sheriff de comté")).toBe(true);
+    expect(canPlanningAdminActions("Sheriff Adjoint")).toBe(true);
+    expect(canPlanningAdminActions("Sheriff adjoint")).toBe(true);
+    expect(canPlanningAdminActions("Sheriff en chef")).toBe(true);
+    expect(canPlanningAdminActions("Sheriff")).toBe(false);
+    expect(canPlanningAdminActions("Deputy")).toBe(false);
+    expect(canPlanningAdminActions(null)).toBe(false);
   });
 
   it("compareGrades respecte l'ordre hiérarchique défini par GRADE_ORDER", () => {

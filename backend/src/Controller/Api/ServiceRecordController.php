@@ -98,16 +98,28 @@ final class ServiceRecordController
         ];
         $hasFormationUpdate = array_key_exists('formationValidations', $data);
 
-        $hasPlanningOrEquipmentUpdate = false;
-        foreach (array_merge($planningKeys, $equipmentKeys) as $key) {
+        $hasPlanningUpdate = false;
+        foreach ($planningKeys as $key) {
             if (array_key_exists($key, $data)) {
-                $hasPlanningOrEquipmentUpdate = true;
+                $hasPlanningUpdate = true;
+                break;
+            }
+        }
+        $hasEquipmentUpdate = false;
+        foreach ($equipmentKeys as $key) {
+            if (array_key_exists($key, $data)) {
+                $hasEquipmentUpdate = true;
                 break;
             }
         }
 
-        if ($hasPlanningOrEquipmentUpdate && !$isOwnRecord) {
-            return new JsonResponse(['error' => 'Forbidden: not your service record'], 403);
+        if (!$isOwnRecord) {
+            if ($hasEquipmentUpdate) {
+                return new JsonResponse(['error' => 'Forbidden: not your service record'], 403);
+            }
+            if ($hasPlanningUpdate && !self::canEditOthersPlanning($user)) {
+                return new JsonResponse(['error' => 'Forbidden: not your service record'], 403);
+            }
         }
 
         if ($hasFormationUpdate && $isOwnRecord) {
@@ -232,6 +244,27 @@ final class ServiceRecordController
             'boatInfo' => $record->getBoatInfo(),
             'formationValidations' => $record->getFormationValidations(),
         ];
+    }
+
+    /** County Sheriff, Deputy, or Chief may PATCH planning fields on another user's service record. */
+    private static function canEditOthersPlanning(User $user): bool
+    {
+        $order = self::gradeOrderForPlanning($user->getGrade());
+
+        return $order !== null && $order <= 2;
+    }
+
+    /** Same canonicalization as frontend COMTE_ADJOINT_GRADES / GRADE_ORDER. */
+    private static function gradeOrderForPlanning(?string $grade): ?int
+    {
+        if ($grade === null || $grade === '') {
+            return null;
+        }
+        if ($grade === 'Sheriff adjoint') {
+            $grade = 'Sheriff Adjoint';
+        }
+
+        return self::GRADE_ORDER[$grade] ?? null;
     }
 
     /** County Sheriff / Deputy / Chief can validate formations only for strictly lower grades. */

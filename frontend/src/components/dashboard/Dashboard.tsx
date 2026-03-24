@@ -11,6 +11,7 @@ import {
   ALL_SHERIFF_GRADES,
   COMTE_ADJOINT_GRADES,
   GRADE_ORDER,
+  canPlanningAdminActions,
   resolveRowGrade,
 } from "@/lib/grades";
 import { normalizeUuidString } from "@/lib/uuidNormalize";
@@ -114,6 +115,7 @@ export function Dashboard({
   const [patchError, setPatchError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [promotingId, setPromotingId] = useState<string | null>(null);
+  const [cleaningPlanning, setCleaningPlanning] = useState(false);
   type DashboardTab = "planning" | "weapons" | "formations";
   const [activeTab, setActiveTab] = useState<DashboardTab>("planning");
   const displayFormations = allFormations?.length ? allFormations : allowedFormations;
@@ -239,6 +241,10 @@ export function Dashboard({
           setPatchError(
             "Vous ne pouvez valider les formations que pour les grades inférieurs si vous êtes Sheriff de comté, Adjoint ou En chef."
           );
+        } else if (canPlanningAdminActions(currentGrade)) {
+          setPatchError(
+            "Modification non autorisée pour cette fiche (présences ou équipement selon les règles du bureau)."
+          );
         } else {
           setPatchError("Vous ne pouvez modifier que votre propre fiche de service.");
         }
@@ -322,6 +328,53 @@ export function Dashboard({
     }
   }
 
+  async function clearPlanningTable(): Promise<void> {
+    if (!canPlanningAdminActions(currentGrade)) return;
+    if (
+      !window.confirm(
+        "Réinitialiser toutes les cases de présence (jour et soir) pour tout le bureau ? Cette action vide la grille pour la semaine affichée."
+      )
+    ) {
+      return;
+    }
+    setPatchError(null);
+    setCleaningPlanning(true);
+    const cleared: Record<string, boolean> = {};
+    for (const col of PLANNING_COLUMNS) {
+      cleared[col.key] = false;
+    }
+    try {
+      for (const r of records) {
+        const res = await fetch(`/api/services/${r.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(cleared),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const message = (body?.error as string) || res.statusText;
+          if (res.status === 403) {
+            setPatchError(
+              "Réinitialisation réservée au Sheriff de comté, à l'Adjoint ou au Sheriff en chef."
+            );
+          } else if (res.status === 401) {
+            setPatchError("Session expirée. Reconnectez-vous.");
+          } else {
+            setPatchError(`Erreur ${res.status}: ${message}`);
+          }
+          return;
+        }
+      }
+      router.refresh();
+    } catch {
+      setPatchError(
+        "Erreur réseau. Vérifiez que le backend est démarré (ex. http://localhost:8080) et que BACKEND_BASE_URL est correct."
+      );
+    } finally {
+      setCleaningPlanning(false);
+    }
+  }
+
   return (
     <div className="flex w-full flex-col gap-8">
       <p className="max-w-2xl text-sm text-sheriff-paper-muted">
@@ -352,13 +405,27 @@ export function Dashboard({
           role="tabpanel"
           aria-label="Planning et paie du bureau"
         >
-          <div className="border-b border-sheriff-gold/40 bg-sheriff-charcoal/80 px-4 py-4">
-            <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-sheriff-gold">
-              Planning &amp; paie — {sheriffs.length} / 15 shérifs
-            </h2>
-            <p className="mt-1.5 text-xs text-sheriff-paper-muted/90">
-              NOM · Télégramme · Grade · Recrutement · Présences jour/soir · Actions RH.
-            </p>
+          <div className="flex flex-col gap-3 border-b border-sheriff-gold/40 bg-sheriff-charcoal/80 px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-sheriff-gold">
+                Planning &amp; paie — {sheriffs.length} / 15 shérifs
+              </h2>
+              <p className="mt-1.5 text-xs text-sheriff-paper-muted/90">
+                NOM · Télégramme · Grade · Recrutement · Présences jour/soir · Actions RH. Le Sheriff de
+                comté, l&apos;Adjoint et le Sheriff en chef peuvent valider ou retirer les présences sur
+                toutes les fiches du bureau (en plus de la leur).
+              </p>
+            </div>
+            {canPlanningAdminActions(currentGrade) && (
+              <button
+                type="button"
+                onClick={() => void clearPlanningTable()}
+                disabled={cleaningPlanning || records.length === 0}
+                className="sheriff-focus-ring shrink-0 rounded border border-sheriff-gold/35 bg-sheriff-charcoal/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-sheriff-gold hover:bg-sheriff-gold/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {cleaningPlanning ? "Réinitialisation…" : "Réinitialiser le planning"}
+              </button>
+            )}
           </div>
           <div className="sheriff-table-scroll overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -406,22 +473,32 @@ export function Dashboard({
                           : "—"}
                       </td>
                       {PLANNING_COLUMNS.map((col) => {
-                        const editable = canEditRecord(r.name);
+                        const planningAdmin =
+                          canPlanningAdminActions(currentGrade) && !cleaningPlanning;
+                        const editable = canEditRecord(r.name) || planningAdmin;
+                        const isOwnRow = canEditRecord(r.name);
+                        let checkboxTitle: string | undefined;
+                        if (!editable) {
+                          checkboxTitle = "Modification réservée à votre propre fiche";
+                        } else if (planningAdmin && !isOwnRow) {
+                          checkboxTitle =
+                            "Valider ou retirer la présence sur la fiche d’un autre membre";
+                        }
                         return (
                           <td key={col.key} className="px-1 py-2 text-center">
                             <input
                               type="checkbox"
                               checked={(r as Record<string, unknown>)[col.key] as boolean}
-                              disabled={updating === r.id || !editable}
+                              disabled={updating === r.id || cleaningPlanning || !editable}
                               readOnly={!editable}
-                              onChange={() =>
-                                editable &&
-                                patchRecord(r.id, {
+                              onChange={() => {
+                                if (!editable || cleaningPlanning) return;
+                                void patchRecord(r.id, {
                                   [col.key]: !(r as Record<string, unknown>)[col.key],
-                                })
-                              }
+                                });
+                              }}
                               className="sheriff-checkbox inline-block align-middle"
-                              title={editable ? undefined : "Modification réservée à votre propre fiche"}
+                              title={checkboxTitle}
                               aria-label={col.label}
                             />
                           </td>

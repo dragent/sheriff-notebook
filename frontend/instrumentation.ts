@@ -14,4 +14,11 @@ export async function register() {
   }
 }
 
-export const onRequestError = Sentry.captureRequestError;
+/** Wrap Sentry to avoid rare Node Web Streams crashes (e.g. transformAlgorithm on Node 25). */
+export const onRequestError: typeof Sentry.captureRequestError = async (...args) => {
+  try {
+    return await Sentry.captureRequestError(...args);
+  } catch (e) {
+    console.error("[instrumentation] Sentry.captureRequestError failed:", e);
+  }
+};
