@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   getAllWeaponNames,
@@ -50,7 +50,10 @@ export function ReferenceTableSection({
   canEdit: boolean;
   updatedAt?: string | null;
 }) {
-  const normalized = normalizeReferenceData(data as Record<string, unknown>);
+  const normalized = useMemo(
+    () => normalizeReferenceData(data as Record<string, unknown>),
+    [data]
+  );
   const updatedAtKey = updatedAt ?? "";
   const router = useRouter();
   const [editing, setEditing] = useState(false);
