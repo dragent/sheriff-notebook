@@ -10,7 +10,7 @@ import {
 } from "@/lib/proxyBackend";
 
 /**
- * Proxie vers le backend GET /api/recruits (liste des membres sans rôle sheriff).
+ * Proxie vers le backend GET /api/recruits (membres du serveur Discord sans rôle sheriff).
  * Spec: docs/PROXY_SPEC.md
  */
 export async function GET() {

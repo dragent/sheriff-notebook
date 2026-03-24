@@ -12,7 +12,7 @@ This document describes the Next.js API routes that proxy to the Symfony backend
 | `/api/me/join-guild` | POST | `POST /api/me/join-guild` | Yes | Add user to Discord server with Sheriff Deputy role (OAuth token in session) |
 | `/api/reference` | PUT | `PUT /api/reference` | Yes | Update reference data (County Sheriff / Deputy) |
 | `/api/services/[id]` | PATCH | `PATCH /api/services/{id}` | Yes | Update a service (planning, weapon, etc.) |
-| `/api/recruits` | GET | `GET /api/recruits` | Yes | List members without sheriff role (recruitment) |
+| `/api/recruits` | GET | `GET /api/recruits` | Yes | Discord guild members without sheriff role (recruitment); no DB-only fallback |
 | `/api/users/[id]` | PATCH | `PATCH /api/users/{id}` | Yes | Update a user's grade (recruitment) |
 | `/api/comptabilite` | GET | `GET /api/comptabilite` | Yes | List accounting entries (in/out) |
 | `/api/comptabilite` | POST | `POST /api/comptabilite` | Yes | Create an entry (in or out) |

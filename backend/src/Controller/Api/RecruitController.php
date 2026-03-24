@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\DiscordGuildMemberResolver;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,14 +18,11 @@ final class RecruitController
     ) {
     }
 
-    /** Guild members without sheriff role (from Discord); fallback to DB users without grade if Discord returns empty. */
+    /** Guild members without a sheriff Discord role (from Discord API only; no DB fallback). */
     #[Route('', name: 'api_recruits_list', methods: ['GET'])]
     public function list(): JsonResponse
     {
         $list = $this->buildListFromDiscord();
-        if ($list === []) {
-            $list = $this->buildListFromDatabase();
-        }
 
         usort($list, static fn (array $a, array $b): int => strcasecmp($a['username'], $b['username']));
 
@@ -63,22 +59,5 @@ final class RecruitController
             }
         }
         return $list;
-    }
-
-    /**
-     * @return list<array{id: string, username: string, avatarUrl: ?string, grade: ?string, connectedToSite: bool}>
-     */
-    private function buildListFromDatabase(): array
-    {
-        $users = $this->userRepository->findWithoutGrade();
-        return array_map(static function (User $user): array {
-            return [
-                'id' => $user->getId()->toRfc4122(),
-                'username' => $user->getUsername(),
-                'avatarUrl' => $user->getAvatarUrl(),
-                'grade' => $user->getGrade(),
-                'connectedToSite' => true,
-            ];
-        }, $users);
     }
 }

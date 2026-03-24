@@ -89,20 +89,20 @@
   --sheriff-secondary-btn-text: var(--sheriff-paper-muted);
   --sheriff-secondary-btn-hover-bg: color-mix(in srgb, var(--sheriff-gold) 16%, transparent);
   --sheriff-secondary-btn-hover-border: color-mix(in srgb, var(--sheriff-gold) 55%, transparent);
-  /* Actions destructives — rouille / minerai (lisible, pas rouge UI pur) */
-  --sheriff-destructive-bg: rgba(95, 42, 38, 0.62);
-  --sheriff-destructive-text: #f2cbcb;
-  --sheriff-destructive-hover: rgba(115, 48, 42, 0.82);
-  /* RH — promotion (lanterne / bronze sur charbon) */
-  --sheriff-hr-promote-bg: rgba(181, 142, 88, 0.22);
-  --sheriff-hr-promote-text: #e8d4b4;
-  --sheriff-hr-promote-border: rgba(214, 180, 120, 0.2);
-  --sheriff-hr-promote-hover: rgba(198, 158, 100, 0.38);
-  /* RH — rétrogradation (fer forgé / rail) */
-  --sheriff-hr-demote-bg: color-mix(in srgb, var(--sheriff-tab-track) 86%, var(--sheriff-gold) 14%);
+  /* Actions destructives — oxyde froid / scories (pas bordeaux « saloon ») */
+  --sheriff-destructive-bg: rgba(72, 44, 40, 0.68);
+  --sheriff-destructive-text: #e8d8d5;
+  --sheriff-destructive-hover: rgba(88, 52, 46, 0.88);
+  /* RH — promotion : acier bleuté / zinc (aligné tab rail, pas bronze Valentine) */
+  --sheriff-hr-promote-bg: rgba(90, 108, 128, 0.28);
+  --sheriff-hr-promote-text: #d4dce8;
+  --sheriff-hr-promote-border: rgba(140, 158, 182, 0.28);
+  --sheriff-hr-promote-hover: rgba(100, 118, 138, 0.44);
+  /* RH — rétrogradation : rail plus sombre que promote (même famille ardoise) */
+  --sheriff-hr-demote-bg: color-mix(in srgb, var(--sheriff-charcoal) 22%, var(--sheriff-tab-track) 78%);
   --sheriff-hr-demote-text: var(--sheriff-paper-muted);
-  --sheriff-hr-demote-border: rgba(197, 199, 204, 0.16);
-  --sheriff-hr-demote-hover: color-mix(in srgb, var(--sheriff-tab-track) 74%, var(--sheriff-gold) 26%);
+  --sheriff-hr-demote-border: rgba(120, 132, 150, 0.22);
+  --sheriff-hr-demote-hover: color-mix(in srgb, var(--sheriff-charcoal) 12%, var(--sheriff-tab-track) 88%);
   /* Avertissement / config (ErrorState warning) */
   --sheriff-warning-bg: rgba(180, 83, 9, 0.2);
   --sheriff-warning-border: rgba(180, 83, 9, 0.5);
@@ -190,20 +190,20 @@
   --sheriff-secondary-btn-text: var(--sheriff-paper-muted);
   --sheriff-secondary-btn-hover-bg: color-mix(in srgb, var(--sheriff-gold) 12%, transparent);
   --sheriff-secondary-btn-hover-border: color-mix(in srgb, var(--sheriff-gold) 48%, transparent);
-  /* Actions destructives — brique / registre (sur papier vieilli) */
-  --sheriff-destructive-bg: rgba(130, 48, 40, 0.18);
-  --sheriff-destructive-text: #7a1f1a;
-  --sheriff-destructive-hover: rgba(130, 48, 40, 0.28);
-  /* RH — promotion (encre sépia / bronze sur registre) */
-  --sheriff-hr-promote-bg: rgba(120, 83, 38, 0.12);
-  --sheriff-hr-promote-text: #4a3418;
-  --sheriff-hr-promote-border: rgba(120, 83, 38, 0.24);
-  --sheriff-hr-promote-hover: rgba(120, 83, 38, 0.2);
-  /* RH — rétrogradation (ardoise, même famille que l’onglet) */
-  --sheriff-hr-demote-bg: color-mix(in srgb, var(--sheriff-tab-track) 92%, var(--sheriff-gold) 8%);
+  /* Actions destructives — oxyde sur papier (teinte plus froide que brique chaude) */
+  --sheriff-destructive-bg: rgba(95, 52, 48, 0.16);
+  --sheriff-destructive-text: #5c2824;
+  --sheriff-destructive-hover: rgba(95, 52, 48, 0.26);
+  /* RH — promotion : ardoise / encre bleu-noir (registre industriel, pas sépia) */
+  --sheriff-hr-promote-bg: rgba(30, 42, 56, 0.1);
+  --sheriff-hr-promote-text: #1a2430;
+  --sheriff-hr-promote-border: rgba(45, 58, 74, 0.32);
+  --sheriff-hr-promote-hover: rgba(30, 42, 56, 0.16);
+  /* RH — rétrogradation : gris rail plus neutre que promote */
+  --sheriff-hr-demote-bg: color-mix(in srgb, var(--sheriff-tab-track) 94%, var(--sheriff-charcoal) 6%);
   --sheriff-hr-demote-text: var(--sheriff-paper-muted);
-  --sheriff-hr-demote-border: rgba(61, 74, 92, 0.22);
-  --sheriff-hr-demote-hover: color-mix(in srgb, var(--sheriff-tab-track) 82%, var(--sheriff-gold) 18%);
+  --sheriff-hr-demote-border: rgba(61, 74, 92, 0.28);
+  --sheriff-hr-demote-hover: color-mix(in srgb, var(--sheriff-tab-track) 86%, var(--sheriff-gold) 14%);
   /* Avertissement */
   --sheriff-warning-bg: rgba(251, 191, 36, 0.2);
   --sheriff-warning-border: rgba(180, 83, 9, 0.45);
