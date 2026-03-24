@@ -95,14 +95,14 @@ export function RecruitRow({
         </span>
         {member.connectedToSite === false && (
           <span
-            className="shrink-0 rounded bg-sheriff-charcoal px-1.5 py-0.5 text-[10px] text-sheriff-paper-muted"
+            className="shrink-0 rounded border border-sheriff-gold/20 bg-sheriff-tab-track/35 px-1.5 py-0.5 text-[10px] text-sheriff-paper-muted"
             title="Membre du serveur Discord, pas encore connecté au site"
           >
             Pas encore connecté
           </span>
         )}
         {member.grade && (
-          <span className="shrink-0 rounded bg-sheriff-gold/20 px-2 py-0.5 text-xs text-sheriff-gold">
+          <span className="shrink-0 rounded border border-sheriff-gold/25 bg-sheriff-tab-active-bg/20 px-2 py-0.5 text-xs text-sheriff-paper">
             {member.grade}
           </span>
         )}
@@ -139,7 +139,7 @@ export function RecruitRow({
             type="button"
             disabled={isDisabled || member.grade === value}
             onClick={() => setGrade(value)}
-            className="sheriff-focus-ring sheriff-btn-save-soft rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
+            className="sheriff-focus-ring sheriff-btn-secondary rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
           >
             {loading === value ? "…" : label}
           </button>

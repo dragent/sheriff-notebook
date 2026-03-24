@@ -104,7 +104,7 @@ export function RecruitPopup({ trigger }: RecruitPopupProps) {
       <button
         type="button"
         onClick={handleOpen}
-        className="sheriff-focus-ring sheriff-btn-save-soft rounded-md px-3 py-2 text-sm font-semibold"
+        className="sheriff-focus-ring sheriff-btn-secondary rounded-md px-3 py-2 text-sm font-semibold"
       >
         {trigger ?? "Recrutement"}
       </button>
@@ -124,7 +124,7 @@ export function RecruitPopup({ trigger }: RecruitPopupProps) {
           <div
             ref={modalRef}
             tabIndex={-1}
-            className="relative max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-xl border border-sheriff-gold/50 bg-sheriff-wood shadow-2xl ring-1 ring-sheriff-gold/20"
+            className="relative max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-xl border border-sheriff-gold/35 bg-sheriff-wood shadow-2xl ring-1 ring-sheriff-gold/15"
           >
             <div className="flex items-center justify-between border-b border-sheriff-gold/40 bg-sheriff-charcoal/95 px-5 py-3.5">
               <h2
@@ -182,9 +182,9 @@ export function RecruitPopup({ trigger }: RecruitPopupProps) {
                     {notConnected.length > 0 && (
                       <section
                         aria-labelledby="recruit-not-connected-heading"
-                        className="rounded-lg border border-sheriff-gold/25 bg-sheriff-charcoal/40 p-4"
+                        className="rounded-lg border border-sheriff-gold/25 bg-sheriff-tab-track/20 p-4"
                       >
-                        <h3 id="recruit-not-connected-heading" className="mb-1.5 font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-gold/90">
+                        <h3 id="recruit-not-connected-heading" className="mb-1.5 font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-paper">
                           Pas encore connectés au site ({notConnected.length})
                         </h3>
                         <p className="mb-3 text-xs leading-relaxed text-sheriff-paper-muted">
@@ -200,9 +200,9 @@ export function RecruitPopup({ trigger }: RecruitPopupProps) {
                     {connected.length > 0 && (
                       <section
                         aria-labelledby="recruit-connected-heading"
-                        className="rounded-lg border border-sheriff-gold/25 bg-sheriff-charcoal/40 p-4"
+                        className="rounded-lg border border-sheriff-gold/25 bg-sheriff-tab-track/20 p-4"
                       >
-                        <h3 id="recruit-connected-heading" className="mb-3 font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-gold/90">
+                        <h3 id="recruit-connected-heading" className="mb-3 font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-paper">
                           Déjà connectés au site ({connected.length})
                         </h3>
                         <ul className="divide-y divide-sheriff-gold/20">
