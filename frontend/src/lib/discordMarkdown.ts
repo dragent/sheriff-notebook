@@ -12,6 +12,16 @@ const EMOJI_SHORTCODES: Record<string, string> = {
   ":stars:": "🌠",
   ":passport_control:": "🛂",
   ":identification_card:": "🪪",
+  ":scroll:": "📜",
+  ":pick:": "⛏️",
+  ":flag_us:": "🇺🇸",
+  ":round_pushpin:": "📍",
+  ":mag_right:": "🔎",
+  ":small_blue_diamond:": "🔹",
+  ":military_medal:": "🎖️",
+  ":mailbox:": "📫",
+  ":eagle:": "🦅",
+  ":scales:": "⚖️",
 };
 
 function escapeHtml(s: string): string {
@@ -51,6 +61,15 @@ export function discordMarkdownToHtml(markdown: string): string {
       }
       const content = applyEmojiShortcodes(trimmed.slice(2));
       blocks.push(`<h1 class="discord-h1">${content}</h1>`);
+      continue;
+    }
+
+    if (/^[━\-]{8,}$/.test(trimmed)) {
+      if (inList) {
+        blocks.push("</ul>");
+        inList = false;
+      }
+      blocks.push('<div class="discord-separator" aria-hidden="true"></div>');
       continue;
     }
 

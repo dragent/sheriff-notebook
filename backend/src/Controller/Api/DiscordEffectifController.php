@@ -43,6 +43,7 @@ final class DiscordEffectifController
             'effectif' => \count($sheriffs),
             'maxEffectif' => EffectifMessageBuilder::MAX_EFFECTIF,
             'date' => $now->format('d/m/Y'),
+            'recruitmentTelegrams' => $this->getRecruitmentTelegrams($sheriffs),
         ]);
     }
 
@@ -74,6 +75,7 @@ final class DiscordEffectifController
             'effectif' => \count($sheriffs),
             'maxEffectif' => EffectifMessageBuilder::MAX_EFFECTIF,
             'date' => $now->format('d/m/Y'),
+            'recruitmentTelegrams' => $this->getRecruitmentTelegrams($sheriffs),
         ]);
     }
 
@@ -129,5 +131,25 @@ final class DiscordEffectifController
         }
         $telegram = $record->getTelegramPrimary();
         return $telegram !== null && $telegram !== '' ? trim($telegram) : null;
+    }
+
+    /** @param list<array{username: string, grade: string, badge?: string, telegram?: string}> $sheriffs */
+    private function getRecruitmentTelegrams(array $sheriffs): array
+    {
+        $allowed = ['Sheriff de comté', 'Sheriff Adjoint', 'Sheriff adjoint'];
+        $telegrams = [];
+        foreach ($sheriffs as $sheriff) {
+            $grade = $sheriff['grade'] ?? null;
+            $telegram = $sheriff['telegram'] ?? null;
+            if (!\is_string($grade) || !\in_array($grade, $allowed, true)) {
+                continue;
+            }
+            if (!\is_string($telegram) || $telegram === '') {
+                continue;
+            }
+            $telegrams[] = $telegram;
+        }
+
+        return array_values(array_unique($telegrams));
     }
 }

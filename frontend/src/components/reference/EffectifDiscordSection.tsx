@@ -8,19 +8,79 @@ type EffectifResponse = {
   effectif?: number;
   maxEffectif?: number;
   date?: string;
+  recruitmentTelegrams?: string[];
   error?: string;
 };
 
 type EffectifDiscordSectionProps = {
   compact?: boolean;
+  variant?: "effectif" | "recruitment";
 };
 
-export function EffectifDiscordSection({ compact }: EffectifDiscordSectionProps = {}) {
+const RECRUITMENT_MARKDOWN_TEMPLATE = `━━━━━━━━━━━━━━━━━━
+##:scroll: COMMUNIQUÉ OFFICIEL
+━━━━━━━━━━━━━━━━━━
+
+### :pick: :flag_us: **BUREAU DU SHÉRIFF D’ANNESBURG RECRUTE**
+*{{AVAILABLE_PLACES}} places disponibles*
+:round_pushpin: Ville portuaire de Van Horn
+
+
+Annesburg est une ville forgée par le travail des mines et le passage constant d’hommes venus de tous horizons. Là où l’activité est intense, les troubles ne sont jamais loin.
+
+Pour maintenir l’ordre et protéger la ville, le **Bureau du Shériff d’Annesburg** ouvre ses rangs.
+
+Comme le faucon qui observe son territoire depuis les hauteurs, nos shériffs surveillent, enquêtent et agissent avec sang-froid lorsque la loi doit être appliquée.
+
+Notre mission repose sur trois piliers :
+**l’enquête**, **la communication entre shériffs des différents comtés**, et **le dialogue avec les civils afin de créer un véritable lien de confiance avec les habitants d’Annesburg**.
+
+━━━━━━━━━━━━━━━━━━
+### :mag_right: PROFILS RECHERCHÉS
+━━━━━━━━━━━━━━━━━━
+
+:small_blue_diamond: Citoyennes et citoyens âgés de minimum 18 ans
+:small_blue_diamond: Esprit d’observation et sens de l’analyse
+:small_blue_diamond: Capacité à mener des enquêtes et recueillir des témoignages
+:small_blue_diamond: Sang-froid, discipline et sens du devoir
+:small_blue_diamond: Respect de la loi et de l’autorité
+:small_blue_diamond: Capacité à échanger avec les habitants et représenter la loi avec respect
+
+━━━━━━━━━━━━━━━━━━
+### :military_medal: MISSIONS PRINCIPALES
+━━━━━━━━━━━━━━━━━━
+
+:star: Conduire des enquêtes criminelles
+:star: Recueillir et analyser les informations
+:star: Maintenir la communication avec les shériffs des autres comtés
+:star: Échanger avec les civils et renforcer la confiance entre la ville et la loi
+:star: Protéger les habitants et les travailleurs d’Annesburg
+
+━━━━━━━━━━━━━━━━━━
+### :round_pushpin: POSTULER
+━━━━━━━━━━━━━━━━━━
+
+:mailbox: **Envoyez votre télégramme au {{TELEGRAMS}} pour déposer votre candidature.**
+
+━━━━━━━━━━━━━━━━━━
+:eagle: **Observer comme le faucon.
+Comprendre avant d’agir.
+Servir la loi et protéger la ville.**
+
+:scales: La loi avant tout.
+:star: Annesburg sous protection.`;
+const RECRUITMENT_MAX_EFFECTIF = 15;
+
+export function EffectifDiscordSection({
+  compact,
+  variant = "effectif",
+}: EffectifDiscordSectionProps = {}) {
   const [data, setData] = useState<EffectifResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     fetch("/api/discord/effectif", { cache: "no-store" })
       .then(async (res) => {
         const body = (await res.json().catch(() => ({}))) as EffectifResponse;
@@ -35,7 +95,7 @@ export function EffectifDiscordSection({ compact }: EffectifDiscordSectionProps 
       })
       .catch(() => setData({ error: "Impossible de charger le message." }))
       .finally(() => setLoading(false));
-  }, []);
+  }, [variant]);
 
   const handleCopy = useCallback(() => {
     const text = data?.markdown ?? "";
@@ -46,7 +106,30 @@ export function EffectifDiscordSection({ compact }: EffectifDiscordSectionProps 
     });
   }, [data?.markdown]);
 
-  const markdown = data?.markdown ?? "";
+  const recruitmentTelegrams = useMemo(() => {
+    const list = data?.recruitmentTelegrams;
+    if (!Array.isArray(list)) return [];
+    return list.filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  }, [data?.recruitmentTelegrams]);
+
+  const recruitmentContactLabel = useMemo(() => {
+    if (recruitmentTelegrams.length === 0) return "2327";
+    return recruitmentTelegrams.join(" ou ");
+  }, [recruitmentTelegrams]);
+  const availablePlaces = useMemo(() => {
+    const currentEffectif = typeof data?.effectif === "number" ? data.effectif : 0;
+    return Math.max(0, RECRUITMENT_MAX_EFFECTIF - currentEffectif);
+  }, [data?.effectif]);
+
+  const markdown = useMemo(() => {
+    if (variant === "recruitment") {
+      return RECRUITMENT_MARKDOWN_TEMPLATE
+        .replace("{{AVAILABLE_PLACES}}", String(availablePlaces))
+        .replace("{{TELEGRAMS}}", recruitmentContactLabel);
+    }
+    return data?.markdown ?? "";
+  }, [availablePlaces, data?.markdown, recruitmentContactLabel, variant]);
+
   const discordHtml = useMemo(() => discordMarkdownToHtml(markdown), [markdown]);
   const date = data?.date;
   const dateRevisionLabel = useMemo(() => {
@@ -74,7 +157,11 @@ export function EffectifDiscordSection({ compact }: EffectifDiscordSectionProps 
     return (
       <section
         className="mt-8 rounded-lg border border-sheriff-gold/25 bg-sheriff-charcoal/40 p-4"
-        aria-label="Message effectif Discord"
+        aria-label={
+          variant === "effectif"
+            ? "Message effectif Discord"
+            : "Message de recrutement Discord"
+        }
       >
         <p className="text-sm text-sheriff-paper-muted">{error}</p>
       </section>
@@ -84,19 +171,27 @@ export function EffectifDiscordSection({ compact }: EffectifDiscordSectionProps 
   return (
     <section
       className={`space-y-4 rounded-lg border border-sheriff-gold/25 bg-sheriff-charcoal/40 p-4 ${compact ? "" : "mt-8"}`}
-      aria-label="Message effectif Discord"
+      aria-label={
+        variant === "effectif"
+          ? "Message effectif Discord"
+          : "Message de recrutement Discord"
+      }
     >
       <h2 className="font-heading text-lg font-semibold uppercase tracking-wider text-sheriff-gold">
-        Message effectif Discord
+        {variant === "effectif"
+          ? "Message effectif Discord"
+          : "Message de recrutement Discord"}
       </h2>
       <p className="text-sm text-sheriff-paper-muted">
-        Effectif à l&apos;instant t, date du jour.
+        {variant === "effectif"
+          ? "Effectif a l'instant t, date du jour."
+          : "Modele de message pour annoncer le recrutement sur Discord."}
       </p>
       <div
-        className="discord-message-preview rounded-lg border border-[#3f4147] bg-[#2b2d31] p-4 font-sans text-[15px] leading-relaxed text-[#f2f3f5] [&_.discord-h1]:mb-2 [&_.discord-h1]:mt-0 [&_.discord-h1]:text-lg [&_.discord-h1]:font-semibold [&_.discord-h1]:text-[#f2f3f5] [&_.discord-h3]:mb-1 [&_.discord-h3]:mt-3 [&_.discord-h3]:text-base [&_.discord-h3]:font-semibold [&_.discord-h3]:text-[#f2f3f5] [&_.discord-ul]:my-2 [&_.discord-ul]:list-disc [&_.discord-ul]:pl-5 [&_.discord-li]:my-0.5 [&_.discord-p]:my-1 [&_.discord-p]:text-[#b5bac1]"
+        className="discord-message-preview rounded-lg border border-[#3f4147] bg-[#2b2d31] p-4 font-sans text-[15px] leading-relaxed text-[#f2f3f5] [&_.discord-h1]:mb-2 [&_.discord-h1]:mt-0 [&_.discord-h1]:text-lg [&_.discord-h1]:font-semibold [&_.discord-h1]:text-[#f2f3f5] [&_.discord-h3]:mb-1 [&_.discord-h3]:mt-3 [&_.discord-h3]:text-base [&_.discord-h3]:font-semibold [&_.discord-h3]:text-[#f2f3f5] [&_.discord-ul]:my-2 [&_.discord-ul]:list-disc [&_.discord-ul]:pl-5 [&_.discord-li]:my-0.5 [&_.discord-p]:my-1 [&_.discord-p]:text-[#b5bac1] [&_.discord-separator]:my-3 [&_.discord-separator]:h-px [&_.discord-separator]:bg-[#4e5058]"
         dangerouslySetInnerHTML={{ __html: discordHtml }}
       />
-      {data?.effectif != null && data?.maxEffectif != null && (
+      {variant === "effectif" && data?.effectif != null && data?.maxEffectif != null && (
         <p className="text-sm text-sheriff-paper-muted">
           Effectif actuel : {data.effectif} / {data.maxEffectif} postes
           {dateRevisionLabel != null && ` — Dernière révision du registre : ${dateRevisionLabel}`}

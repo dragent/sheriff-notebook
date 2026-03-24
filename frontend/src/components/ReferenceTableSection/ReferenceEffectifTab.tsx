@@ -2,6 +2,10 @@
 
 import { EffectifDiscordSection } from "@/components/reference/EffectifDiscordSection";
 
-export function ReferenceEffectifTab() {
-  return <EffectifDiscordSection compact />;
+type ReferenceDiscordMessageTabProps = {
+  variant: "effectif" | "recruitment";
+};
+
+export function ReferenceDiscordMessageTab({ variant }: ReferenceDiscordMessageTabProps) {
+  return <EffectifDiscordSection compact variant={variant} />;
 }

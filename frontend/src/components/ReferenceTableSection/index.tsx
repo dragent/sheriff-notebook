@@ -27,7 +27,7 @@ import { ReferenceWeaponsTab } from "./ReferenceWeaponsTab";
 import { ReferenceItemsTab } from "./ReferenceItemsTab";
 import { ReferenceAccueilTab } from "./ReferenceAccueilTab";
 import { ReferenceFormationsTab } from "./ReferenceFormationsTab";
-import { ReferenceEffectifTab } from "./ReferenceEffectifTab";
+import { ReferenceDiscordMessageTab } from "./ReferenceEffectifTab";
 import { ReferenceWeaponsEditTab } from "./ReferenceWeaponsEditTab";
 import { ReferenceItemsEditTab } from "./ReferenceItemsEditTab";
 import { ReferenceAccueilEditTab } from "./ReferenceAccueilEditTab";
@@ -38,7 +38,13 @@ export { getAllWeaponNames, normalizeReferenceData };
 export type { WeaponKeys } from "./shared";
 export { WEAPON_TYPES } from "./shared";
 
-type ViewTabId = "armes" | "items" | "accueil" | "formations" | "effectif";
+type ViewTabId =
+  | "armes"
+  | "items"
+  | "accueil"
+  | "formations"
+  | "effectif"
+  | "recruitmentMessage";
 type EditTabId = "armes" | "items" | "accueil" | "formations";
 
 export function ReferenceTableSection({
@@ -239,6 +245,12 @@ export function ReferenceTableSection({
                 icon: IconEffectif,
               },
               {
+                id: "recruitmentMessage",
+                label: "Message de recrutement",
+                count: null,
+                icon: IconEffectif,
+              },
+              {
                 id: "accueil",
                 label: "Informations d'accueil",
                 count: homeCategoriesCount,
@@ -333,7 +345,16 @@ export function ReferenceTableSection({
             hidden={viewTab !== "effectif"}
             className="pt-4"
           >
-            <ReferenceEffectifTab />
+            <ReferenceDiscordMessageTab variant="effectif" />
+          </div>
+          <div
+            role="tabpanel"
+            id="view-panel-recruitmentMessage"
+            aria-labelledby="view-tab-recruitmentMessage"
+            hidden={viewTab !== "recruitmentMessage"}
+            className="pt-4"
+          >
+            <ReferenceDiscordMessageTab variant="recruitment" />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-sheriff-gold/20 pt-6">
