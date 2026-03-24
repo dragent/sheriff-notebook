@@ -63,6 +63,7 @@ async function getBackendHealth(): Promise<{ ok: boolean; error?: string }> {
  */
 async function getBackendDiscordDebug(): Promise<{
   connected: boolean;
+  guildId: string | null;
   guildName: string | null;
   message: string;
   unavailable?: boolean;
@@ -70,16 +71,35 @@ async function getBackendDiscordDebug(): Promise<{
   const base = getBackendBase();
   try {
     const res = await fetch(`${base}/api/debug/discord`, { cache: "no-store" });
-    if (res.status === 404) return { connected: false, guildName: null, message: "Route debug Discord désactivée (env prod).", unavailable: true };
-    if (!res.ok) return { connected: false, guildName: null, message: `HTTP ${res.status}` };
-    const data = (await res.json()) as { connected?: boolean; guildName?: string | null; message?: string };
+    if (res.status === 404)
+      return {
+        connected: false,
+        guildId: null,
+        guildName: null,
+        message: "Route debug Discord désactivée (env prod).",
+        unavailable: true,
+      };
+    if (!res.ok) return { connected: false, guildId: null, guildName: null, message: `HTTP ${res.status}` };
+    const data = (await res.json()) as {
+      connected?: boolean;
+      guildId?: string | null;
+      guildName?: string | null;
+      message?: string;
+    };
     return {
       connected: data.connected === true,
+      guildId: typeof data.guildId === "string" ? data.guildId : null,
       guildName: data.guildName ?? null,
       message: typeof data.message === "string" ? data.message : "—",
     };
   } catch (e) {
-    return { connected: false, guildName: null, message: e instanceof Error ? e.message : String(e), unavailable: true };
+    return {
+      connected: false,
+      guildId: null,
+      guildName: null,
+      message: e instanceof Error ? e.message : String(e),
+      unavailable: true,
+    };
   }
 }
 
@@ -167,7 +187,15 @@ export default async function DebugJwtPage() {
               />
               {discord.connected ? (
                 <span className="text-green-400">
-                  Le backend peut accéder au serveur Discord. Serveur : <strong>{discord.guildName ?? "—"}</strong>. Les nicknames du serveur seront utilisés pour l’affichage.
+                  Le backend peut accéder au serveur Discord. ID configuré (<code className="rounded bg-black/20 px-1">DISCORD_GUILD_ID</code>) :{" "}
+                  <strong className="font-mono">{discord.guildId ?? "—"}</strong>
+                  {discord.guildName != null && discord.guildName !== "" ? (
+                    <>
+                      {" "}
+                      — nom : <strong>{discord.guildName}</strong>
+                    </>
+                  ) : null}
+                  . Les nicknames du serveur seront utilisés pour l’affichage ; le recrutement utilise ce même serveur.
                 </span>
               ) : (
                 <span className="text-red-400">

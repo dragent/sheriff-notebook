@@ -34,6 +34,7 @@ services:
 
     App\Controller\Api\DiscordDebugController:
         arguments:
+            $guildId: '%env(default:discord_guild_id_default:DISCORD_GUILD_ID)%'
             $appEnv: '%env(APP_ENV)%'
 
     App\Controller\Api\JwtSecretDebugController:

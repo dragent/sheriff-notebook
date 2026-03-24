@@ -169,7 +169,7 @@ export function RecruitPopup({ trigger }: RecruitPopupProps) {
                       Aucune personne à recruter
                     </p>
                     <p className="max-w-sm text-xs leading-relaxed text-sheriff-paper-muted">
-                      Les membres Discord sans rôle sheriff apparaîtront ici. Vérifiez que le bot est sur le serveur avec l&apos;intent « Server Members ».
+                      Les membres du serveur sans rôle Deputy à Sheriff de comté (nom identique aux grades du site) apparaissent ici. Vérifiez le bot et l&apos;intent « Server Members ».
                     </p>
                   </div>
                 </div>

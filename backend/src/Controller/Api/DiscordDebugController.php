@@ -16,6 +16,8 @@ final class DiscordDebugController
 {
     public function __construct(
         private readonly DiscordGuildMemberResolver $discordGuildMemberResolver,
+        /** Same ID as used for /api/recruits member listing (DiscordGuildMemberResolver). */
+        private readonly string $guildId,
         private readonly string $appEnv = 'prod',
     ) {
     }
@@ -31,9 +33,10 @@ final class DiscordDebugController
 
         return new JsonResponse([
             'connected' => $result['ok'],
+            'guildId' => $this->guildId !== '' ? $this->guildId : null,
             'guildName' => $result['guildName'],
             'message' => $result['ok']
-                ? 'Le backend peut accéder au serveur Discord. Les pseudos du serveur (nicknames) seront utilisés.'
+                ? 'Le backend peut accéder au serveur Discord. Les pseudos du serveur (nicknames) seront utilisés. Le recrutement liste les membres de ce même serveur (sans grade Deputy…Sheriff de comté).'
                 : $result['error'],
         ]);
     }

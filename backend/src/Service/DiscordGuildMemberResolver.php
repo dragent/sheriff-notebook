@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Entity\User;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
@@ -62,17 +63,32 @@ final class DiscordGuildMemberResolver
         return $roles;
     }
 
-    /** @return list<string> */
+    /**
+     * Discord role IDs whose names match an in-app sheriff grade (Deputy … Sheriff de comté).
+     * Used for recruitment filtering and when clearing sheriff roles from a member.
+     *
+     * @return list<string>
+     */
     public function getSheriffRoleIds(): array
     {
-        $roles = $this->listGuildRoles();
+        if ($this->guildId === '' || $this->botToken === '') {
+            return [];
+        }
+
+        $gradeNames = User::getSheriffGradeValues();
+        $guildRoles = $this->listGuildRoles();
         $ids = [];
-        foreach ($roles as $role) {
-            if (stripos($role['name'], 'sheriff') !== false) {
-                $ids[] = $role['id'];
+        foreach ($guildRoles as $role) {
+            $name = trim($role['name']);
+            foreach ($gradeNames as $grade) {
+                if (strcasecmp($name, $grade) === 0) {
+                    $ids[] = $role['id'];
+                    break;
+                }
             }
         }
-        return $ids;
+
+        return array_values(array_unique($ids));
     }
 
     /** @return list<array{discord_id: string, username: string, avatar_url: ?string, roles: array<string>}> */
