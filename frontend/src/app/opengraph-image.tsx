@@ -19,8 +19,8 @@ export default async function OpengraphImage() {
           justifyContent: "space-between",
           padding: "72px",
           background:
-            "radial-gradient(1200px 630px at 15% 50%, rgba(207, 165, 74, 0.18), rgba(0, 0, 0, 0) 55%), radial-gradient(900px 500px at 70% 40%, rgba(207, 165, 74, 0.12), rgba(0, 0, 0, 0) 60%), linear-gradient(135deg, #0a0a0a 0%, #141414 55%, #0b0b0b 100%)",
-          color: "#f1eadb",
+            "radial-gradient(1100px 600px at 14% 55%, rgba(197, 199, 204, 0.14), rgba(0, 0, 0, 0) 56%), radial-gradient(900px 520px at 72% 40%, rgba(30, 36, 46, 0.55), rgba(0, 0, 0, 0) 62%), linear-gradient(135deg, #0f1012 0%, #13151c 55%, #0f1012 100%)",
+          color: "#e6e7ea",
           fontFamily:
             'ui-serif, "Georgia", "Times New Roman", Times, serif',
         }}
@@ -42,7 +42,7 @@ export default async function OpengraphImage() {
               fontSize: 30,
               lineHeight: 1.25,
               maxWidth: 700,
-              color: "rgba(241, 234, 219, 0.86)",
+              color: "rgba(230, 231, 234, 0.86)",
             }}
           >
             Registre officiel du bureau du shérif d&apos;Annesburg. Dossiers,
@@ -57,12 +57,12 @@ export default async function OpengraphImage() {
               alignItems: "center",
               gap: 10,
               fontSize: 22,
-              color: "rgba(207, 165, 74, 0.95)",
+              color: "rgba(197, 199, 204, 0.95)",
             }}
           >
             <span style={{ fontWeight: 600 }}>sheriff.annesburg</span>
-            <span style={{ color: "rgba(241, 234, 219, 0.35)" }}>•</span>
-            <span style={{ color: "rgba(241, 234, 219, 0.75)" }}>
+            <span style={{ color: "rgba(230, 231, 234, 0.35)" }}>•</span>
+            <span style={{ color: "rgba(230, 231, 234, 0.72)" }}>
               Dossiers & enquêtes
             </span>
           </div>
@@ -74,8 +74,8 @@ export default async function OpengraphImage() {
             height: 380,
             borderRadius: 28,
             background:
-              "linear-gradient(180deg, rgba(207, 165, 74, 0.24), rgba(207, 165, 74, 0.06))",
-            border: "1px solid rgba(207, 165, 74, 0.38)",
+              "linear-gradient(180deg, rgba(30, 36, 46, 0.92), rgba(19, 21, 28, 0.86))",
+            border: "1px solid rgba(197, 199, 204, 0.38)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
