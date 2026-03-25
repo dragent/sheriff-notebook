@@ -19,7 +19,7 @@ export default async function OpengraphImage() {
           justifyContent: "space-between",
           padding: "72px",
           background:
-            "radial-gradient(1100px 600px at 14% 55%, rgba(197, 199, 204, 0.14), rgba(0, 0, 0, 0) 56%), radial-gradient(900px 520px at 72% 40%, rgba(30, 36, 46, 0.55), rgba(0, 0, 0, 0) 62%), linear-gradient(135deg, #0f1012 0%, #13151c 55%, #0f1012 100%)",
+            "radial-gradient(1100px 640px at 18% 48%, rgba(30, 36, 46, 0.85), rgba(0, 0, 0, 0) 58%), radial-gradient(900px 520px at 78% 42%, rgba(54, 61, 74, 0.55), rgba(0, 0, 0, 0) 62%), radial-gradient(900px 520px at 12% 70%, rgba(197, 199, 204, 0.14), rgba(0, 0, 0, 0) 60%), linear-gradient(135deg, #0f1012 0%, #1e242e 52%, #0f1012 100%)",
           color: "#e6e7ea",
           fontFamily:
             'ui-serif, "Georgia", "Times New Roman", Times, serif',
@@ -74,11 +74,13 @@ export default async function OpengraphImage() {
             height: 380,
             borderRadius: 28,
             background:
-              "linear-gradient(180deg, rgba(30, 36, 46, 0.92), rgba(19, 21, 28, 0.86))",
+              "linear-gradient(180deg, rgba(30, 36, 46, 0.94), rgba(15, 16, 18, 0.9))",
             border: "1px solid rgba(197, 199, 204, 0.38)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            padding: 28,
+            overflow: "visible",
             boxShadow:
               "0 22px 60px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(0,0,0,0.35)",
           }}
@@ -87,8 +89,8 @@ export default async function OpengraphImage() {
           <img
             alt=""
             src={logoSrc}
-            width={330}
-            height={330}
+            width={300}
+            height={300}
             style={{
               objectFit: "contain",
               filter:
