@@ -28,6 +28,21 @@ export const metadata: Metadata = {
   title: "Bureau du Shérif — Annesburg",
   description:
     "Registre officiel du bureau du shérif d'Annesburg. Dossiers, enquêtes et communication intercomté.",
+  metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
+  openGraph: {
+    type: "website",
+    title: "Bureau du Shérif — Annesburg",
+    description:
+      "Registre officiel du bureau du shérif d'Annesburg. Dossiers, enquêtes et communication intercomté.",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bureau du Shérif — Annesburg",
+    description:
+      "Registre officiel du bureau du shérif d'Annesburg. Dossiers, enquêtes et communication intercomté.",
+    images: ["/opengraph-image"],
+  },
   icons: {
     icon: [{ url: "/favicon.png", type: "image/png" }],
     apple: [{ url: "/favicon.png", type: "image/png" }],
