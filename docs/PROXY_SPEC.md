@@ -23,6 +23,10 @@ This document describes the Next.js API routes that proxy to the Symfony backend
 | `/api/destructions/[id]` | PATCH | `PATCH /api/destructions/{id}` | Yes | Single validation: success or lost |
 | `/api/coffres` | GET | `GET /api/coffres` | Yes | Bureau inventory (ammo + accessories) |
 | `/api/coffres` | PATCH | `PATCH /api/coffres` | Yes | Update a quantity (section + type + quantity) |
+| `/api/bureau-weapons` | GET | `GET /api/bureau-weapons` | Yes | Bureau weapons census (list) |
+| `/api/bureau-weapons` | POST | `POST /api/bureau-weapons` | Yes | Bureau weapons census (create) |
+| `/api/bureau-weapons/[id]` | PATCH | `PATCH /api/bureau-weapons/{id}` | Yes | Bureau weapons census (update) |
+| `/api/bureau-weapons/[id]` | DELETE | `DELETE /api/bureau-weapons/{id}` | Yes | Bureau weapons census (delete) |
 | `/api/discord/effectif` | GET | `GET /api/discord/effectif` | Yes | Roster message preview (markdown, count, date) — County Sheriff / Deputy |
 | `/api/discord/effectif/send` | POST | `POST /api/discord/effectif/send` | Yes | Publish roster message to Discord channel — County Sheriff / Deputy |
 
@@ -91,5 +95,5 @@ Output: `console.info` for success, `console.error` for error; one line = one JS
 ## 4. Implementation
 
 - **Shared module**: `frontend/src/lib/proxyBackend.ts` — `proxyRequest()`, `getBackendBase()`, `createProxyContext()`, and logger `proxyLog()`.
-- **Routes**: `api/me`, `api/reference`, `api/services/[id]`, `api/recruits`, `api/users/[id]`, `api/comptabilite`, `api/coffres`, `api/saisies`, `api/destructions`, `api/destructions/[id]` use this module to avoid duplication and ensure the spec (error + log) is followed.
+- **Routes**: `api/me`, `api/reference`, `api/services/[id]`, `api/recruits`, `api/users/[id]`, `api/comptabilite`, `api/coffres`, `api/bureau-weapons`, `api/bureau-weapons/[id]`, `api/saisies`, `api/destructions`, `api/destructions/[id]` use this module to avoid duplication and ensure the spec (error + log) is followed.
 - **Updating this document**: whenever a new proxy route is added or behaviour changes (codes, log fields).

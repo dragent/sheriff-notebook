@@ -146,27 +146,55 @@ export function CoffresView({
     }
   }, [initialData]);
 
-  // Chargement des quantités inventaire / accessoires depuis l’API au montage
+  // Chargement inventaire + accessoires + recensement depuis l’API au montage
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/coffres", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
-      .then((data: { inventaire?: InventaireMunition[]; accessoiresBureau?: AccessoireBureau[] }) => {
+    Promise.all([
+      fetch("/api/coffres", { cache: "no-store" }).then((res) =>
+        res.ok ? res.json() : Promise.reject(new Error(String(res.status)))
+      ),
+      fetch("/api/bureau-weapons", { cache: "no-store" }).then((res) =>
+        res.ok ? res.json() : Promise.reject(new Error(String(res.status)))
+      ),
+    ])
+      .then(([coffresData, weaponsData]: [
+        { inventaire?: InventaireMunition[]; accessoiresBureau?: AccessoireBureau[] },
+        Array<{
+          id: string;
+          model: string;
+          serialNumber: string;
+          onLoan: boolean;
+          inChest: boolean;
+          hasScope: boolean;
+          comments: string | null;
+        }>,
+      ]) => {
         if (cancelled) return;
         setState((s) => ({
           ...s,
           inventaire:
-            Array.isArray(data.inventaire) && data.inventaire.length > 0
-              ? data.inventaire
+            Array.isArray(coffresData.inventaire) && coffresData.inventaire.length > 0
+              ? coffresData.inventaire
               : s.inventaire,
           accessoiresBureau:
-            Array.isArray(data.accessoiresBureau) && data.accessoiresBureau.length > 0
-              ? data.accessoiresBureau
+            Array.isArray(coffresData.accessoiresBureau) && coffresData.accessoiresBureau.length > 0
+              ? coffresData.accessoiresBureau
               : s.accessoiresBureau,
+          recensement: Array.isArray(weaponsData)
+            ? weaponsData.map((w) => ({
+                id: w.id,
+                modele: w.model,
+                numeroSerie: w.serialNumber,
+                pret: !!w.onLoan,
+                coffre: !!w.inChest,
+                lunette: !!w.hasScope,
+                assigne: (w.comments ?? "").trim(),
+              }))
+            : s.recensement,
         }));
       })
       .catch(() => {
-        // Erreur silencieuse ; les valeurs par défaut (0) restent affichées
+        // Erreur silencieuse ; les valeurs par défaut restent affichées
       });
     return () => {
       cancelled = true;
@@ -223,16 +251,50 @@ export function CoffresView({
     }
   }, []);
 
-  const addRecensement = useCallback(
-    (row: Omit<ArmeRecensement, "id">) => {
+  const addRecensement = useCallback(async (row: Omit<ArmeRecensement, "id">) => {
+    try {
+      const res = await fetch("/api/bureau-weapons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: row.modele,
+          serialNumber: row.numeroSerie,
+          onLoan: row.pret,
+          inChest: row.coffre,
+          hasScope: row.lunette,
+          comments: row.assigne || null,
+        }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const created = (await res.json()) as {
+        id: string;
+        model: string;
+        serialNumber: string;
+        onLoan: boolean;
+        inChest: boolean;
+        hasScope: boolean;
+        comments: string | null;
+      };
       setState((s) => ({
         ...s,
-        recensement: [...s.recensement, { ...row, id: crypto.randomUUID() }],
+        recensement: [
+          ...s.recensement,
+          {
+            id: created.id,
+            modele: created.model,
+            numeroSerie: created.serialNumber,
+            pret: !!created.onLoan,
+            coffre: !!created.inChest,
+            lunette: !!created.hasScope,
+            assigne: (created.comments ?? "").trim(),
+          },
+        ],
       }));
       setModalRecensement(false);
-    },
-    []
-  );
+    } catch {
+      // Erreur silencieuse
+    }
+  }, []);
 
   const updateRecensement = useCallback((id: string, patch: Partial<ArmeRecensement>) => {
     setState((s) => ({
@@ -241,11 +303,38 @@ export function CoffresView({
     }));
   }, []);
 
-  const removeRecensement = useCallback((id: string) => {
-    setState((s) => ({
-      ...s,
-      recensement: s.recensement.filter((r) => r.id !== id),
-    }));
+  const persistRecensementPatch = useCallback(async (id: string, patch: Partial<ArmeRecensement>) => {
+    const payload: Record<string, unknown> = {};
+    if (typeof patch.modele === "string") payload.model = patch.modele;
+    if (typeof patch.numeroSerie === "string") payload.serialNumber = patch.numeroSerie;
+    if (typeof patch.pret === "boolean") payload.onLoan = patch.pret;
+    if (typeof patch.coffre === "boolean") payload.inChest = patch.coffre;
+    if (typeof patch.lunette === "boolean") payload.hasScope = patch.lunette;
+    if (typeof patch.assigne === "string") payload.comments = patch.assigne || null;
+
+    try {
+      const res = await fetch(`/api/bureau-weapons/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+    } catch {
+      // Erreur silencieuse
+    }
+  }, []);
+
+  const removeRecensement = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/bureau-weapons/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(String(res.status));
+      setState((s) => ({
+        ...s,
+        recensement: s.recensement.filter((r) => r.id !== id),
+      }));
+    } catch {
+      // Erreur silencieuse
+    }
   }, []);
 
   const recensementFiltre = useMemo(() => {
@@ -436,7 +525,11 @@ export function CoffresView({
               <input
                 type="checkbox"
                 checked={row.pret}
-                onChange={(e) => updateRecensement(row.id, { pret: e.target.checked })}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  updateRecensement(row.id, { pret: next });
+                  void persistRecensementPatch(row.id, { pret: next });
+                }}
                 className="sheriff-checkbox"
                 aria-label="Prêtée"
               />
@@ -445,7 +538,11 @@ export function CoffresView({
               <input
                 type="checkbox"
                 checked={row.coffre}
-                onChange={(e) => updateRecensement(row.id, { coffre: e.target.checked })}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  updateRecensement(row.id, { coffre: next });
+                  void persistRecensementPatch(row.id, { coffre: next });
+                }}
                 className="sheriff-checkbox"
                 aria-label="En coffre"
               />
@@ -454,7 +551,11 @@ export function CoffresView({
               <input
                 type="checkbox"
                 checked={row.lunette}
-                onChange={(e) => updateRecensement(row.id, { lunette: e.target.checked })}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  updateRecensement(row.id, { lunette: next });
+                  void persistRecensementPatch(row.id, { lunette: next });
+                }}
                 className="sheriff-checkbox"
                 aria-label="Lunette"
               />
@@ -464,7 +565,10 @@ export function CoffresView({
                 <OptionSelect
                   id={`assigne-${row.id}`}
                   value={row.assigne}
-                  onChange={(v) => updateRecensement(row.id, { assigne: v })}
+                  onChange={(v) => {
+                    updateRecensement(row.id, { assigne: v });
+                    void persistRecensementPatch(row.id, { assigne: v });
+                  }}
                   options={sheriffs.map((s) => ({ value: s.username, label: s.username }))}
                   placeholder="Non assignée"
                   aria-label="Assigné à"
@@ -476,6 +580,7 @@ export function CoffresView({
                   type="text"
                   value={row.assigne}
                   onChange={(e) => updateRecensement(row.id, { assigne: e.target.value })}
+                  onBlur={(e) => void persistRecensementPatch(row.id, { assigne: e.target.value })}
                   placeholder="Nom"
                   className={`${SHERIFF_FIELD_DENSE} min-w-0 max-w-[140px]`}
                   aria-label="Assigné à"
@@ -485,7 +590,7 @@ export function CoffresView({
             <td className={TABLE_CELL}>
               <button
                 type="button"
-                onClick={() => removeRecensement(row.id)}
+                onClick={() => void removeRecensement(row.id)}
                 className="sheriff-focus-ring sheriff-btn-destructive-icon rounded p-1.5"
                 aria-label="Supprimer"
                 title="Supprimer"
@@ -520,7 +625,7 @@ function ModalRecensement({
   sheriffs = [],
 }: {
   onClose: () => void;
-  onSave: (row: Omit<ArmeRecensement, "id">) => void;
+  onSave: (row: Omit<ArmeRecensement, "id">) => void | Promise<void>;
   weaponCategories?: WeaponCategoryOption[];
   sheriffs?: SheriffOption[];
 }) {
@@ -542,12 +647,12 @@ function ModalRecensement({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const m = modele.trim();
     const num = numeroSerie.trim();
     if (!m || !num) return;
-    onSave({
+    await onSave({
       modele: m,
       numeroSerie: num,
       pret,
