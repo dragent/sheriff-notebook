@@ -28,6 +28,10 @@ export const metadata: Metadata = {
   title: "Bureau du Shérif — Annesburg",
   description:
     "Registre officiel du bureau du shérif d'Annesburg. Dossiers, enquêtes et communication intercomté.",
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    apple: [{ url: "/favicon.png", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
