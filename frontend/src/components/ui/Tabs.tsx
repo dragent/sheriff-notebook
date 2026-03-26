@@ -35,7 +35,7 @@ const TAB_ACTIVE = "bg-sheriff-tab-active-bg text-sheriff-tab-active-text shadow
 const TAB_INACTIVE =
   "text-sheriff-paper-muted hover:bg-sheriff-gold/10 hover:text-sheriff-gold";
 const LIST_CLASS =
-  "inline-flex max-w-full flex-wrap gap-1.5 overflow-x-auto rounded-lg border border-sheriff-gold/30 bg-sheriff-tab-track p-1 sm:gap-2 sm:p-1.5 text-sm sheriff-panel-shadow self-start";
+  "inline-flex max-w-full flex-nowrap gap-1.5 overflow-x-auto rounded-lg border border-sheriff-gold/30 bg-sheriff-tab-track p-1 sm:gap-2 sm:p-1.5 text-sm sheriff-panel-shadow self-start sheriff-table-scroll";
 
 /**
  * Barre d'onglets harmonisée (accueil, référentiel).
@@ -53,7 +53,7 @@ export function Tabs({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`sheriff-scrollbar-hide ${LIST_CLASS} ${className}`.trim()}
+      className={`${LIST_CLASS} ${className}`.trim()}
     >
       {tabs.map((tab) => {
         const isActive = value === tab.id;
