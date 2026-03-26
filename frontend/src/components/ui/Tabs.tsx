@@ -30,12 +30,12 @@ type TabsProps = {
 };
 
 const TAB_BASE =
-  "sheriff-focus-ring flex shrink-0 items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition";
+  "sheriff-focus-ring flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition sm:gap-2 sm:px-3 sm:text-sm";
 const TAB_ACTIVE = "bg-sheriff-tab-active-bg text-sheriff-tab-active-text shadow-sm";
 const TAB_INACTIVE =
   "text-sheriff-paper-muted hover:bg-sheriff-gold/10 hover:text-sheriff-gold";
 const LIST_CLASS =
-  "inline-flex max-w-full flex-wrap gap-2 overflow-x-auto rounded-lg border border-sheriff-gold/30 bg-sheriff-tab-track p-1.5 text-sm sheriff-panel-shadow";
+  "inline-flex max-w-full flex-wrap gap-1.5 overflow-x-auto rounded-lg border border-sheriff-gold/30 bg-sheriff-tab-track p-1 sm:gap-2 sm:p-1.5 text-sm sheriff-panel-shadow self-start";
 
 /**
  * Barre d'onglets harmonisée (accueil, référentiel).
