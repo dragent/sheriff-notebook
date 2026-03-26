@@ -19,7 +19,7 @@ type EffectifDiscordSectionProps = {
 };
 
 const RECRUITMENT_MARKDOWN_TEMPLATE = `━━━━━━━━━━━━━━━━━━
-##:scroll: COMMUNIQUÉ OFFICIEL
+## :scroll: COMMUNIQUÉ OFFICIEL
 ━━━━━━━━━━━━━━━━━━
 
 ### :pick: :flag_us: **BUREAU DU SHÉRIFF D’ANNESBURG RECRUTE**
