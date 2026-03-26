@@ -185,10 +185,10 @@ export function RecruitPopup({ trigger }: RecruitPopupProps) {
                         className="rounded-lg border border-sheriff-gold/25 bg-sheriff-tab-track/20 p-4"
                       >
                         <h3 id="recruit-not-connected-heading" className="mb-1.5 font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-paper">
-                          Pas encore connectés au site ({notConnected.length})
+                          Pas encore de compte sur le site ({notConnected.length})
                         </h3>
                         <p className="mb-3 text-xs leading-relaxed text-sheriff-paper-muted">
-                          Attribuez un grade ; un compte sera créé à leur première connexion.
+                          Attribuez un grade : ils n’ont pas besoin de se connecter avant. Un compte sera créé automatiquement à leur première connexion.
                         </p>
                         <ul className="divide-y divide-sheriff-gold/20">
                           {notConnected.map((member) => (

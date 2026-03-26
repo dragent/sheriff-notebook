@@ -96,9 +96,9 @@ export function RecruitRow({
         {member.connectedToSite === false && (
           <span
             className="shrink-0 rounded border border-sheriff-gold/20 bg-sheriff-tab-track/35 px-1.5 py-0.5 text-[10px] text-sheriff-paper-muted"
-            title="Membre du serveur Discord, pas encore connecté au site"
+            title="Membre du serveur Discord : peut être recruté sans s'être connecté au site. Un compte sera créé automatiquement."
           >
-            Pas encore connecté
+            Compte à créer
           </span>
         )}
         {member.grade && (
