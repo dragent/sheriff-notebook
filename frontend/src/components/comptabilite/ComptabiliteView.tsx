@@ -35,8 +35,12 @@ function formatSomme(value: number): string {
 const TABLE_HEAD_CLASS =
   "sheriff-table-head-shadow sticky top-0 z-10 border-b border-sheriff-gold/40 bg-sheriff-charcoal/95 px-3 py-2.5 text-left font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-gold";
 const TABLE_CELL_CLASS = "border-b border-sheriff-gold/15 px-3 py-2.5 text-sm text-sheriff-paper-muted";
+const TABLE_SUM_CLASS = `${TABLE_CELL_CLASS} text-right tabular-nums whitespace-nowrap`;
 const TABLE_ROW_ALT = "bg-sheriff-charcoal/25";
-const TABLE_TOTAL_ROW = "border-t-2 border-sheriff-gold/40 bg-sheriff-charcoal/60 font-medium text-sheriff-paper";
+const TABLE_TOTAL_ROW =
+  "border-t-2 border-sheriff-gold/40 bg-linear-to-b from-sheriff-charcoal/55 to-sheriff-charcoal/75 font-medium text-sheriff-paper";
+const TABLE_TOTAL_LABEL = "px-4 py-3.5 text-right align-middle font-heading text-[11px] font-semibold uppercase tracking-widest text-sheriff-gold/90";
+const TABLE_TOTAL_AMOUNT = "min-w-[8.5rem] px-4 py-3.5 text-right align-middle font-heading text-base font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-lg";
 
 /**
  * Icône étoile devant le nom du sheriff.
@@ -83,26 +87,26 @@ export function ComptabiliteView({ data }: ComptabiliteViewProps) {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(200px,280px)_1fr_1fr]">
       <div className="flex flex-col gap-4 lg:gap-5">
-        <div className="sheriff-card rounded-lg border border-sheriff-gold/30 bg-sheriff-charcoal/60 px-5 py-5 transition-shadow">
-          <p className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold/90">
+        <div className="sheriff-card relative overflow-hidden rounded-xl border border-sheriff-gold/25 bg-sheriff-charcoal/55 px-5 py-5 pl-6 shadow-[inset_3px_0_0_0_rgba(197,199,204,0.35)] transition-shadow">
+          <p className="font-heading text-[11px] font-semibold uppercase tracking-widest text-sheriff-gold/90">
             Solde du bureau
           </p>
-          <p className="mt-1 text-[10px] uppercase tracking-wider text-sheriff-paper-muted/80">1er mois</p>
+          <p className="mt-1.5 text-[10px] font-medium uppercase tracking-widest text-sheriff-paper-muted/75">1er mois</p>
           <p
-            className={`mt-3 font-heading text-xl tabular-nums text-sheriff-paper sm:text-2xl ${
+            className={`mt-4 font-heading text-2xl tabular-nums tracking-tight whitespace-nowrap text-sheriff-paper sm:text-[1.65rem] ${
               !soldePremierPositive ? "text-sheriff-sortie" : ""
             }`}
           >
             {formatSomme(soldePremierMois)}
           </p>
         </div>
-        <div className="sheriff-card rounded-lg border border-sheriff-gold/40 bg-sheriff-charcoal/70 px-5 py-5 transition-shadow">
-          <p className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold/90">
+        <div className="sheriff-card relative overflow-hidden rounded-xl border border-sheriff-gold/35 bg-sheriff-charcoal/65 px-5 py-5 pl-6 shadow-[inset_3px_0_0_0_rgba(197,199,204,0.5)] transition-shadow">
+          <p className="font-heading text-[11px] font-semibold uppercase tracking-widest text-sheriff-gold/90">
             Solde du bureau
           </p>
-          <p className="mt-1 text-[10px] uppercase tracking-wider text-sheriff-paper-muted/80">Total</p>
+          <p className="mt-1.5 text-[10px] font-medium uppercase tracking-widest text-sheriff-paper-muted/75">Total</p>
           <p
-            className={`mt-3 font-heading text-xl font-semibold tabular-nums text-sheriff-paper sm:text-2xl ${
+            className={`mt-4 font-heading text-2xl font-semibold tabular-nums tracking-tight whitespace-nowrap text-sheriff-paper sm:text-[1.65rem] ${
               !soldeTotalPositive ? "text-sheriff-sortie" : ""
             }`}
           >
@@ -111,13 +115,19 @@ export function ComptabiliteView({ data }: ComptabiliteViewProps) {
         </div>
       </div>
 
-      <div className="sheriff-panel-shadow overflow-hidden rounded-lg border border-sheriff-gold/30 bg-sheriff-wood">
-        <h2 className="flex items-center gap-2 border-b border-sheriff-entree/30 bg-sheriff-charcoal/90 px-4 py-3 font-heading text-sm font-semibold uppercase tracking-wider text-sheriff-entree">
+      <div className="sheriff-panel-shadow overflow-hidden rounded-xl border border-sheriff-gold/30 bg-sheriff-wood">
+        <h2 className="flex items-center gap-2 border-b border-sheriff-entree/25 bg-linear-to-r from-sheriff-charcoal/95 to-sheriff-charcoal/85 px-4 py-3.5 font-heading text-sm font-semibold uppercase tracking-wider text-sheriff-entree">
           <span className="h-1.5 w-1.5 rounded-full bg-sheriff-entree" aria-hidden />
           Entrées
         </h2>
         <div className="sheriff-table-scroll max-h-[420px] overflow-y-auto">
-          <table className="w-full min-w-[320px] border-collapse">
+          <table className="w-full min-w-[320px] table-fixed border-collapse">
+            <colgroup>
+              <col className="w-[14%]" />
+              <col className="w-[22%]" />
+              <col />
+              <col className="w-[min(28%,9.5rem)]" />
+            </colgroup>
             <thead>
               <tr>
                 <th className={TABLE_HEAD_CLASS}>Date</th>
@@ -156,18 +166,14 @@ export function ComptabiliteView({ data }: ComptabiliteViewProps) {
                         </span>
                       </td>
                       <td className={TABLE_CELL_CLASS}>{row.raison}</td>
-                      <td className={`${TABLE_CELL_CLASS} text-right tabular-nums`}>
-                        {formatSomme(row.somme)}
-                      </td>
+                      <td className={`${TABLE_SUM_CLASS} text-sheriff-entree/95`}>{formatSomme(row.somme)}</td>
                     </tr>
                   ))}
                   <tr className={TABLE_TOTAL_ROW}>
-                    <td colSpan={3} className="px-3 py-2.5 text-right font-heading text-xs uppercase tracking-wider text-sheriff-gold/90">
+                    <td colSpan={3} className={TABLE_TOTAL_LABEL}>
                       Total entrées
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-sheriff-entree">
-                      {formatSomme(totalEntrees)}
-                    </td>
+                    <td className={`${TABLE_TOTAL_AMOUNT} text-sheriff-entree`}>{formatSomme(totalEntrees)}</td>
                   </tr>
                 </>
               )}
@@ -176,13 +182,19 @@ export function ComptabiliteView({ data }: ComptabiliteViewProps) {
         </div>
       </div>
 
-      <div className="sheriff-panel-shadow overflow-hidden rounded-lg border border-sheriff-gold/30 bg-sheriff-wood">
-        <h2 className="flex items-center gap-2 border-b border-sheriff-sortie/30 bg-sheriff-charcoal/90 px-4 py-3 font-heading text-sm font-semibold uppercase tracking-wider text-sheriff-sortie">
+      <div className="sheriff-panel-shadow overflow-hidden rounded-xl border border-sheriff-gold/30 bg-sheriff-wood">
+        <h2 className="flex items-center gap-2 border-b border-sheriff-sortie/25 bg-linear-to-r from-sheriff-charcoal/95 to-sheriff-charcoal/85 px-4 py-3.5 font-heading text-sm font-semibold uppercase tracking-wider text-sheriff-sortie">
           <span className="h-1.5 w-1.5 rounded-full bg-sheriff-sortie" aria-hidden />
           Sorties
         </h2>
         <div className="sheriff-table-scroll max-h-[420px] overflow-y-auto">
-          <table className="w-full min-w-[320px] border-collapse">
+          <table className="w-full min-w-[320px] table-fixed border-collapse">
+            <colgroup>
+              <col className="w-[14%]" />
+              <col className="w-[22%]" />
+              <col />
+              <col className="w-[min(28%,9.5rem)]" />
+            </colgroup>
             <thead>
               <tr>
                 <th className={TABLE_HEAD_CLASS}>Date</th>
@@ -221,18 +233,14 @@ export function ComptabiliteView({ data }: ComptabiliteViewProps) {
                         </span>
                       </td>
                       <td className={TABLE_CELL_CLASS}>{row.raison}</td>
-                      <td className={`${TABLE_CELL_CLASS} text-right tabular-nums`}>
-                        {formatSomme(row.somme)}
-                      </td>
+                      <td className={`${TABLE_SUM_CLASS} text-sheriff-sortie/95`}>{formatSomme(row.somme)}</td>
                     </tr>
                   ))}
                   <tr className={TABLE_TOTAL_ROW}>
-                    <td colSpan={3} className="px-3 py-2.5 text-right font-heading text-xs uppercase tracking-wider text-sheriff-gold/90">
+                    <td colSpan={3} className={TABLE_TOTAL_LABEL}>
                       Total sorties
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-sheriff-sortie">
-                      {formatSomme(totalSorties)}
-                    </td>
+                    <td className={`${TABLE_TOTAL_AMOUNT} text-sheriff-sortie`}>{formatSomme(totalSorties)}</td>
                   </tr>
                 </>
               )}

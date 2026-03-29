@@ -329,27 +329,31 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
       {/* Bandeau récap — chiffres clés en un coup d'œil */}
       {hasAnyTransaction && (
         <div
-          className="sheriff-panel-shadow flex flex-wrap items-center gap-6 rounded-xl border border-sheriff-gold/25 bg-sheriff-charcoal/60 px-5 py-4"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-3"
           role="region"
           aria-label="Résumé comptable"
         >
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-sheriff-paper-muted">Entrées</span>
-            <span className="font-heading text-lg tabular-nums text-sheriff-entree sm:text-xl">{formatSomme(sumEntrees)}</span>
+          <div className="sheriff-panel-shadow relative overflow-hidden rounded-xl border border-sheriff-gold/25 bg-linear-to-br from-sheriff-charcoal/65 to-sheriff-charcoal/45 px-5 py-4 pl-6 shadow-[inset_4px_0_0_0_rgba(122,158,122,0.55)]">
+            <p className="font-heading text-[10px] font-semibold uppercase tracking-widest text-sheriff-gold/90">Total entrées</p>
+            <p className="mt-2 font-heading text-xl font-semibold tabular-nums tracking-tight whitespace-nowrap text-sheriff-entree sm:text-2xl">
+              {formatSomme(sumEntrees)}
+            </p>
           </div>
-          <div className="h-6 w-px bg-sheriff-gold/30" aria-hidden />
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-sheriff-paper-muted">Sorties</span>
-            <span className="font-heading text-lg tabular-nums text-sheriff-sortie sm:text-xl">{formatSomme(sumSorties)}</span>
+          <div className="sheriff-panel-shadow relative overflow-hidden rounded-xl border border-sheriff-gold/25 bg-linear-to-br from-sheriff-charcoal/65 to-sheriff-charcoal/45 px-5 py-4 pl-6 shadow-[inset_4px_0_0_0_rgba(196,154,122,0.55)]">
+            <p className="font-heading text-[10px] font-semibold uppercase tracking-widest text-sheriff-gold/90">Total sorties</p>
+            <p className="mt-2 font-heading text-xl font-semibold tabular-nums tracking-tight whitespace-nowrap text-sheriff-sortie sm:text-2xl">
+              {formatSomme(sumSorties)}
+            </p>
           </div>
-          <div className="h-6 w-px bg-sheriff-gold/30" aria-hidden />
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-sheriff-paper-muted">Solde</span>
-            <span
-              className={`font-heading text-lg tabular-nums sm:text-xl ${soldeTotal >= 0 ? "text-sheriff-paper" : "text-sheriff-sortie"}`}
+          <div className="sheriff-panel-shadow relative overflow-hidden rounded-xl border border-sheriff-gold/35 bg-linear-to-br from-sheriff-charcoal/70 to-sheriff-charcoal/50 px-5 py-4 pl-6 shadow-[inset_4px_0_0_0_rgba(197,199,204,0.45)]">
+            <p className="font-heading text-[10px] font-semibold uppercase tracking-widest text-sheriff-gold/90">Solde</p>
+            <p
+              className={`mt-2 font-heading text-xl font-semibold tabular-nums tracking-tight whitespace-nowrap sm:text-2xl ${
+                soldeTotal >= 0 ? "text-sheriff-paper" : "text-sheriff-sortie"
+              }`}
             >
               {formatSomme(soldeTotal)}
-            </span>
+            </p>
           </div>
         </div>
       )}
