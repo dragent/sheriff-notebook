@@ -1,0 +1,40 @@
+---
+description: Professional Discord bot, API, and slash-command practices for this monorepo
+globs: "**/*Discord*,**/discord/**"
+alwaysApply: false
+---
+
+# Discord integrations (professional)
+
+## Scope
+
+Use this rule when adding or changing **Discord Bot / REST API**, **slash commands**, **interaction webhooks**, or **gateway** code. Align with existing services (`DiscordGuildMemberResolver`, `DiscordChannelNotifier`, etc.) and `docs/PROXY_SPEC.md` for any new frontend proxy.
+
+## Secrets and tokens
+
+- **`DISCORD_BOT_TOKEN`**: server-side only (Symfony env, or a dedicated Node worker). **Never** expose to the browser, client bundles, or public logs.
+- **OAuth** (`DISCORD_CLIENT_ID` / `CLIENT_SECRET`): NextAuth only; do not reuse OAuth tokens as bot tokens.
+- Log **request IDs** and HTTP status from Discord; never log full `Authorization` headers or raw tokens.
+
+## REST vs Gateway
+
+- **HTTP REST** (current pattern in this repo): guild members, roles, channels, messages — use Symfony services or shared HTTP client; handle timeouts and **429** (rate limits / `Retry-After`).
+- **Interactions (slash commands)**: prefer Discord’s **Interactions Endpoint URL** (HTTPS POST with **Ed25519 signature verification**) on the backend or a small sidecar; respond within **3 seconds** or use `defer` + follow-up.
+- **Gateway** (persistent WebSocket): only if you need live events at scale; isolate in a **separate process** from PHP-FPM so disconnects do not take down the site.
+
+## Slash commands and channel actions
+
+- Register commands **globally or per-guild** deliberately; document scope in code. Re-registration should be **idempotent** or versioned to avoid duplicate commands.
+- Creating channels (e.g. convocation): check **bot permissions** (Manage Channels, View, Send Messages); use a **category** template; plan **cleanup** (TTL job or manual policy) so orphaned channels do not accumulate.
+- Map Discord user IDs to app users carefully; **authorize** who may run privileged commands (roles in DB or Discord permission checks).
+
+## API quality
+
+- Pin **Discord API version** in one place (e.g. `/api/v10`).
+- Return clear JSON errors to callers; map Discord API errors to safe messages (French UI allowed; technical comments in **English** per project rules).
+- Respect **Discord Developer Policy** and server rules for automation.
+
+## This repository
+
+- New user-facing Discord routes from Next.js: follow **`proxyBackend.ts`** + **`proxyLogger.ts`**; update **`docs/PROXY_SPEC.md`**.
+- Reuse existing env vars; document any new keys in **`.env.example`** only (no real secrets).
