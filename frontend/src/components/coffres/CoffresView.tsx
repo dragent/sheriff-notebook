@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { SectionTable } from "@/components/ui/SectionTable";
 import { Tabs } from "@/components/ui/Tabs";
 import { WeaponSelect } from "@/components/ui/WeaponSelect";
@@ -48,9 +48,16 @@ const TYPES_ACCESSOIRES_BUREAU = [
   "Plat",
   "Boisson",
   "Appareil photo",
-  "Fumigène",
   "Jumelle",
   "Menotte",
+  "Fumigène Rouge",
+  "Fumigène Bleu",
+  "Fumigène Blanc",
+  "Fumigène Cyan",
+  "Fumigène Noir",
+  "Fumigène Rose",
+  "Fumigène Vert",
+  "Fumigène Jaune",
 ];
 
 function IconMunitions({ className }: { className?: string }) {
@@ -251,7 +258,7 @@ export function CoffresView({
     }
   }, []);
 
-  const addRecensement = useCallback(async (row: Omit<ArmeRecensement, "id">) => {
+  const addRecensement = useCallback(async (row: Omit<ArmeRecensement, "id">): Promise<boolean> => {
     try {
       const res = await fetch("/api/bureau-weapons", {
         method: "POST",
@@ -290,9 +297,9 @@ export function CoffresView({
           },
         ],
       }));
-      setModalRecensement(false);
+      return true;
     } catch {
-      // Erreur silencieuse
+      return false;
     }
   }, []);
 
@@ -625,7 +632,7 @@ function ModalRecensement({
   sheriffs = [],
 }: {
   onClose: () => void;
-  onSave: (row: Omit<ArmeRecensement, "id">) => void | Promise<void>;
+  onSave: (row: Omit<ArmeRecensement, "id">) => boolean | Promise<boolean>;
   weaponCategories?: WeaponCategoryOption[];
   sheriffs?: SheriffOption[];
 }) {
@@ -635,6 +642,8 @@ function ModalRecensement({
   const [coffre, setCoffre] = useState(false);
   const [lunette, setLunette] = useState(false);
   const [assigne, setAssigne] = useState(sheriffs[0]?.username ?? "");
+  const [submitting, setSubmitting] = useState(false);
+  const serieInputRef = useRef<HTMLInputElement>(null);
 
   const hasWeaponOptions = weaponCategories.length > 0;
   const hasSheriffOptions = sheriffs.length > 0;
@@ -647,33 +656,75 @@ function ModalRecensement({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const m = modele.trim();
-    const num = numeroSerie.trim();
-    if (!m || !num) return;
-    await onSave({
-      modele: m,
-      numeroSerie: num,
-      pret,
-      coffre,
-      lunette,
-      assigne: assigne.trim(),
-    });
+  const resetFormForNext = () => {
     setModele("");
     setNumeroSerie("");
     setPret(false);
     setCoffre(false);
     setLunette(false);
-    setAssigne("");
+    setAssigne(sheriffs[0]?.username ?? "");
+    queueMicrotask(() => serieInputRef.current?.focus());
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const m = modele.trim();
+    const num = numeroSerie.trim();
+    if (!m || !num || submitting) return;
+    setSubmitting(true);
+    try {
+      const ok = await onSave({
+        modele: m,
+        numeroSerie: num,
+        pret,
+        coffre,
+        lunette,
+        assigne: assigne.trim(),
+      });
+      if (ok) {
+        resetFormForNext();
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-recensement-title">
-      <div className="sheriff-card w-full max-w-md rounded-lg border border-sheriff-gold/30 bg-sheriff-wood p-6 shadow-xl">
-        <h2 id="modal-recensement-title" className="font-heading mb-4 text-lg font-semibold uppercase tracking-wider text-sheriff-gold">
-          Nouvelle arme (recensement)
-        </h2>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-recensement-title"
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute inset-0 -z-10 cursor-default focus:outline-none"
+        aria-label="Fermer"
+        tabIndex={-1}
+      />
+      <div
+        className="sheriff-card relative z-0 w-full max-w-md rounded-lg border border-sheriff-gold/30 bg-sheriff-wood p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h2 id="modal-recensement-title" className="font-heading flex-1 pr-2 text-lg font-semibold uppercase tracking-wider text-sheriff-gold">
+            Nouvelle arme (recensement)
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="sheriff-focus-ring -m-1 shrink-0 rounded-md p-1.5 text-sheriff-paper-muted transition hover:bg-sheriff-gold/10 hover:text-sheriff-paper"
+            aria-label="Fermer"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <p className="mb-4 text-xs text-sheriff-paper-muted">
+          Après chaque enregistrement réussi, le formulaire se vide pour saisir l&apos;arme suivante. Fermez avec la croix, un clic à l&apos;extérieur ou « Annuler ».
+        </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label htmlFor="rec-modele" className="mb-1 block text-xs font-medium text-sheriff-paper-muted">
@@ -702,7 +753,16 @@ function ModalRecensement({
           </div>
           <div>
             <label htmlFor="rec-serie" className="mb-1 block text-xs font-medium text-sheriff-paper-muted">N° série</label>
-            <input id="rec-serie" type="text" required value={numeroSerie} onChange={(e) => setNumeroSerie(e.target.value)} className={SHERIFF_FIELD_COMFORTABLE} placeholder="Ex. 1729815374-6859" />
+            <input
+              ref={serieInputRef}
+              id="rec-serie"
+              type="text"
+              required
+              value={numeroSerie}
+              onChange={(e) => setNumeroSerie(e.target.value)}
+              className={SHERIFF_FIELD_COMFORTABLE}
+              placeholder="Ex. 1729815374-6859"
+            />
           </div>
           <div className="flex flex-wrap gap-4">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-sheriff-paper-muted">
@@ -744,8 +804,12 @@ function ModalRecensement({
             <button type="button" onClick={onClose} className="sheriff-focus-ring sheriff-btn-secondary rounded-md px-4 py-2 text-sm font-medium">
               Annuler
             </button>
-            <button type="submit" className="sheriff-focus-ring sheriff-btn-save rounded-md px-4 py-2 text-sm font-semibold">
-              Ajouter
+            <button
+              type="submit"
+              disabled={submitting}
+              className="sheriff-focus-ring sheriff-btn-save rounded-md px-4 py-2 text-sm font-semibold disabled:pointer-events-none disabled:opacity-60"
+            >
+              {submitting ? "Enregistrement…" : "Ajouter"}
             </button>
           </div>
         </form>
