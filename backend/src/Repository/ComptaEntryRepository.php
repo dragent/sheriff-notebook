@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\ComptaEntry;
+use App\Util\ComptaAmountParser;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -28,16 +29,17 @@ class ComptaEntryRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    /** Current balance (sum of entries minus sum of exits); single aggregated query to avoid loading all rows. */
+    /**
+     * Current balance (entries minus exits). Parsed in PHP so legacy display formats ($, spaces, commas) match list totals.
+     */
     public function getCurrentSolde(): float
     {
-        $qb = $this->createQueryBuilder('c')
-            ->select('COALESCE(SUM(CASE WHEN c.type = :entree THEN c.amount ELSE -c.amount END), 0) AS solde')
-            ->setParameter('entree', ComptaEntry::TYPE_ENTREE);
+        $total = 0.0;
+        foreach ($this->findAll() as $e) {
+            $amount = ComptaAmountParser::parseToFloat($e->getAmount());
+            $total += $e->getType() === ComptaEntry::TYPE_ENTREE ? $amount : -$amount;
+        }
 
-        /** @var string|float|int|null $raw */
-        $raw = $qb->getQuery()->getSingleScalarResult();
-
-        return (float) $raw;
+        return $total;
     }
 }

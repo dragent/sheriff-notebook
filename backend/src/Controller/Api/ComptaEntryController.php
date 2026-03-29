@@ -9,6 +9,7 @@ use App\Entity\ComptaEntry;
 use App\Entity\User;
 use App\Repository\ComptaEntryRepository;
 use App\Security\Voter\ComptaEntryVoter;
+use App\Util\ComptaAmountParser;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -37,7 +38,7 @@ final class ComptaEntryController
         $sorties = [];
 
         foreach ($entries as $e) {
-            $somme = (float) $e->getAmount();
+            $somme = ComptaAmountParser::parseToFloat($e->getAmount());
             $row = [
                 'id' => $e->getId()->toRfc4122(),
                 'dateIso' => $e->getDate(),
@@ -82,7 +83,7 @@ final class ComptaEntryController
         // Business rule: reject withdrawals that would make balance negative.
         if ($dto->type === ComptaEntry::TYPE_SORTIE) {
             $soldeCourant = $this->repository->getCurrentSolde();
-            $nouveauSolde = $soldeCourant - (float) $dto->somme;
+            $nouveauSolde = $soldeCourant - $dto->somme;
 
             if ($nouveauSolde < 0) {
                 return new JsonResponse([
@@ -107,7 +108,7 @@ final class ComptaEntryController
             'dateIso' => $entry->getDate(),
             'sheriff' => $entry->getSheriff(),
             'raison' => $entry->getReason(),
-            'somme' => (float) $entry->getAmount(),
+            'somme' => ComptaAmountParser::parseToFloat($entry->getAmount()),
         ], Response::HTTP_CREATED);
     }
 }

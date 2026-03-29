@@ -22,6 +22,31 @@ function formatSomme(value: number): string {
 }
 
 /**
+ * Parse saisie montant (aligné backend ComptaAmountParser) : $, espaces, format EU.
+ */
+function parseSommeInput(raw: string): number {
+  let s = raw
+    .trim()
+    .replace(/\u00a0/g, "")
+    .replace(/\s/g, "")
+    .replace(/[$€]/g, "");
+  if (s === "") return Number.NaN;
+
+  if (/^-?\d+(\.\d+)?$/.test(s)) {
+    return Math.round(parseFloat(s) * 100) / 100;
+  }
+
+  if (/,\d{1,2}$/.test(s)) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else {
+    s = s.replace(/,/g, "");
+  }
+  const n = parseFloat(s);
+  if (Number.isNaN(n)) return Number.NaN;
+  return Math.round(n * 100) / 100;
+}
+
+/**
  * Icône entrée (recette).
  */
 function EntreeIcon({ className }: { className?: string }) {
@@ -198,13 +223,12 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
       setFormError(null);
       const sheriff = form.sheriff.trim();
       const raison = form.raison.trim();
-      const rawSomme = form.somme.replace(/\s/g, "").replace(",", ".");
-      const somme = Math.round(parseFloat(rawSomme) * 100) / 100;
+      const somme = parseSommeInput(form.somme);
       if (!form.date || !sheriff || !raison) {
         setFormError("Remplissez tous les champs.");
         return;
       }
-      if (rawSomme === "" || Number.isNaN(somme)) {
+      if (form.somme.trim() === "" || Number.isNaN(somme)) {
         setFormError("Somme invalide. Ex. : 150 ou 12,50");
         return;
       }

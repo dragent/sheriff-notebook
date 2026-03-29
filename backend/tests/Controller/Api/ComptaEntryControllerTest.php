@@ -123,4 +123,48 @@ final class ComptaEntryControllerTest extends WebTestCase
         self::assertSame('Test création', $data['raison']);
         self::assertSame(42.5, $data['somme']);
     }
+
+    /**
+     * POST sortie après une entrée : solde calculé en SQL (amount VARCHAR) — doit répondre 201, pas 500.
+     */
+    public function testCreateSortieAfterEntreeReturns201(): void
+    {
+        $client = self::createClient();
+        [, $token] = $this->createUserAndJwt($client, ['grade' => 'Sheriff Adjoint']);
+
+        $this->requestWithJwt(
+            $client,
+            'POST',
+            '/api/comptabilite',
+            $token,
+            json_encode([
+                'type' => 'entree',
+                'dateIso' => '2025-01-10',
+                'sheriff' => 'Sheriff Test',
+                'raison' => 'Caisse',
+                'somme' => 500,
+            ], JSON_THROW_ON_ERROR)
+        );
+        self::assertResponseStatusCodeSame(201);
+
+        $this->requestWithJwt(
+            $client,
+            'POST',
+            '/api/comptabilite',
+            $token,
+            json_encode([
+                'type' => 'sortie',
+                'dateIso' => '2025-01-11',
+                'sheriff' => 'Sheriff Test',
+                'raison' => 'Achat fournitures',
+                'somme' => 160,
+            ], JSON_THROW_ON_ERROR)
+        );
+
+        self::assertResponseStatusCodeSame(201);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        self::assertIsArray($data);
+        self::assertSame('sortie', $data['type']);
+        self::assertSame(160.0, $data['somme']);
+    }
 }
