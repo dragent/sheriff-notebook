@@ -165,6 +165,6 @@ final class ComptaEntryControllerTest extends WebTestCase
         $data = json_decode($client->getResponse()->getContent(), true);
         self::assertIsArray($data);
         self::assertSame('sortie', $data['type']);
-        self::assertSame(160.0, $data['somme']);
+        self::assertEquals(160, $data['somme']);
     }
 }

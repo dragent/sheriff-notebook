@@ -7,6 +7,12 @@ Monorepo **Next.js (frontend)** + **Symfony (backend API)**, **Discord** authent
 - Docker Desktop
 - A Discord application (OAuth2)
 
+### Node.js (frontend sans Docker)
+
+Utilisez **Node.js 20.x** (≥ 20.18) ou **22.x LTS**. Le dépôt contient un fichier **`.nvmrc`** (`22`) pour `nvm use` / `fnm use`.
+
+Évitez **Node 25** pour le développement local : avec Next.js, cela peut déclencher des erreurs du type `TypeError: controller[kState].transformAlgorithm is not a function` (API Web Streams). L’image Docker du frontend reste sur **Node 20** (voir `frontend/Dockerfile`).
+
 ## Discord configuration
 
 In the **Discord Developer Portal**:
