@@ -70,7 +70,7 @@ export function SectionTable({
   return (
     <div
       id={id}
-      className="sheriff-card w-full overflow-hidden rounded-lg border-sheriff-gold/40 bg-sheriff-wood shadow-md"
+      className="sheriff-card w-full rounded-lg border-sheriff-gold/40 bg-sheriff-wood shadow-md"
       role={role}
       aria-label={ariaLabel ?? title}
     >

@@ -116,7 +116,7 @@ export function WeaponSelect({
   };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className={open ? "relative z-[1]" : "relative"}>
       <button
         type="button"
         role="combobox"
