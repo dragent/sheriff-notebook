@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import {
   SHERIFF_COMBOBOX_TRIGGER_COMFORTABLE,
   SHERIFF_COMBOBOX_TRIGGER_DENSE,
@@ -49,6 +50,40 @@ export function OptionSelect({
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listboxRef = useRef<HTMLUListElement>(null);
+  const [listboxPos, setListboxPos] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
+
+  const updateListboxPosition = useCallback(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const gap = 4;
+    const maxListPx = 16 * 16; /* 16rem */
+    const spaceBelow = window.innerHeight - rect.bottom - gap - 8;
+    const spaceAbove = rect.top - gap - 8;
+    const openDown = spaceBelow >= 120 || spaceBelow >= spaceAbove;
+    if (openDown) {
+      setListboxPos({
+        top: rect.bottom + gap,
+        left: rect.left,
+        width: rect.width,
+        maxHeight: Math.min(maxListPx, Math.max(80, spaceBelow)),
+      });
+    } else {
+      setListboxPos({
+        bottom: window.innerHeight - rect.top + gap,
+        left: rect.left,
+        width: rect.width,
+        maxHeight: Math.min(maxListPx, Math.max(80, spaceAbove)),
+      });
+    }
+  }, [open]);
 
   const displayValue = value
     ? (options.find((o) => o.value === value)?.label ?? value)
@@ -62,12 +97,29 @@ export function OptionSelect({
     );
   }, [open, value, selectedIndex]);
 
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateListboxPosition();
+  }, [open, updateListboxPosition, options.length]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleScrollOrResize = () => updateListboxPosition();
+    window.addEventListener("resize", handleScrollOrResize);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    return () => {
+      window.removeEventListener("resize", handleScrollOrResize);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+    };
+  }, [open, updateListboxPosition]);
+
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const t = e.target as Node;
+      if (containerRef.current?.contains(t)) return;
+      if (listboxRef.current?.contains(t)) return;
+      setOpen(false);
     };
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -107,9 +159,74 @@ export function OptionSelect({
     }
   };
 
+  const listboxEl =
+    open &&
+    listboxPos &&
+    typeof document !== "undefined" &&
+    createPortal(
+      <ul
+        ref={listboxRef}
+        id={`${id}-listbox`}
+        role="listbox"
+        aria-label={ariaLabel}
+        className={`${SHERIFF_COMBOBOX_LIST} mt-0!`}
+        style={
+          {
+            /* Inline layer: global .sheriff-registry-listbox sets z-index:1; must beat modals (z-50) and sticky headers */
+            position: "fixed",
+            zIndex: 100000,
+            top: listboxPos.top,
+            bottom: listboxPos.bottom,
+            left: listboxPos.left,
+            width: listboxPos.width,
+            maxHeight: listboxPos.maxHeight,
+          } as CSSProperties
+        }
+      >
+        <li
+          role="option"
+          id={`${id}-opt-none`}
+          aria-selected={!value}
+          className={optionRowClass(
+            highlightIndex === -1,
+            !value && highlightIndex !== -1
+          )}
+          onClick={() => {
+            onChange("");
+            setOpen(false);
+          }}
+          onMouseEnter={() => setHighlightIndex(-1)}
+        >
+          {placeholder}
+        </li>
+        {options.map((opt, idx) => {
+          const isHighlight = highlightIndex === idx;
+          const isSelected = value === opt.value;
+          return (
+            <li
+              key={opt.value}
+              role="option"
+              id={`${id}-opt-${idx}`}
+              aria-selected={isSelected}
+              className={optionRowClass(isHighlight, isSelected)}
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              onMouseEnter={() => setHighlightIndex(idx)}
+            >
+              {opt.label}
+            </li>
+          );
+        })}
+      </ul>,
+      document.body
+    );
+
   return (
-    <div ref={containerRef} className={open ? "relative z-[1]" : "relative"}>
+    <div ref={containerRef} className="relative min-w-0">
       <button
+        ref={triggerRef}
         type="button"
         role="combobox"
         id={id}
@@ -146,51 +263,7 @@ export function OptionSelect({
         </svg>
       </button>
 
-      {open && (
-        <ul
-          id={`${id}-listbox`}
-          role="listbox"
-          aria-label={ariaLabel}
-          className={SHERIFF_COMBOBOX_LIST}
-        >
-          <li
-            role="option"
-            id={`${id}-opt-none`}
-            aria-selected={!value}
-            className={optionRowClass(
-              highlightIndex === -1,
-              !value && highlightIndex !== -1
-            )}
-            onClick={() => {
-              onChange("");
-              setOpen(false);
-            }}
-            onMouseEnter={() => setHighlightIndex(-1)}
-          >
-            {placeholder}
-          </li>
-          {options.map((opt, idx) => {
-            const isHighlight = highlightIndex === idx;
-            const isSelected = value === opt.value;
-            return (
-              <li
-                key={opt.value}
-                role="option"
-                id={`${id}-opt-${idx}`}
-                aria-selected={isSelected}
-                className={optionRowClass(isHighlight, isSelected)}
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-                onMouseEnter={() => setHighlightIndex(idx)}
-              >
-                {opt.label}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {listboxEl}
     </div>
   );
 }
