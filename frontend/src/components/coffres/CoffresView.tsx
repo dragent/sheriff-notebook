@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from "react";
 import { SectionTable } from "@/components/ui/SectionTable";
 import { Tabs } from "@/components/ui/Tabs";
 import { WeaponSelect } from "@/components/ui/WeaponSelect";
@@ -42,6 +42,71 @@ const TYPES_MUNITION = [
   "Munition de fusil",
   "Munition tranquillisante",
 ];
+
+/** Label for models not found in the county reference (custom / legacy names). */
+const RECENSEMENT_OTHER_CATEGORY = "Autre";
+
+/**
+ * Maps weapon model names to their reference category label.
+ */
+function buildModelToCategoryMap(categories: WeaponCategoryOption[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const cat of categories) {
+    for (const name of cat.weapons) {
+      if (!map.has(name)) {
+        map.set(name, cat.label);
+      }
+    }
+  }
+  return map;
+}
+
+type RecensementGroup = { label: string | null; rows: ArmeRecensement[] };
+
+/**
+ * Groups filtered recensement rows by reference category, then sorts by model name.
+ * Categories with no rows are omitted. When there is no reference, returns a single group without a header.
+ */
+function groupRecensementByCategory(
+  rows: ArmeRecensement[],
+  weaponCategories: WeaponCategoryOption[]
+): RecensementGroup[] {
+  if (rows.length === 0) return [];
+
+  if (weaponCategories.length === 0) {
+    const sorted = [...rows].sort((a, b) => a.modele.localeCompare(b.modele, "fr"));
+    return [{ label: null, rows: sorted }];
+  }
+
+  const modelToCategory = buildModelToCategoryMap(weaponCategories);
+  const buckets = new Map<string, ArmeRecensement[]>();
+
+  for (const row of rows) {
+    const label = modelToCategory.get(row.modele) ?? RECENSEMENT_OTHER_CATEGORY;
+    const list = buckets.get(label) ?? [];
+    list.push(row);
+    buckets.set(label, list);
+  }
+
+  const orderedLabels: string[] = [...weaponCategories.map((c) => c.label)];
+  if ((buckets.get(RECENSEMENT_OTHER_CATEGORY)?.length ?? 0) > 0) {
+    orderedLabels.push(RECENSEMENT_OTHER_CATEGORY);
+  }
+
+  const seen = new Set<string>();
+  const out: RecensementGroup[] = [];
+
+  for (const label of orderedLabels) {
+    if (seen.has(label)) continue;
+    seen.add(label);
+    const list = buckets.get(label);
+    if (!list?.length) continue;
+    list.sort((a, b) => a.modele.localeCompare(b.modele, "fr"));
+    out.push({ label, rows: list });
+  }
+
+  return out;
+}
 
 const TYPES_ACCESSOIRES_BUREAU = [
   "Étoile de sheriff",
@@ -350,6 +415,11 @@ export function CoffresView({
     return recensement.filter((r) => r.pret);
   }, [recensement, filtre]);
 
+  const recensementGrouped = useMemo(
+    () => groupRecensementByCategory(recensementFiltre, weaponCategories),
+    [recensementFiltre, weaponCategories]
+  );
+
   const stats = useMemo(() => {
     const enCoffre = recensement.filter((r) => r.coffre).length;
     const pretees = recensement.filter((r) => r.pret).length;
@@ -521,7 +591,24 @@ export function CoffresView({
           </div>
         }
       >
-        {recensementFiltre.map((row, i) => (
+        {(() => {
+          let dataRowIndex = 0;
+          return recensementGrouped.map((group) => (
+            <Fragment key={group.label ?? "sans-categorie"}>
+              {group.label != null && (
+                <tr className="border-b border-sheriff-gold/25 bg-sheriff-charcoal/55">
+                  <th
+                    colSpan={7}
+                    scope="colgroup"
+                    className="px-3 py-2 text-left font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-gold/95"
+                  >
+                    {group.label}
+                  </th>
+                </tr>
+              )}
+              {group.rows.map((row) => {
+                const i = dataRowIndex++;
+                return (
           <tr
             key={row.id}
             className={`${i % 2 === 1 ? TABLE_ROW_ALT : ""} border-b border-sheriff-gold/15 last:border-b-0`}
@@ -608,7 +695,11 @@ export function CoffresView({
               </button>
             </td>
           </tr>
-        ))}
+                );
+              })}
+            </Fragment>
+          ));
+        })()}
       </SectionTable>
       </div>
 
