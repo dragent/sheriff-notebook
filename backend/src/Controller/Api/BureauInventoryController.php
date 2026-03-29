@@ -37,9 +37,16 @@ final class BureauInventoryController
         'Plat',
         'Boisson',
         'Appareil photo',
-        'Fumigène',
         'Jumelle',
         'Menotte',
+        'Fumigène Rouge',
+        'Fumigène Bleu',
+        'Fumigène Blanc',
+        'Fumigène Cyan',
+        'Fumigène Noir',
+        'Fumigène Rose',
+        'Fumigène Vert',
+        'Fumigène Jaune',
     ];
 
     public function __construct(
