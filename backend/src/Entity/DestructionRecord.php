@@ -70,6 +70,14 @@ class DestructionRecord
         return $this->lines;
     }
 
+    /**
+     * @param array<int, array{date: string, qte: int, sommes: string, destruction: string}> $lines
+     */
+    public function setLines(array $lines): void
+    {
+        $this->lines = $lines;
+    }
+
     public function getStatus(): string
     {
         return $this->status;

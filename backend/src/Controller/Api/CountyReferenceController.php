@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Repository\CountyReferenceRepository;
+use App\Service\ReferenceDataRenamePropagator;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,6 +23,7 @@ final class CountyReferenceController
         private readonly CountyReferenceRepository $repository,
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface $logger,
+        private readonly ReferenceDataRenamePropagator $referenceRenamePropagator,
     ) {
     }
 
@@ -63,21 +65,29 @@ final class CountyReferenceController
         ]);
 
         $ref = $this->repository->getSingleton();
+        $before = $ref->getData();
         $ref->setData($body);
+        $after = $ref->getData();
+        $propagation = $this->referenceRenamePropagator->propagate($before, $after);
 
         // Doctrine does not detect changes on JSON columns; must schedule update explicitly.
         $this->entityManager->getUnitOfWork()->scheduleForUpdate($ref);
-        $this->logger->info('reference.put: flush start', ['id' => $ref->getId()->toRfc4122()]);
+        $this->logger->info('reference.put: flush start', [
+            'id' => $ref->getId()->toRfc4122(),
+            'propagation' => $propagation,
+        ]);
         $this->entityManager->flush();
         $this->logger->info('reference.put: flush ok', [
             'id' => $ref->getId()->toRfc4122(),
             'updatedAt' => $ref->getUpdatedAt()->format(\DateTimeInterface::ATOM),
             'fusil_count_after' => \count($ref->getData()['fusil'] ?? []),
+            'propagation' => $propagation,
         ]);
 
         return new JsonResponse([
             'data' => $ref->getData(),
             'updatedAt' => $ref->getUpdatedAt()->format(\DateTimeInterface::ATOM),
+            'propagation' => $propagation,
         ]);
     }
 }
