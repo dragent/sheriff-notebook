@@ -40,13 +40,23 @@ function canManageRecruitment(grade: string | null): boolean {
   return COMTE_ADJOINT_GRADES.has(grade);
 }
 
+/** Plus ancienne recrutement en premier ; sans date en dernier au sein du même grade. */
+function compareRecruitedAtIso(a: string | null, b: string | null): number {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return a.localeCompare(b);
+}
+
 /**
- * Trie les sheriffs par grade puis par nom.
+ * Trie les sheriffs par grade puis par date de recrutement, puis par nom.
  */
 function sortSheriffsByGrade(sheriffs: Sheriff[]): Sheriff[] {
   return [...sheriffs].sort((a, b) => {
     const byGrade = compareGrades(a.grade, b.grade);
     if (byGrade !== 0) return byGrade;
+    const byDate = compareRecruitedAtIso(a.recruitedAt, b.recruitedAt);
+    if (byDate !== 0) return byDate;
     return a.username.localeCompare(b.username, undefined, { sensitivity: "base" });
   });
 }

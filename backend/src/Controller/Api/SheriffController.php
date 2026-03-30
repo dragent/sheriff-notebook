@@ -52,6 +52,22 @@ final class SheriffController
             if ($orderA !== $orderB) {
                 return $orderA <=> $orderB;
             }
+            $dateA = $a['recruitedAt'];
+            $dateB = $b['recruitedAt'];
+            if ($dateA === null && $dateB === null) {
+                return strcasecmp($a['username'], $b['username']);
+            }
+            if ($dateA === null) {
+                return 1;
+            }
+            if ($dateB === null) {
+                return -1;
+            }
+            $cmp = strcmp((string) $dateA, (string) $dateB);
+            if ($cmp !== 0) {
+                return $cmp;
+            }
+
             return strcasecmp($a['username'], $b['username']);
         });
 

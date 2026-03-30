@@ -91,8 +91,43 @@ final class DiscordEffectifController
             'Sheriff Deputy' => 4,
             'Deputy' => 5,
         ];
-        $sheriffs = [];
+        $candidates = [];
         foreach ($users as $u) {
+            $grade = $u->getGrade();
+            if ($grade === null || $grade === '') {
+                continue;
+            }
+            $candidates[] = $u;
+        }
+        usort($candidates, static function (User $a, User $b) use ($order): int {
+            $ga = $a->getGrade() ?? '';
+            $gb = $b->getGrade() ?? '';
+            $oa = $order[$ga] ?? 99;
+            $ob = $order[$gb] ?? 99;
+            if ($oa !== $ob) {
+                return $oa <=> $ob;
+            }
+            $da = $a->getRecruitedAt();
+            $db = $b->getRecruitedAt();
+            if ($da === null && $db === null) {
+                return strcasecmp($a->getUsername(), $b->getUsername());
+            }
+            if ($da === null) {
+                return 1;
+            }
+            if ($db === null) {
+                return -1;
+            }
+            $cmp = $da <=> $db;
+            if ($cmp !== 0) {
+                return $cmp;
+            }
+
+            return strcasecmp($a->getUsername(), $b->getUsername());
+        });
+
+        $sheriffs = [];
+        foreach ($candidates as $u) {
             $grade = $u->getGrade();
             if ($grade === null || $grade === '') {
                 continue;
@@ -106,14 +141,6 @@ final class DiscordEffectifController
                 'telegram' => $telegram,
             ];
         }
-        usort($sheriffs, static function (array $a, array $b) use ($order): int {
-            $oa = $order[$a['grade']] ?? 99;
-            $ob = $order[$b['grade']] ?? 99;
-            if ($oa !== $ob) {
-                return $oa <=> $ob;
-            }
-            return strcasecmp($a['username'], $b['username']);
-        });
 
         return $sheriffs;
     }
