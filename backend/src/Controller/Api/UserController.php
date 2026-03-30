@@ -63,7 +63,7 @@ final class UserController
         $previousGrade = null;
 
         if (str_starts_with($id, 'discord-')) {
-            $discordId = substr($id, 7);
+            $discordId = substr($id, \strlen('discord-'));
             if ($discordId === '') {
                 return new JsonResponse(['error' => 'Invalid user id'], 400);
             }
