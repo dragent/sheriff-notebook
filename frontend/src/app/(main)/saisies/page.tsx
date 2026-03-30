@@ -11,7 +11,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { PageIcons } from "@/components/layout/PageIcons";
 import { PageIntroBlock } from "@/components/layout/PageIntroBlock";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { Flashbag } from "@/components/feedback/Flashbag";
 import { SaisiesForm } from "@/components/saisies/SaisiesForm";
 import {
   normalizeReferenceData,
@@ -27,7 +26,7 @@ type MeResponse = { grade: string | null };
 /** Une ligne de saisie telle que renvoyée par l’API (GET /api/saisies). */
 export type SaisieRecord = {
   id: string;
-  type: "item" | "weapon";
+  type: "item" | "weapon" | "cash";
   date: string;
   sheriff: string;
   quantity: number;
@@ -226,29 +225,31 @@ export default async function SaisiesPage() {
         <PageHeader
           headingId="saisies-heading"
           title="Saisies"
-          subtitle="Saisie rapide des armes et items confisqués, avec inventaire session à droite."
+          subtitle="Saisie rapide des armes, items et dollares confisqués, avec inventaires et total des sommes saisies."
           hint="Pensé pour remplacer votre feuille de calcul : navigation fluide, suggestions depuis le référentiel et résumé visuel."
           icon={PageIcons.saisies}
         />
 
         <PageIntroBlock
           items={[
-            "Enregistrer chaque saisie d’arme ou d’item (date, quantité, shérif, contexte).",
+            "Enregistrer chaque saisie d’arme, d’item ou de dollares (montant, date, shérif, contexte).",
             "Retrouver rapidement les saisies récentes durant votre service.",
             "Bénéficier des suggestions d’armes et d’objets issues du référentiel, tout en gardant la saisie manuelle possible.",
           ]}
         />
 
         {(loadErrors.reference || loadErrors.sheriffs || loadErrors.saisies) && (
-          <Flashbag variant="warning" className="mb-6">
-            <span className="block text-xs font-medium uppercase tracking-wider">Données partielles</span>
+          <div className="mb-6 text-sheriff-sortie">
+            <span className="block text-xs font-semibold uppercase tracking-wider">
+              Données partielles
+            </span>
             {loadErrors.reference && <span className="block text-sm">{loadErrors.reference}</span>}
             {loadErrors.sheriffs && <span className="block text-sm">{loadErrors.sheriffs}</span>}
             {loadErrors.saisies && <span className="block text-sm">{loadErrors.saisies}</span>}
             <span className="mt-1 block text-xs opacity-90">
               Vous pouvez continuer : les champs restent saisissables à la main.
             </span>
-          </Flashbag>
+          </div>
         )}
 
         <SaisiesForm
@@ -257,6 +258,7 @@ export default async function SaisiesPage() {
           itemCategories={itemCategories}
           initialRows={saisiesResult.data.map((r) => ({
             id: r.id,
+            type: r.type,
             date: r.date,
             sheriff: r.sheriff,
             quantity: r.quantity,

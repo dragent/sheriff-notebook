@@ -162,4 +162,31 @@ final class SeizureRecordControllerTest extends WebTestCase
         self::assertSame(3, $data['quantity']);
         self::assertSame('Objet de test', $data['itemName']);
     }
+
+    /**
+     * POST /api/saisies type cash : 201, sans item ni arme.
+     */
+    public function testCreateCashWithValidBodyReturns201(): void
+    {
+        $client = self::createClient();
+        [$user, $token] = $this->createUserAndJwt($client, ['username' => 'SheriffCash', 'grade' => 'Sheriff Adjoint']);
+
+        $body = json_encode([
+            'type' => 'cash',
+            'date' => '2025-01-21',
+            'sheriff' => $user->getUsername(),
+            'quantity' => 1250,
+            'notes' => 'Saisie route 68',
+        ]);
+        $this->requestWithJwt($client, 'POST', '/api/saisies', $token, $body);
+
+        self::assertResponseStatusCodeSame(201);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        self::assertIsArray($data);
+        self::assertArrayHasKey('id', $data);
+        self::assertSame('cash', $data['type']);
+        self::assertSame(1250, $data['quantity']);
+        self::assertNull($data['itemName']);
+        self::assertNull($data['weaponModel']);
+    }
 }

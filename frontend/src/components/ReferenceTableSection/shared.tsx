@@ -5,12 +5,12 @@ import type { ReferenceItem, WeaponEntry } from "@/lib/reference";
 
 /** Six weapon types used by the reference table (weapons tab). */
 export const WEAPON_TYPES = [
-  { key: "fusil", label: "Fusil" },
-  { key: "carabine", label: "Carabine" },
-  { key: "fusilAPompe", label: "Fusil à pompe" },
-  { key: "revolver", label: "Revolver" },
-  { key: "pistolet", label: "Pistolet" },
   { key: "armeBlanche", label: "Arme blanche" },
+  { key: "carabine", label: "Carabine" },
+  { key: "fusil", label: "Fusil" },
+  { key: "fusilAPompe", label: "Fusil à pompe" },
+  { key: "pistolet", label: "Pistolet" },
+  { key: "revolver", label: "Revolver" },
 ] as const;
 
 export type WeaponKeys = (typeof WEAPON_TYPES)[number]["key"];

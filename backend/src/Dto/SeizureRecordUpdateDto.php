@@ -4,41 +4,26 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
-use App\Entity\SeizureRecord;
 use Symfony\Component\Validator\Constraints as Assert;
 
-final readonly class SeizureRecordCreateDto
+final readonly class SeizureRecordUpdateDto
 {
     public function __construct(
-        #[Assert\NotBlank(message: 'Le type de saisie est requis.')]
-        #[Assert\Choice(
-            choices: [
-                SeizureRecord::TYPE_ITEM,
-                SeizureRecord::TYPE_WEAPON,
-                SeizureRecord::TYPE_CASH,
-            ],
-            message: 'Le type doit être "item", "weapon" ou "cash".'
-        )]
-        public string $type,
-
-        #[Assert\NotBlank(message: 'La date est requise.')]
         #[Assert\Regex(
             pattern: '/^\d{4}-\d{2}-\d{2}$/',
             message: 'La date doit être au format AAAA-MM-JJ.'
         )]
-        public string $date,
+        public ?string $date = null,
 
-        #[Assert\NotBlank(message: 'Le nom du sheriff est requis.')]
         #[Assert\Length(
             max: 128,
             maxMessage: 'Le nom du sheriff ne doit pas dépasser {{ limit }} caractères.'
         )]
-        public string $sheriff,
+        public ?string $sheriff = null,
 
-        #[Assert\NotNull(message: 'La quantité est requise.')]
         #[Assert\Type(type: 'integer', message: 'La quantité doit être un entier.')]
         #[Assert\GreaterThanOrEqual(value: 1, message: 'La quantité doit être supérieure ou égale à 1.')]
-        public int $quantity,
+        public ?int $quantity = null,
 
         #[Assert\Length(
             max: 255,
@@ -72,19 +57,20 @@ final readonly class SeizureRecordCreateDto
     ) {
     }
 
-    /** type=item requires itemName; type=weapon requires weaponModel. */
     #[Assert\Callback]
-    public function validateCombination(\Symfony\Component\Validator\Context\ExecutionContextInterface $context): void
+    public function validateAtLeastOne(\Symfony\Component\Validator\Context\ExecutionContextInterface $context): void
     {
-        if ($this->type === SeizureRecord::TYPE_ITEM && ($this->itemName === null || $this->itemName === '')) {
-            $context->buildViolation('itemName est requis pour une saisie d\'item.')
-                ->atPath('itemName')
-                ->addViolation();
-        }
-
-        if ($this->type === SeizureRecord::TYPE_WEAPON && ($this->weaponModel === null || $this->weaponModel === '')) {
-            $context->buildViolation('weaponModel est requis pour une saisie d\'arme.')
-                ->atPath('weaponModel')
+        if (
+            $this->date === null
+            && $this->sheriff === null
+            && $this->quantity === null
+            && $this->itemName === null
+            && $this->weaponModel === null
+            && $this->serialNumber === null
+            && $this->possessedBy === null
+            && $this->notes === null
+        ) {
+            $context->buildViolation('Aucun champ à mettre à jour.')
                 ->addViolation();
         }
     }
@@ -92,13 +78,14 @@ final readonly class SeizureRecordCreateDto
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
-        $type = isset($data['type']) && \is_string($data['type']) ? trim($data['type']) : '';
-        $date = isset($data['date']) && \is_string($data['date']) ? trim($data['date']) : '';
-        $sheriff = isset($data['sheriff']) && \is_string($data['sheriff']) ? trim($data['sheriff']) : '';
+        $date = isset($data['date']) && \is_string($data['date']) ? trim($data['date']) : null;
+        $sheriff = isset($data['sheriff']) && \is_string($data['sheriff']) ? trim($data['sheriff']) : null;
 
-        $quantity = 0;
-        if (isset($data['quantity']) && (is_int($data['quantity']) || is_numeric($data['quantity']))) {
-            $quantity = (int) $data['quantity'];
+        $quantity = null;
+        if (array_key_exists('quantity', $data)) {
+            if (is_int($data['quantity']) || is_numeric($data['quantity'])) {
+                $quantity = (int) $data['quantity'];
+            }
         }
 
         $itemName = isset($data['itemName']) && \is_string($data['itemName']) ? trim($data['itemName']) : null;
@@ -108,7 +95,6 @@ final readonly class SeizureRecordCreateDto
         $notes = isset($data['notes']) && \is_string($data['notes']) ? trim($data['notes']) : null;
 
         return new self(
-            $type,
             $date,
             $sheriff,
             $quantity,
@@ -120,3 +106,4 @@ final readonly class SeizureRecordCreateDto
         );
     }
 }
+

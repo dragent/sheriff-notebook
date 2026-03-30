@@ -110,6 +110,14 @@ final class DestructionRecordController
                     400
                 );
             }
+            if (($line['destruction'] ?? '') === SeizureRecord::DESTRUCTION_LINE_KEY_CASH) {
+                if (($line['qte'] % 100) !== 0) {
+                    return new JsonResponse(
+                        ['error' => 'Les dollares doivent être détruits par tranches de 100 $.'],
+                        400
+                    );
+                }
+            }
 
             $dateValue = $line['date'] ?? '';
             if ($referenceDate === null) {
@@ -204,6 +212,11 @@ final class DestructionRecordController
     {
         $seized = [];
         foreach ($this->seizureRepository->findAllOrderedByDateDesc() as $s) {
+            if ($s->getType() === SeizureRecord::TYPE_CASH) {
+                $cashKey = SeizureRecord::DESTRUCTION_LINE_KEY_CASH;
+                $seized[$cashKey] = ($seized[$cashKey] ?? 0) + $s->getQuantity();
+                continue;
+            }
             if ($s->getType() === SeizureRecord::TYPE_ITEM) {
                 $name = $s->getItemName() ?? '';
                 if ($name !== '') {
@@ -265,9 +278,11 @@ final class DestructionRecordController
             $after = $alreadyDestroyed + $qteNew;
             if ($after > $totalSeized) {
                 $pipePos = strpos($name, '|');
-                $displayName = $pipePos !== false
-                    ? substr($name, 0, $pipePos) . ' (n° ' . substr($name, $pipePos + 1) . ')'
-                    : $name;
+                $displayName = $name === SeizureRecord::DESTRUCTION_LINE_KEY_CASH
+                    ? 'Dollars saisis'
+                    : ($pipePos !== false
+                        ? substr($name, 0, $pipePos) . ' (n° ' . substr($name, $pipePos + 1) . ')'
+                        : $name);
                 return sprintf(
                     'La quantité à détruire pour « %s » dépasse la quantité saisie (saisi : %d, déjà détruit : %d, disponible : %d).',
                     $displayName,
@@ -291,22 +306,26 @@ final class DestructionRecordController
                 continue;
             }
 
-            $pipe = strpos($key, '|');
-            if ($pipe !== false) {
-                $weaponModel = substr($key, 0, $pipe);
-                $serialNumber = substr($key, $pipe + 1);
-                $seizures = $this->seizureRepository->findByWeaponModelOrderedByDateAsc($weaponModel, $serialNumber);
+            if ($key === SeizureRecord::DESTRUCTION_LINE_KEY_CASH) {
+                $seizures = $this->seizureRepository->findCashOrderedByDateAsc();
             } else {
-                $seizuresItem = $this->seizureRepository->findByItemNameOrderedByDateAsc($key);
-                $seizuresWeapon = $this->seizureRepository->findByWeaponModelOrderedByDateAsc($key, null);
-                $seizures = array_merge($seizuresItem, $seizuresWeapon);
-                usort($seizures, static function (SeizureRecord $a, SeizureRecord $b): int {
-                    $d = strcmp($a->getDate(), $b->getDate());
-                    if ($d !== 0) {
-                        return $d;
-                    }
-                    return $a->getCreatedAt() <=> $b->getCreatedAt();
-                });
+                $pipe = strpos($key, '|');
+                if ($pipe !== false) {
+                    $weaponModel = substr($key, 0, $pipe);
+                    $serialNumber = substr($key, $pipe + 1);
+                    $seizures = $this->seizureRepository->findByWeaponModelOrderedByDateAsc($weaponModel, $serialNumber);
+                } else {
+                    $seizuresItem = $this->seizureRepository->findByItemNameOrderedByDateAsc($key);
+                    $seizuresWeapon = $this->seizureRepository->findByWeaponModelOrderedByDateAsc($key, null);
+                    $seizures = array_merge($seizuresItem, $seizuresWeapon);
+                    usort($seizures, static function (SeizureRecord $a, SeizureRecord $b): int {
+                        $d = strcmp($a->getDate(), $b->getDate());
+                        if ($d !== 0) {
+                            return $d;
+                        }
+                        return $a->getCreatedAt() <=> $b->getCreatedAt();
+                    });
+                }
             }
 
             $remaining = $toConsume;
@@ -326,7 +345,7 @@ final class DestructionRecordController
         }
     }
 
-    /** Creates an accounting entry for a successful destruction; amount = sum of (qty × destructionValue) from reference. */
+    /** Creates an accounting entry for a successful destruction; amount = sum of (qty × destructionValue) from reference, plus cash reward (20$ per 100$ destroyed). */
     private function createComptaEntryForSuccessfulDestruction(DestructionRecord $record): void
     {
         $lines = $record->getLines();
@@ -384,23 +403,23 @@ final class DestructionRecordController
             }
         }
 
-        if ($valueByName === []) {
-            return;
-        }
-
         $total = 0.0;
         foreach ($lines as $line) {
             $name = isset($line['destruction']) && \is_string($line['destruction']) ? trim($line['destruction']) : '';
             if ($name === '') {
                 continue;
             }
+            $qte = isset($line['qte']) && is_numeric($line['qte']) ? (int) $line['qte'] : 0;
+            if ($qte <= 0) {
+                continue;
+            }
+            if ($name === SeizureRecord::DESTRUCTION_LINE_KEY_CASH) {
+                $total += (float) (int) floor($qte / 100) * 20.0;
+                continue;
+            }
             $pipe = strpos($name, '|');
             $key = ($pipe !== false && $pipe > 0) ? substr($name, 0, $pipe) : $name;
             if (!isset($valueByName[$key])) {
-                continue;
-            }
-            $qte = isset($line['qte']) && is_numeric($line['qte']) ? (int) $line['qte'] : 0;
-            if ($qte <= 0) {
                 continue;
             }
             $total += $qte * $valueByName[$key];

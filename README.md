@@ -101,11 +101,11 @@ Use with Docker services already running (`docker compose up -d`):
 
 | Command | Description |
 |---------|-------------|
-| `npm run db:setup` | Migrations + import services (full DB init) |
-| `npm run db:migrate` | Run Doctrine migrations |
 | `npm run db:import` | Import service records |
 | `npm run db:import-services` | Import services (CSV) |
 | `npm run db:link-users` | Link service records to accounts (once after “one service record per user” migration) |
+| `npm run db:migrate` | Run Doctrine migrations |
+| `npm run db:setup` | Migrations + import services (full DB init) |
 | `npm run users:list` | List users in the database |
 
 ### Makefile (if `make` is installed)

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\ServiceRecord;
+use App\Entity\ServicePlanningSnapshot;
 use App\Entity\User;
 use App\Repository\CountyReferenceRepository;
 use App\Repository\ServiceRecordRepository;
+use App\Service\DiscordChannelNotifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,6 +33,8 @@ final class ServiceRecordController
         private readonly ServiceRecordRepository $repository,
         private readonly CountyReferenceRepository $referenceRepository,
         private readonly EntityManagerInterface $entityManager,
+        private readonly DiscordChannelNotifier $discordNotifier,
+        private readonly string $planningLogChannelId = '',
     ) {
     }
 
@@ -144,6 +148,147 @@ final class ServiceRecordController
         $this->entityManager->flush();
 
         return new JsonResponse(self::toArray($record));
+    }
+
+    #[Route('/planning/reset', name: 'api_services_planning_reset', methods: ['POST'])]
+    public function resetPlanning(#[CurrentUser] User $user): JsonResponse
+    {
+        if (!self::canEditOthersPlanning($user)) {
+            return new JsonResponse(['error' => 'Forbidden'], 403);
+        }
+
+        if ($this->planningLogChannelId === '') {
+            return new JsonResponse([
+                'error' => 'Canal Discord non configuré (DISCORD_PLANNING_CHANNEL_ID).',
+            ], 503);
+        }
+
+        try {
+            // Eager-load user for grade/name context in the snapshot.
+            $records = $this->repository->createQueryBuilder('sr')
+                ->leftJoin('sr.user', 'u')->addSelect('u')
+                ->orderBy('sr.name', 'ASC')
+                ->getQuery()
+                ->getResult();
+
+            $planningKeys = [
+                'monDay', 'monNight', 'tueDay', 'tueNight',
+                'wedDay', 'wedNight', 'thuDay', 'thuNight',
+                'friDay', 'friNight', 'satDay', 'satNight',
+                'sunDay', 'sunNight',
+            ];
+
+            $rows = [];
+            $checkedCount = 0;
+            foreach ($records as $r) {
+                if (!$r instanceof ServiceRecord) {
+                    continue;
+                }
+                $row = [
+                    'id' => $r->getId()->toRfc4122(),
+                    'name' => $r->getName(),
+                    'userId' => $r->getUser()?->getId()?->toRfc4122(),
+                    'grade' => $r->getUser()?->getGrade(),
+                ];
+                foreach ($planningKeys as $k) {
+                    $getter = match ($k) {
+                        'monDay' => 'isMonDay',
+                        'monNight' => 'isMonNight',
+                        'tueDay' => 'isTueDay',
+                        'tueNight' => 'isTueNight',
+                        'wedDay' => 'isWedDay',
+                        'wedNight' => 'isWedNight',
+                        'thuDay' => 'isThuDay',
+                        'thuNight' => 'isThuNight',
+                        'friDay' => 'isFriDay',
+                        'friNight' => 'isFriNight',
+                        'satDay' => 'isSatDay',
+                        'satNight' => 'isSatNight',
+                        'sunDay' => 'isSunDay',
+                        'sunNight' => 'isSunNight',
+                    };
+                    $value = $r->$getter();
+                    $row[$k] = $value;
+                    if ($value === true) {
+                        $checkedCount++;
+                    }
+                }
+                $rows[] = $row;
+            }
+
+            $snapshot = new ServicePlanningSnapshot(
+                actor: $user->getUsername() ?: 'unknown',
+                data: [
+                    'kind' => 'planning_reset',
+                    'createdAt' => (new \DateTimeImmutable('now'))->format(\DateTimeInterface::ATOM),
+                    'actorUserId' => $user->getId()->toRfc4122(),
+                    'actorGrade' => $user->getGrade(),
+                    'checkedCount' => $checkedCount,
+                    'rows' => $rows,
+                ]
+            );
+            $this->entityManager->persist($snapshot);
+
+            // Reset all planning booleans.
+            foreach ($records as $r) {
+                if (!$r instanceof ServiceRecord) {
+                    continue;
+                }
+                $r->setMonDay(false);
+                $r->setMonNight(false);
+                $r->setTueDay(false);
+                $r->setTueNight(false);
+                $r->setWedDay(false);
+                $r->setWedNight(false);
+                $r->setThuDay(false);
+                $r->setThuNight(false);
+                $r->setFriDay(false);
+                $r->setFriNight(false);
+                $r->setSatDay(false);
+                $r->setSatNight(false);
+                $r->setSunDay(false);
+                $r->setSunNight(false);
+            }
+
+            $this->entityManager->flush();
+
+            $content = sprintf(
+                "[Planning] Reset des présences effectué.\nActeur: %s%s\nPrésences (demi-journées) validées : %d\nHorodatage: %s",
+                $user->getUsername(),
+                $user->getGrade() ? ' (' . $user->getGrade() . ')' : '',
+                $checkedCount,
+                (new \DateTimeImmutable('now'))->format('Y-m-d H:i:s')
+            );
+            $discordError = $this->discordNotifier->sendMessage($this->planningLogChannelId, $content);
+            if ($discordError !== null) {
+                return new JsonResponse(['error' => $discordError], 502);
+            }
+
+            return new JsonResponse([
+                'ok' => true,
+                'snapshotId' => $snapshot->getId()->toRfc4122(),
+                'checkedCount' => $checkedCount,
+                'discord' => [
+                    'channelId' => $this->planningLogChannelId,
+                    'ok' => true,
+                    'error' => null,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            $message = $e->getMessage();
+            $hint = null;
+            if (stripos($message, 'service_planning_snapshot') !== false) {
+                $hint = 'Migration manquante : exécutez les migrations Doctrine pour créer la table service_planning_snapshot.';
+            }
+            if ($hint === null && stripos($message, 'does not exist') !== false) {
+                $hint = 'Vérifiez que les migrations Doctrine sont à jour.';
+            }
+
+            return new JsonResponse([
+                'error' => 'Erreur interne lors du reset du planning.',
+                'hint' => $hint,
+            ], 500);
+        }
     }
 
     private static function applyPlanning(ServiceRecord $record, array $data): void

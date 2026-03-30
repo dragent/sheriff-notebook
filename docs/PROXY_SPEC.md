@@ -8,27 +8,30 @@ This document describes the Next.js API routes that proxy to the Symfony backend
 
 | Next.js route | Method | Symfony backend | Auth required | Description |
 |---------------|--------|-----------------|---------------|-------------|
-| `/api/me` | GET | `GET /api/me` | Yes | User profile (roles, etc.) |
-| `/api/me/join-guild` | POST | `POST /api/me/join-guild` | Yes | Add user to Discord server with Sheriff Deputy role (OAuth token in session) |
-| `/api/reference` | PUT | `PUT /api/reference` | Yes | Update reference data (County Sheriff / Deputy) |
-| `/api/services/[id]` | PATCH | `PATCH /api/services/{id}` | Yes | Update a service (planning, weapon, etc.) |
-| `/api/recruits` | GET | `GET /api/recruits` | Yes | Discord guild members without a Deputy…Sheriff de comté role (name must match app grades); no DB-only fallback |
-| `/api/users/[id]` | PATCH | `PATCH /api/users/{id}` | Yes | Update a user's grade (recruitment) |
-| `/api/comptabilite` | GET | `GET /api/comptabilite` | Yes | List accounting entries (in/out) |
-| `/api/comptabilite` | POST | `POST /api/comptabilite` | Yes | Create an entry (in or out) |
-| `/api/saisies` | GET | `GET /api/saisies` | Yes | List seizures (items and weapons) |
-| `/api/saisies` | POST | `POST /api/saisies` | Yes | Create a seizure (item or weapon) |
-| `/api/destructions` | GET | `GET /api/destructions` | Yes | List destruction history |
-| `/api/destructions` | POST | `POST /api/destructions` | Yes | Create a destruction record |
-| `/api/destructions/[id]` | PATCH | `PATCH /api/destructions/{id}` | Yes | Single validation: success or lost |
-| `/api/coffres` | GET | `GET /api/coffres` | Yes | Bureau inventory (ammo + accessories) |
-| `/api/coffres` | PATCH | `PATCH /api/coffres` | Yes | Update a quantity (section + type + quantity) |
 | `/api/bureau-weapons` | GET | `GET /api/bureau-weapons` | Yes | Bureau weapons census (list) |
 | `/api/bureau-weapons` | POST | `POST /api/bureau-weapons` | Yes | Bureau weapons census (create) |
-| `/api/bureau-weapons/[id]` | PATCH | `PATCH /api/bureau-weapons/{id}` | Yes | Bureau weapons census (update) |
 | `/api/bureau-weapons/[id]` | DELETE | `DELETE /api/bureau-weapons/{id}` | Yes | Bureau weapons census (delete) |
+| `/api/bureau-weapons/[id]` | PATCH | `PATCH /api/bureau-weapons/{id}` | Yes | Bureau weapons census (update) |
+| `/api/coffres` | GET | `GET /api/coffres` | Yes | Bureau inventory (ammo + accessories) |
+| `/api/coffres` | PATCH | `PATCH /api/coffres` | Yes | Update a quantity (section + type + quantity) |
+| `/api/comptabilite` | GET | `GET /api/comptabilite` | Yes | List accounting entries (in/out) |
+| `/api/comptabilite` | POST | `POST /api/comptabilite` | Yes | Create an entry (in or out) |
+| `/api/destructions` | GET | `GET /api/destructions` | Yes | List destruction history |
+| `/api/destructions` | POST | `POST /api/destructions` | Yes | Create a destruction record (`lines[].destruction` may be `__cash_seizure__` for dollars; `qte` = dollars removed, FIFO on cash seizures) |
+| `/api/destructions/[id]` | PATCH | `PATCH /api/destructions/{id}` | Yes | Single validation: success or lost |
 | `/api/discord/effectif` | GET | `GET /api/discord/effectif` | Yes | Roster message preview (markdown, count, date) — County Sheriff / Deputy |
 | `/api/discord/effectif/send` | POST | `POST /api/discord/effectif/send` | Yes | Publish roster message to Discord channel — County Sheriff / Deputy |
+| `/api/me` | GET | `GET /api/me` | Yes | User profile (roles, etc.) |
+| `/api/me/join-guild` | POST | `POST /api/me/join-guild` | Yes | Add user to Discord server with Sheriff Deputy role (OAuth token in session) |
+| `/api/recruits` | GET | `GET /api/recruits` | Yes | Discord guild members without a Deputy…Sheriff de comté role (name must match app grades); no DB-only fallback |
+| `/api/reference` | PUT | `PUT /api/reference` | Yes | Update reference data (County Sheriff / Deputy) |
+| `/api/saisies` | GET | `GET /api/saisies` | Yes | List seizures (items, weapons, cash) |
+| `/api/saisies` | POST | `POST /api/saisies` | Yes | Create a seizure (`type`: `item`, `weapon`, or `cash`; `quantity` is dollar amount for `cash`) |
+| `/api/saisies/[id]` | PATCH | `PATCH /api/saisies/{id}` | Yes | Update a seizure (no type change; 409 if already cancelled) |
+| `/api/saisies/[id]/cancel` | POST | `POST /api/saisies/{id}/cancel` | Yes | Cancel a seizure with a reason (audit trail) |
+| `/api/services/[id]` | PATCH | `PATCH /api/services/{id}` | Yes | Update a service (planning, weapon, etc.) |
+| `/api/services/planning/reset` | POST | `POST /api/services/planning/reset` | Yes | Snapshot the current planning presences table, reset all presences, and post an automatic Discord log (County Sheriff / Deputy / Chief) |
+| `/api/users/[id]` | PATCH | `PATCH /api/users/{id}` | Yes | Update a user's grade (recruitment) |
 
 **Non-proxy routes (out of scope):**
 

@@ -3,12 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DestructionSaisieForm, type DestructionOption } from "./DestructionSaisieForm";
 import { DestructionHistorique, type DestructionRecordItem } from "./DestructionHistorique";
+import {
+  DESTRUCTION_LINE_KEY_CASH,
+  labelCashDestructionLine,
+} from "@/lib/destructionCashKey";
 
 type DestructionPageClientProps = {
   defaultDate: string;
 };
 
 type SaisieRecord = {
+  type?: 'item' | 'weapon' | 'cash';
   itemName: string | null;
   weaponModel: string | null;
   quantity: number;
@@ -55,6 +60,11 @@ function computeAvailableQuantities(
 ): Record<string, number> {
   const seized: Record<string, number> = {};
   for (const s of saisies) {
+    if (s.type === 'cash') {
+      const k = DESTRUCTION_LINE_KEY_CASH;
+      seized[k] = (seized[k] ?? 0) + (s.quantity || 0);
+      continue;
+    }
     const name = s.itemName ?? s.weaponModel ?? '';
     if (!name) continue;
     if (s.itemName != null && s.itemName !== '') {
@@ -95,14 +105,27 @@ function computeAvailableQuantities(
 
 const ARMES_SAISIES_GROUP = 'Armes saisies';
 const ITEMS_SAISIS_GROUP = 'Items saisis';
+const DOLLARS_SAISIS_GROUP = 'Dollars saisis';
 
 function buildOptionsFromSaisiesOnly(saisies: SaisieRecord[]): DestructionOption[] {
   const options: DestructionOption[] = [];
   const seenWeaponWithoutSerial = new Set<string>();
   const seenWeaponSerial = new Set<string>();
   const seenItems = new Set<string>();
+  let seenCashOption = false;
 
   for (const s of saisies) {
+    if (s.type === 'cash') {
+      if (!seenCashOption) {
+        seenCashOption = true;
+        options.push({
+          name: DESTRUCTION_LINE_KEY_CASH,
+          categoryName: DOLLARS_SAISIS_GROUP,
+          displayLabel: labelCashDestructionLine(),
+        });
+      }
+      continue;
+    }
     if (s.weaponModel?.trim()) {
       const model = s.weaponModel.trim();
       const serial = s.serialNumber?.trim();

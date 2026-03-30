@@ -15,11 +15,11 @@ No events are sent until DSNs are set. To enable:
 | Variable | Side | Required | Description |
 |----------|------|----------|-------------|
 | `NEXT_PUBLIC_SENTRY_DSN` | Frontend | To enable front | Public Sentry project DSN (e.g. `https://xxx@o0.ingest.sentry.io/123`). |
+| `SENTRY_PROJECT` | Frontend build | For source maps | Sentry project slug. |
+| `SENTRY_AUTH_TOKEN` | Frontend build | For source maps | Sentry auth token (do not commit). |
 | `SENTRY_DSN` | Backend | To enable back | Backend project DSN (can be the same as frontend). |
 | `SENTRY_ENVIRONMENT` | Both | No | `production`, `staging`, etc. Default: `NODE_ENV` (front) / `kernel.environment` (back). |
 | `SENTRY_ORG` | Frontend build | For source maps | Sentry organization slug. |
-| `SENTRY_PROJECT` | Frontend build | For source maps | Sentry project slug. |
-| `SENTRY_AUTH_TOKEN` | Frontend build | For source maps | Sentry auth token (do not commit). |
 
 Without a DSN, the SDK initializes but sends no events.
 

@@ -15,6 +15,13 @@ class SeizureRecord
 {
     public const TYPE_ITEM = 'item';
     public const TYPE_WEAPON = 'weapon';
+    public const TYPE_CASH = 'cash';
+
+    /**
+     * Valeur du champ JSON `destruction` pour détruire des dollars saisis (agrégat FIFO).
+     * Ne pas utiliser comme nom d'item référentiel.
+     */
+    public const DESTRUCTION_LINE_KEY_CASH = '__cash_seizure__';
 
     #[ORM\Id]
     #[ORM\Column(type: 'uuid', unique: true)]
@@ -23,8 +30,8 @@ class SeizureRecord
     #[ORM\Column(length: 16)]
     #[Assert\NotBlank(message: 'Le type de saisie est requis.')]
     #[Assert\Choice(
-        choices: [self::TYPE_ITEM, self::TYPE_WEAPON],
-        message: 'Le type doit être "item" ou "weapon".'
+        choices: [self::TYPE_ITEM, self::TYPE_WEAPON, self::TYPE_CASH],
+        message: 'Le type doit être "item", "weapon" ou "cash".'
     )]
     private string $type;
 
@@ -96,6 +103,23 @@ class SeizureRecord
     #[ORM\Column]
     private \DateTimeImmutable $updatedAt;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $cancelledAt = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Length(
+        max: 255,
+        maxMessage: 'La raison d\'annulation ne doit pas dépasser {{ limit }} caractères.'
+    )]
+    private ?string $cancelledReason = null;
+
+    #[ORM\Column(length: 128, nullable: true)]
+    #[Assert\Length(
+        max: 128,
+        maxMessage: 'Le champ "Annulé par" ne doit pas dépasser {{ limit }} caractères.'
+    )]
+    private ?string $cancelledBy = null;
+
     public function __construct(
         string $type,
         string $date,
@@ -137,9 +161,21 @@ class SeizureRecord
         return $this->date;
     }
 
+    public function setDate(string $date): void
+    {
+        $this->date = $date;
+        $this->updatedAt = new \DateTimeImmutable('now');
+    }
+
     public function getSheriff(): string
     {
         return $this->sheriff;
+    }
+
+    public function setSheriff(string $sheriff): void
+    {
+        $this->sheriff = $sheriff;
+        $this->updatedAt = new \DateTimeImmutable('now');
     }
 
     public function getQuantity(): int
@@ -158,9 +194,21 @@ class SeizureRecord
         return $this->itemName;
     }
 
+    public function setItemName(?string $itemName): void
+    {
+        $this->itemName = $itemName !== null && trim($itemName) !== '' ? trim($itemName) : null;
+        $this->updatedAt = new \DateTimeImmutable('now');
+    }
+
     public function getWeaponModel(): ?string
     {
         return $this->weaponModel;
+    }
+
+    public function setWeaponModel(?string $weaponModel): void
+    {
+        $this->weaponModel = $weaponModel !== null && trim($weaponModel) !== '' ? trim($weaponModel) : null;
+        $this->updatedAt = new \DateTimeImmutable('now');
     }
 
     public function getSerialNumber(): ?string
@@ -168,14 +216,32 @@ class SeizureRecord
         return $this->serialNumber;
     }
 
+    public function setSerialNumber(?string $serialNumber): void
+    {
+        $this->serialNumber = $serialNumber !== null && trim($serialNumber) !== '' ? trim($serialNumber) : null;
+        $this->updatedAt = new \DateTimeImmutable('now');
+    }
+
     public function getPossessedBy(): ?string
     {
         return $this->possessedBy;
     }
 
+    public function setPossessedBy(?string $possessedBy): void
+    {
+        $this->possessedBy = $possessedBy !== null && trim($possessedBy) !== '' ? trim($possessedBy) : null;
+        $this->updatedAt = new \DateTimeImmutable('now');
+    }
+
     public function getNotes(): ?string
     {
         return $this->notes;
+    }
+
+    public function setNotes(?string $notes): void
+    {
+        $this->notes = $notes !== null && trim($notes) !== '' ? trim($notes) : null;
+        $this->updatedAt = new \DateTimeImmutable('now');
     }
 
     public function getCreatedAt(): \DateTimeImmutable
@@ -186,5 +252,33 @@ class SeizureRecord
     public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->cancelledAt !== null;
+    }
+
+    public function getCancelledAt(): ?\DateTimeImmutable
+    {
+        return $this->cancelledAt;
+    }
+
+    public function getCancelledReason(): ?string
+    {
+        return $this->cancelledReason;
+    }
+
+    public function getCancelledBy(): ?string
+    {
+        return $this->cancelledBy;
+    }
+
+    public function cancel(string $reason, string $actor): void
+    {
+        $this->cancelledAt = new \DateTimeImmutable('now');
+        $this->cancelledReason = trim($reason) !== '' ? trim($reason) : null;
+        $this->cancelledBy = trim($actor) !== '' ? trim($actor) : null;
+        $this->updatedAt = new \DateTimeImmutable('now');
     }
 }

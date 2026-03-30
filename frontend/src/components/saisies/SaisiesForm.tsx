@@ -10,8 +10,18 @@ import {
 const TOAST_DURATION_MS = 2500;
 const INVENTORY_MAX_ITEMS = 50;
 
+const dollarsIntl = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+
+/** Display seized dollar totals (RP : montants entiers). */
+function formatSeizedDollars(amount: number): string {
+  return dollarsIntl.format(Math.max(0, amount));
+}
+
+type SaisieType = 'item' | 'weapon' | 'cash';
+
 type SaisieRow = {
   id: string;
+  kind: SaisieType;
   date: string;
   sheriff: string;
   quantity: number | '';
@@ -20,9 +30,10 @@ type SaisieRow = {
   weaponModel: string;
   serialNumber: string;
   notes: string;
+  cancelledAt?: string | null;
+  cancelledReason?: string | null;
+  cancelledBy?: string | null;
 };
-
-type SaisieType = 'item' | 'weapon';
 
 type ModalFormState = {
   type: SaisieType;
@@ -42,6 +53,7 @@ type ItemCategoryOption = { name: string; items: { name: string }[] };
 /** Format des lignes passées par la page (API / chargement). */
 type InitialRowInput = {
   id: string;
+  type: SaisieType;
   date: string;
   sheriff: string;
   quantity: number;
@@ -50,6 +62,9 @@ type InitialRowInput = {
   weaponModel?: string;
   serialNumber?: string;
   notes?: string;
+  cancelledAt?: string | null;
+  cancelledReason?: string | null;
+  cancelledBy?: string | null;
 };
 
 type SaisiesFormProps = {
@@ -74,14 +89,10 @@ function createId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-/** Affiche un numéro de saisie court (8 premiers caractères) pour lisibilité, avec tooltip sur l’id complet. */
-function formatSaisieNumero(id: string): string {
-  return id.length >= 8 ? id.slice(0, 8) : id;
-}
-
 function createEmptyRow(defaultDate: string, defaultSheriff: string | null): SaisieRow {
   return {
     id: createId('row'),
+    kind: 'item',
     date: defaultDate,
     sheriff: defaultSheriff ?? '',
     quantity: 1,
@@ -90,6 +101,9 @@ function createEmptyRow(defaultDate: string, defaultSheriff: string | null): Sai
     weaponModel: '',
     serialNumber: '',
     notes: '',
+    cancelledAt: null,
+    cancelledReason: null,
+    cancelledBy: null,
   };
 }
 
@@ -99,6 +113,7 @@ type SortDir = 'asc' | 'desc';
 function recordToRow(r: InitialRowInput): SaisieRow {
   return {
     id: r.id,
+    kind: r.type,
     date: r.date,
     sheriff: r.sheriff,
     quantity: r.quantity,
@@ -107,6 +122,9 @@ function recordToRow(r: InitialRowInput): SaisieRow {
     weaponModel: r.weaponModel ?? '',
     serialNumber: r.serialNumber ?? '',
     notes: r.notes ?? '',
+    cancelledAt: r.cancelledAt ?? null,
+    cancelledReason: r.cancelledReason ?? null,
+    cancelledBy: r.cancelledBy ?? null,
   };
 }
 
@@ -126,9 +144,9 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
   const [mounted, setMounted] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
-  const [toastLastSavedId, setToastLastSavedId] = useState<string | null>(null);
   const [toastError, setToastError] = useState<string | null>(null);
   const [openModalType, setOpenModalType] = useState<SaisieType | null>(null);
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [weaponSort, setWeaponSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'qty', dir: 'desc' });
   const [itemSort, setItemSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'qty', dir: 'desc' });
   const [saving, setSaving] = useState(false);
@@ -143,11 +161,20 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
   const modalRef = useRef<HTMLDivElement>(null);
   const itemTriggerRef = useRef<HTMLButtonElement>(null);
   const weaponTriggerRef = useRef<HTMLButtonElement>(null);
+  const cashTriggerRef = useRef<HTMLButtonElement>(null);
+  const historyRef = useRef<HTMLElement>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   /** Ferme le modal et rend le focus au bouton déclencheur. */
   const closeModal = useCallback(() => {
     setModalOpen(false);
-    const trigger = openModalType === 'item' ? itemTriggerRef.current : weaponTriggerRef.current;
+    setEditingRowId(null);
+    const trigger =
+      openModalType === 'item'
+        ? itemTriggerRef.current
+        : openModalType === 'weapon'
+          ? weaponTriggerRef.current
+          : cashTriggerRef.current;
     setOpenModalType(null);
     requestAnimationFrame(() => trigger?.focus());
   }, [openModalType]);
@@ -168,8 +195,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
     return () => clearTimeout(t);
   }, [toastError]);
 
-  const showToast = useCallback((savedId?: string) => {
-    setToastLastSavedId(savedId ?? null);
+  const showToast = useCallback(() => {
     setToastVisible(true);
   }, []);
 
@@ -206,7 +232,12 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
 
   useEffect(() => {
     if (!modalOpen) return;
-    const primaryId = openModalType === 'item' ? 'saisie-item' : 'saisie-weapon';
+    const primaryId =
+      openModalType === 'item'
+        ? 'saisie-item'
+        : openModalType === 'weapon'
+          ? 'saisie-weapon'
+          : 'saisie-qty';
     const focus = () => document.getElementById(primaryId)?.focus();
     const t = setTimeout(focus, 50);
     return () => clearTimeout(t);
@@ -214,9 +245,14 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const defaultSheriff = sheriffs[0]?.username ?? null;
+  const currentMonthPrefix = useMemo(() => todayIso.slice(0, 7), [todayIso]);
 
   const [rows, setRows] = useState<SaisieRow[]>(() =>
     initialRows?.length ? initialRows.map(recordToRow) : []
+  );
+  const historyRows = useMemo(
+    () => rows.filter((r) => typeof r.date === 'string' && r.date.startsWith(currentMonthPrefix)),
+    [rows, currentMonthPrefix]
   );
   const [form, setForm] = useState<ModalFormState>(() => ({
     type: 'item',
@@ -242,6 +278,8 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
   const weaponInventoryRaw = useMemo(() => {
     const map = new Map<string, number>();
     for (const row of rows) {
+      if (row.cancelledAt) continue;
+      if (row.kind !== 'weapon') continue;
       if (!row.weaponModel || !row.quantity || typeof row.quantity !== 'number') continue;
       const key = row.weaponModel.trim();
       if (!key) continue;
@@ -253,12 +291,26 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
   const itemInventoryRaw = useMemo(() => {
     const map = new Map<string, number>();
     for (const row of rows) {
+      if (row.cancelledAt) continue;
+      if (row.kind !== 'item') continue;
       if (!row.itemName || !row.quantity || typeof row.quantity !== 'number') continue;
       const key = row.itemName.trim();
       if (!key) continue;
       map.set(key, (map.get(key) ?? 0) + row.quantity);
     }
     return Array.from(map.entries()).slice(0, INVENTORY_MAX_ITEMS);
+  }, [rows]);
+
+  const { totalCashDollars, cashEntryCount } = useMemo(() => {
+    let total = 0;
+    let count = 0;
+    for (const row of rows) {
+      if (row.cancelledAt) continue;
+      if (row.kind !== 'cash' || typeof row.quantity !== 'number') continue;
+      total += row.quantity;
+      count += 1;
+    }
+    return { totalCashDollars: total, cashEntryCount: count };
   }, [rows]);
 
   const weaponInventory = useMemo(() => {
@@ -273,6 +325,8 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
   const weaponRowsByModel = useMemo(() => {
     const map = new Map<string, SaisieRow[]>();
     for (const row of rows) {
+      if (row.cancelledAt) continue;
+      if (row.kind !== 'weapon') continue;
       const model = row.weaponModel?.trim();
       if (!model || typeof row.quantity !== 'number') continue;
       const list = map.get(model) ?? [];
@@ -369,6 +423,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
       const next: SaisieRow = {
         ...template,
         id: createId('row'),
+        kind: template.kind,
         quantity: template.quantity || 1,
       };
       return [...current, next];
@@ -385,11 +440,12 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
 
   function openModal(initialType: SaisieType) {
     setOpenModalType(initialType);
+    setEditingRowId(null);
     setForm({
       type: initialType,
       date: todayIso,
       sheriff: defaultSheriff ?? '',
-      quantity: '1',
+      quantity: initialType === 'cash' ? '100' : '1',
       itemName: '',
       possessedBy: '',
       weaponModel: '',
@@ -399,10 +455,28 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
     setModalOpen(true);
   }
 
+  function openEdit(row: SaisieRow) {
+    if (row.cancelledAt) return;
+    setOpenModalType(row.kind);
+    setEditingRowId(row.id);
+    setForm({
+      type: row.kind,
+      date: row.date,
+      sheriff: row.sheriff,
+      quantity: typeof row.quantity === 'number' ? String(row.quantity) : '1',
+      itemName: row.itemName,
+      possessedBy: row.possessedBy,
+      weaponModel: row.weaponModel,
+      serialNumber: row.serialNumber,
+      notes: row.notes,
+    });
+    setModalOpen(true);
+  }
+
   function resetFormKeepingDateSheriff() {
     setForm((f) => ({
       ...f,
-      quantity: '1',
+      quantity: f.type === 'cash' ? '100' : '1',
       itemName: '',
       possessedBy: '',
       weaponModel: '',
@@ -417,6 +491,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
     const type: SaisieType = form.type;
     const base: SaisieRow = {
       id: createId('row'),
+      kind: type,
       date: form.date,
       sheriff: form.sheriff,
       quantity,
@@ -426,6 +501,9 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
       serialNumber: form.serialNumber.trim(),
       notes: form.notes.trim(),
     };
+    if (type === 'cash') {
+      return { ...base, serialNumber: '' };
+    }
     const row: SaisieRow =
       type === 'item'
         ? { ...base, itemName: form.itemName.trim() }
@@ -442,28 +520,58 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
     setToastError(null);
     setSaving(true);
     try {
-      const body = {
-        type: form.type,
-        date: form.date,
-        sheriff: form.sheriff,
-        quantity: typeof row.quantity === 'number' ? row.quantity : 1,
-        serialNumber: row.serialNumber || undefined,
-        possessedBy: row.possessedBy || undefined,
-        notes: row.notes || undefined,
-        ...(form.type === 'item' ? { itemName: row.itemName } : { weaponModel: row.weaponModel }),
-      };
-      const res = await fetch('/api/saisies', {
-        method: 'POST',
+      const body =
+        form.type === 'cash'
+          ? {
+              type: form.type,
+              date: form.date,
+              sheriff: form.sheriff,
+              quantity: typeof row.quantity === 'number' ? row.quantity : 1,
+              possessedBy: row.possessedBy || undefined,
+              notes: row.notes || undefined,
+            }
+          : {
+              type: form.type,
+              date: form.date,
+              sheriff: form.sheriff,
+              quantity: typeof row.quantity === 'number' ? row.quantity : 1,
+              serialNumber: row.serialNumber || undefined,
+              possessedBy: row.possessedBy || undefined,
+              notes: row.notes || undefined,
+              ...(form.type === 'item' ? { itemName: row.itemName } : { weaponModel: row.weaponModel }),
+            };
+      const isEdit = editingRowId !== null;
+      const endpoint = isEdit ? `/api/saisies/${encodeURIComponent(editingRowId)}` : '/api/saisies';
+      const method = isEdit ? 'PATCH' : 'POST';
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const data = (await res.json()) as { id?: string; error?: string; date?: string; sheriff?: string; quantity?: number; itemName?: string | null; weaponModel?: string | null; serialNumber?: string | null; possessedBy?: string | null; notes?: string | null };
+      const data = (await res.json()) as {
+        id?: string;
+        error?: string;
+        type?: string;
+        date?: string;
+        sheriff?: string;
+        quantity?: number;
+        itemName?: string | null;
+        weaponModel?: string | null;
+        serialNumber?: string | null;
+        possessedBy?: string | null;
+        notes?: string | null;
+        cancelledAt?: string | null;
+        cancelledReason?: string | null;
+        cancelledBy?: string | null;
+      };
       if (!res.ok) {
         setToastError(data?.error ?? `Erreur ${res.status}. Réessayez.`);
         return;
       }
       const savedRow = recordToRow({
-        id: data.id ?? row.id,
+        id: (data.id ?? (isEdit ? editingRowId! : row.id)) as string,
+        type: (data.type === 'item' || data.type === 'weapon' || data.type === 'cash' ? data.type : form.type) as SaisieType,
         date: data.date ?? row.date,
         sheriff: data.sheriff ?? row.sheriff,
         quantity: typeof data.quantity === 'number' ? data.quantity : (row.quantity as number),
@@ -472,21 +580,69 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
         serialNumber: data.serialNumber ?? undefined,
         possessedBy: data.possessedBy ?? undefined,
         notes: data.notes ?? undefined,
+        cancelledAt: data.cancelledAt ?? undefined,
+        cancelledReason: data.cancelledReason ?? undefined,
+        cancelledBy: data.cancelledBy ?? undefined,
       });
-      setRows((current) => [...current, savedRow]);
-      showToast(data.id ?? savedRow.id);
-      if (addAnother) {
+      if (isEdit) {
+        setRows((current) => current.map((r) => (r.id === savedRow.id ? { ...r, ...savedRow } : r)));
+      } else {
+        setRows((current) => [...current, savedRow]);
+      }
+      showToast();
+      if (!isEdit && addAnother) {
         resetFormKeepingDateSheriff();
         requestAnimationFrame(() => {
-          const primaryId = form.type === 'item' ? 'saisie-item' : 'saisie-weapon';
+          const primaryId =
+            form.type === 'item'
+              ? 'saisie-item'
+              : form.type === 'weapon'
+                ? 'saisie-weapon'
+                : 'saisie-qty';
           document.getElementById(primaryId)?.focus();
         });
       } else {
         setModalOpen(false);
         setOpenModalType(null);
-        const trigger = form.type === 'item' ? itemTriggerRef.current : weaponTriggerRef.current;
+        setEditingRowId(null);
+        const trigger =
+          form.type === 'item'
+            ? itemTriggerRef.current
+            : form.type === 'weapon'
+              ? weaponTriggerRef.current
+              : cashTriggerRef.current;
         requestAnimationFrame(() => trigger?.focus());
       }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function cancelRow(row: SaisieRow) {
+    if (row.cancelledAt) return;
+    const reason = window.prompt("Raison de l'annulation ?");
+    if (!reason) return;
+    setToastError(null);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/saisies/${encodeURIComponent(row.id)}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      const data = (await res.json()) as { error?: string; cancelledAt?: string | null; cancelledReason?: string | null; cancelledBy?: string | null };
+      if (!res.ok) {
+        setToastError(data?.error ?? `Erreur ${res.status}. Réessayez.`);
+        return;
+      }
+      setRows((current) =>
+        current.map((r) =>
+          r.id === row.id
+            ? { ...r, cancelledAt: data.cancelledAt ?? new Date().toISOString(), cancelledReason: data.cancelledReason ?? reason, cancelledBy: data.cancelledBy ?? null }
+            : r
+        )
+      );
+      showToast();
     } finally {
       setSaving(false);
     }
@@ -502,6 +658,12 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
     );
   }
 
+  function getRowLabel(row: SaisieRow): string {
+    if (row.kind === 'cash') return 'Dollares';
+    if (row.kind === 'weapon') return row.weaponModel || 'Arme';
+    return row.itemName || 'Item';
+  }
+
   return (
     <div className="flex flex-col gap-6" suppressHydrationWarning>
       {toastVisible && (
@@ -512,11 +674,6 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
         >
           <span className="text-sm font-medium text-sheriff-paper">
             Saisie enregistrée
-            {toastLastSavedId && (
-              <span className="ml-1.5 font-mono text-sheriff-gold" title={toastLastSavedId}>
-                (n° {formatSaisieNumero(toastLastSavedId)})
-              </span>
-            )}
           </span>
         </div>
       )}
@@ -531,11 +688,23 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
               Nouvelle saisie
             </h2>
             <p className="mt-1 text-xs text-sheriff-paper-muted">
-              Enregistrez une saisie (item ou arme) via le formulaire, puis consultez les inventaires
-              agrégés ci-dessous.
+              Enregistrez une saisie (item, arme ou dollares) via le formulaire, puis consultez les
+              inventaires et le cumul monétaire ci-dessous.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setHistoryOpen((v) => !v);
+                requestAnimationFrame(() => historyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+              }}
+              className="sheriff-focus-ring rounded-md border border-sheriff-gold/30 bg-sheriff-charcoal/60 px-3 py-1.5 text-xs font-medium text-sheriff-paper transition hover:bg-sheriff-gold/15 sm:text-sm"
+              aria-expanded={historyOpen}
+              aria-controls="saisies-history"
+            >
+              Voir l&apos;historique
+            </button>
             <button
               ref={itemTriggerRef}
               type="button"
@@ -552,6 +721,195 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
             >
               + Saisie d&apos;arme
             </button>
+            <button
+              ref={cashTriggerRef}
+              type="button"
+              onClick={() => openModal('cash')}
+              className="sheriff-focus-ring rounded-md border border-sheriff-sortie/45 bg-sheriff-sortie-bg px-3 py-1.5 text-xs font-medium text-sheriff-sortie transition hover:bg-sheriff-sortie/20 sm:text-sm"
+            >
+              + Saisie de dollares
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section
+        ref={historyRef}
+        id="saisies-history"
+        aria-label="Historique des saisies"
+        className="sheriff-card rounded-lg border border-sheriff-gold/30 bg-sheriff-charcoal/70 p-3 shadow-sm sm:p-4"
+      >
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-gold sm:text-sm">
+              Historique des saisies
+            </h3>
+            <p className="mt-0.5 text-[11px] leading-snug text-sheriff-paper-muted/90">
+              {historyRows.length === 0
+                ? 'Aucune saisie enregistrée pour le mois en cours.'
+                : `${historyRows.length} saisie${historyRows.length > 1 ? 's' : ''} affichée${historyRows.length > 1 ? 's' : ''} (mois en cours).`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setHistoryOpen((v) => !v)}
+            className="sheriff-focus-ring rounded-md border border-sheriff-gold/30 bg-sheriff-wood/10 px-3 py-1.5 text-xs font-medium text-sheriff-paper transition hover:bg-sheriff-gold/10 sm:text-sm"
+            aria-expanded={historyOpen}
+            aria-controls="saisies-history-table"
+          >
+            {historyOpen ? 'Masquer' : 'Afficher'}
+          </button>
+        </header>
+
+        {historyOpen ? (
+          historyRows.length === 0 ? (
+            <div className="mt-3 rounded-md bg-sheriff-charcoal/50 p-3 text-[11px] text-sheriff-paper-muted/85">
+              Aucune saisie pour le mois en cours. Utilise « + Saisie d&apos;item / arme / dollares » pour ajouter une entrée.
+            </div>
+          ) : (
+            <div
+              id="saisies-history-table"
+              className="sheriff-table-scroll mt-3 overflow-auto rounded-md border border-sheriff-gold/10 bg-sheriff-charcoal/50"
+            >
+              <table className="w-full min-w-[700px] border-collapse text-left text-xs sm:text-sm">
+                <thead>
+                  <tr>
+                    <th className={CELL_HEADER + ' py-1.5'}>Date</th>
+                    <th className={CELL_HEADER + ' py-1.5'}>Sheriff</th>
+                    <th className={CELL_HEADER + ' py-1.5'}>Type</th>
+                    <th className={CELL_HEADER + ' py-1.5'}>Détail</th>
+                    <th className={`${CELL_HEADER} w-24 py-1.5 text-right`}>Qté</th>
+                    <th className={CELL_HEADER + ' py-1.5'}>Possédé par</th>
+                    <th className={CELL_HEADER + ' py-1.5'}>Notes</th>
+                    <th className={`${CELL_HEADER} w-32 py-1.5 text-right`}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyRows.map((row, index) => (
+                    <tr
+                      key={row.id}
+                      className={`transition-colors ${
+                        index % 2 === 1 ? 'bg-sheriff-charcoal/60' : 'bg-sheriff-charcoal/40'
+                      } ${row.cancelledAt ? 'opacity-60' : 'hover:bg-sheriff-gold/5'}`}
+                    >
+                      <td className={CELL_BASE + ' py-1.5 whitespace-nowrap'}>{row.date}</td>
+                      <td className={CELL_BASE + ' py-1.5'}>{row.sheriff || '—'}</td>
+                      <td className={CELL_BASE + ' py-1.5'}>
+                        <span className="inline-flex rounded bg-sheriff-gold/10 px-1.5 py-0.5 font-heading text-[10px] font-semibold uppercase tracking-wider text-sheriff-gold">
+                          {row.kind === 'cash' ? 'cash' : row.kind}
+                        </span>
+                        {row.cancelledAt ? (
+                          <span className="ml-2 inline-flex rounded bg-sheriff-sortie/15 px-1.5 py-0.5 font-heading text-[10px] font-semibold uppercase tracking-wider text-sheriff-sortie">
+                            annulée
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className={CELL_BASE + ' py-1.5'}>
+                        <span className="font-medium text-sheriff-paper">{getRowLabel(row)}</span>
+                        {row.kind === 'cash' ? (
+                          <span className="ml-1 text-[11px] text-sheriff-sortie/85">(dollares)</span>
+                        ) : null}
+                      </td>
+                      <td className={`${CELL_BASE} py-1.5 text-right`}>
+                        <span
+                          className={`inline-flex min-w-7 justify-end rounded px-1.5 py-0.5 font-heading text-xs tabular-nums font-medium ${
+                            row.kind === 'cash'
+                              ? 'bg-sheriff-sortie/15 text-sheriff-sortie'
+                              : 'bg-sheriff-gold/15 text-sheriff-gold'
+                          }`}
+                        >
+                          {typeof row.quantity === 'number' ? row.quantity : 0}
+                        </span>
+                      </td>
+                      <td className={CELL_BASE + ' py-1.5'}>{row.possessedBy || '—'}</td>
+                      <td className={CELL_BASE + ' py-1.5'}>
+                        <span className="block max-w-md truncate" title={row.notes || undefined}>
+                          {row.notes || '—'}
+                        </span>
+                        {row.cancelledAt && row.cancelledReason ? (
+                          <span className="mt-0.5 block text-[10px] text-sheriff-sortie/80" title={row.cancelledReason}>
+                            Annulation : {row.cancelledReason}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className={`${CELL_BASE} py-1.5 text-right`}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(row)}
+                            disabled={saving || !!row.cancelledAt}
+                            className="sheriff-focus-ring rounded-md border border-sheriff-gold/30 bg-sheriff-wood/10 px-2 py-1 text-[11px] font-medium text-sheriff-paper transition hover:bg-sheriff-gold/10 disabled:opacity-50"
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => cancelRow(row)}
+                            disabled={saving || !!row.cancelledAt}
+                            className="sheriff-focus-ring rounded-md border border-sheriff-sortie/40 bg-sheriff-sortie-bg px-2 py-1 text-[11px] font-medium text-sheriff-sortie transition hover:bg-sheriff-sortie/20 disabled:opacity-50"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          <p className="mt-3 text-[11px] text-sheriff-paper-muted/80">
+            Clique sur « Voir l&apos;historique » pour afficher la liste des saisies.
+          </p>
+        )}
+      </section>
+
+      <section aria-label="Total des dollares saisis">
+        <div className="flex flex-col gap-3 text-sheriff-sortie sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center text-sheriff-sortie" aria-hidden>
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M12 3v18M7 8.5h10M6.5 12h11M7 15.5h10"
+                  stroke="currentColor"
+                  strokeWidth={1.25}
+                  strokeLinecap="round"
+                />
+                <rect
+                  x={4}
+                  y={5}
+                  width={16}
+                  height={14}
+                  rx={2}
+                  stroke="currentColor"
+                  strokeWidth={1.25}
+                  fill="none"
+                  opacity={0.85}
+                />
+              </svg>
+            </span>
+            <div>
+              <h3 className="font-heading text-xs font-semibold uppercase tracking-[0.26em] text-sheriff-sortie">
+                Inventaire dollares
+              </h3>
+              <p className="mt-1 max-w-md text-[11px] leading-relaxed text-sheriff-sortie/85">
+                Somme de toutes les saisies monétaires enregistrées (montants entrants, hors items du
+                référentiel).
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col items-stretch gap-1 sm:items-end">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-sheriff-sortie/80">Total saisi</p>
+            <p className="font-heading text-3xl font-semibold tabular-nums tracking-tight sm:text-4xl">
+              <span className="mr-1">$</span>
+              {formatSeizedDollars(totalCashDollars)}
+            </p>
+            <p className="text-[11px] text-sheriff-sortie/85">
+              {cashEntryCount === 0
+                ? 'Aucune ligne de cash — utilisez « Saisie de dollares ».'
+                : `${cashEntryCount} saisie${cashEntryCount > 1 ? 's' : ''} comptabilisée${cashEntryCount > 1 ? 's' : ''}`}
+            </p>
           </div>
         </div>
       </section>
@@ -870,7 +1228,17 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                 id="saisie-modal-title"
                 className="font-heading text-base font-semibold uppercase tracking-wider text-sheriff-gold sm:text-lg"
               >
-                {form.type === 'item' ? "Nouvelle saisie d'item" : "Nouvelle saisie d'arme"}
+                {editingRowId
+                  ? form.type === 'item'
+                    ? "Modifier la saisie d'item"
+                    : form.type === 'weapon'
+                      ? "Modifier la saisie d'arme"
+                      : 'Modifier la saisie de dollares'
+                  : form.type === 'item'
+                    ? "Nouvelle saisie d'item"
+                    : form.type === 'weapon'
+                      ? "Nouvelle saisie d'arme"
+                      : 'Nouvelle saisie de dollares'}
               </h2>
               <button
                 type="button"
@@ -898,11 +1266,11 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
               onSubmit={(e) => handleSubmitModal(e)}
               className="flex flex-col gap-3"
             >
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, type: 'item' }))}
-                  className={`sheriff-focus-ring flex-1 rounded-md border px-3 py-1.5 text-xs font-medium sm:text-sm ${
+                  onClick={() => setForm((f) => ({ ...f, type: 'item', quantity: '1' }))}
+                  className={`sheriff-focus-ring min-w-22 flex-1 rounded-md border px-2 py-1.5 text-xs font-medium sm:text-sm ${
                     form.type === 'item'
                       ? 'border-sheriff-gold bg-sheriff-gold/20 text-sheriff-gold'
                       : 'border-sheriff-gold/30 bg-sheriff-charcoal/50 text-sheriff-paper-muted'
@@ -912,14 +1280,25 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                 </button>
                 <button
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, type: 'weapon' }))}
-                  className={`sheriff-focus-ring flex-1 rounded-md border px-3 py-1.5 text-xs font-medium sm:text-sm ${
+                  onClick={() => setForm((f) => ({ ...f, type: 'weapon', quantity: '1' }))}
+                  className={`sheriff-focus-ring min-w-22 flex-1 rounded-md border px-2 py-1.5 text-xs font-medium sm:text-sm ${
                     form.type === 'weapon'
                       ? 'border-sheriff-gold bg-sheriff-gold/20 text-sheriff-gold'
                       : 'border-sheriff-gold/30 bg-sheriff-charcoal/50 text-sheriff-paper-muted'
                   }`}
                 >
                   Arme
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, type: 'cash', quantity: '100' }))}
+                  className={`sheriff-focus-ring min-w-22 flex-1 rounded-md border px-2 py-1.5 text-xs font-medium sm:text-sm ${
+                    form.type === 'cash'
+                      ? 'border-sheriff-sortie bg-sheriff-sortie-bg text-sheriff-sortie'
+                      : 'border-sheriff-sortie/30 bg-sheriff-charcoal/50 text-sheriff-paper-muted'
+                  }`}
+                >
+                  Dollares
                 </button>
               </div>
 
@@ -970,7 +1349,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                     htmlFor="saisie-qty"
                     className="mb-1 block text-xs font-medium text-sheriff-paper-muted"
                   >
-                    Quantité
+                    {form.type === 'cash' ? 'Montant saisi (dollares)' : 'Quantité'}
                   </label>
                   <input
                     id="saisie-qty"
@@ -979,7 +1358,11 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                     required
                     value={form.quantity}
                     onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
-                    className={INPUT_BASE}
+                    className={
+                      form.type === 'cash'
+                        ? `${INPUT_BASE} border-sheriff-sortie/40 bg-sheriff-sortie-bg font-heading text-sheriff-sortie tabular-nums`
+                        : INPUT_BASE
+                    }
                   />
                 </div>
                 <div>
@@ -999,6 +1382,13 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                   />
                 </div>
               </div>
+
+              {form.type === 'cash' ? (
+                <p className="rounded-md border border-sheriff-sortie/35 px-3 py-2 text-[11px] leading-snug text-sheriff-sortie/85">
+                  Indiquez le montant total confisqué pour cette saisie. Les sommes sont additionnées
+                  dans la carte « Inventaire dollares ».
+                </p>
+              ) : null}
 
               {form.type === 'item' ? (
                 <div>
@@ -1027,7 +1417,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                     ))}
                   </select>
                 </div>
-              ) : (
+              ) : form.type === 'weapon' ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,2fr)]">
                   <div>
                     <label
@@ -1085,7 +1475,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                     />
                   </div>
                 </div>
-              )}
+              ) : null}
 
               <div>
                 <label
@@ -1134,14 +1524,14 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                   }}
                   className="sheriff-focus-ring sheriff-btn-save-soft rounded-md px-4 py-1.5 text-xs font-medium disabled:opacity-60 sm:text-sm"
                 >
-                  {saving ? 'Enregistrement…' : 'Enregistrer et ajouter une autre'}
+                  {editingRowId ? 'Enregistrer' : saving ? 'Enregistrement…' : 'Enregistrer et ajouter une autre'}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
                   className="sheriff-focus-ring sheriff-btn-save rounded-md px-4 py-1.5 text-xs font-medium disabled:opacity-60 sm:text-sm"
                 >
-                  {saving ? 'Enregistrement…' : 'Enregistrer la saisie'}
+                  {saving ? 'Enregistrement…' : editingRowId ? 'Enregistrer les modifications' : 'Enregistrer la saisie'}
                 </button>
               </div>
             </form>

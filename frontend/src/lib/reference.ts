@@ -167,12 +167,12 @@ export function normalizeReferenceData(
 }
 
 export const WEAPON_CATEGORIES = [
-  { key: "fusil", label: "Fusil" },
-  { key: "carabine", label: "Carabine" },
-  { key: "fusilAPompe", label: "Fusil à pompe" },
-  { key: "revolver", label: "Revolver" },
-  { key: "pistolet", label: "Pistolet" },
   { key: "armeBlanche", label: "Arme blanche" },
+  { key: "carabine", label: "Carabine" },
+  { key: "fusil", label: "Fusil" },
+  { key: "fusilAPompe", label: "Fusil à pompe" },
+  { key: "pistolet", label: "Pistolet" },
+  { key: "revolver", label: "Revolver" },
 ] as const;
 
 export type WeaponCategoryKey = (typeof WEAPON_CATEGORIES)[number]["key"];

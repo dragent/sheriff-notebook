@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 import { Flashbag } from "@/components/feedback/Flashbag";
+import {
+  DESTRUCTION_LINE_KEY_CASH,
+  labelCashDestructionLine,
+} from "@/lib/destructionCashKey";
 
 export type DestructionRecordItem = {
   id: string;
@@ -66,6 +70,9 @@ function formatLineDate(dateStr: string): string {
 /** Affiche "Modèle (n° série)" pour les destructions de type arme avec n° de série. */
 function formatDestructionLabel(destruction: string): string {
   if (!destruction) return '—';
+  if (destruction === DESTRUCTION_LINE_KEY_CASH) {
+    return labelCashDestructionLine();
+  }
   const pipe = destruction.indexOf('|');
   if (pipe >= 0) {
     return `${destruction.slice(0, pipe)} (n° ${destruction.slice(pipe + 1)})`;

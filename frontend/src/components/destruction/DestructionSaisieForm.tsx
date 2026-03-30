@@ -7,6 +7,7 @@ import {
   SHERIFF_FIELD_DENSE as INPUT_BASE,
   SHERIFF_NATIVE_SELECT_DENSE,
 } from "@/lib/formFieldClasses";
+import { isCashDestructionLine } from "@/lib/destructionCashKey";
 const CELL_HEADER =
   'border-b border-sheriff-gold/40 bg-sheriff-charcoal/90 px-2.5 py-2 text-left font-heading text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-sheriff-gold sticky top-0 z-10';
 
@@ -66,6 +67,11 @@ function toNum(q: number | ''): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function normalizeCashAmount(n: number): number {
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.floor(n / 100) * 100;
+}
+
 export function DestructionSaisieForm({
   destructionOptions,
   defaultDate,
@@ -106,9 +112,14 @@ export function DestructionSaisieForm({
           const otherSameType = next
             .filter((r) => r.id !== id && (r.destruction ?? '').trim() === name)
             .reduce((sum, r) => sum + toNum(r.qte), 0);
-          const cap = Math.max(0, available - otherSameType);
+          const isCash = isCashDestructionLine(name);
+          const rawCap = Math.max(0, available - otherSameType);
+          const cap = isCash ? normalizeCashAmount(rawCap) : rawCap;
           const currentQte = toNum(row.qte);
-          if (currentQte > cap) {
+          const normalizedQte = isCash ? normalizeCashAmount(currentQte) : currentQte;
+          if (normalizedQte !== currentQte) {
+            next = next.map((r) => (r.id === id ? { ...r, qte: normalizedQte } : r));
+          } else if (currentQte > cap) {
             next = next.map((r) => (r.id === id ? { ...r, qte: cap } : r));
           }
         }
@@ -158,7 +169,8 @@ export function DestructionSaisieForm({
       const otherSameType = rows
         .filter((r) => r.id !== row.id && (r.destruction ?? '').trim() === name)
         .reduce((sum, r) => sum + toNum(r.qte), 0);
-      max[row.id] = Math.max(0, available - otherSameType);
+      const raw = Math.max(0, available - otherSameType);
+      max[row.id] = isCashDestructionLine(name) ? normalizeCashAmount(raw) : raw;
     }
     return max;
   }, [rows, availableQuantities]);
@@ -194,6 +206,16 @@ export function DestructionSaisieForm({
     if (hasOverflow) {
       setSaveError('Une ou plusieurs quantités dépassent le maximum disponible (saisi - déjà détruit). Corrigez les lignes concernées.');
       return;
+    }
+    for (const r of rows) {
+      const name = (r.destruction ?? '').trim();
+      if (isCashDestructionLine(name)) {
+        const q = toNum(r.qte);
+        if (q <= 0 || q % 100 !== 0) {
+          setSaveError('Pour les dollares, la destruction doit être saisie par tranches de 100 $.');
+          return;
+        }
+      }
     }
     const lines: DestructionLinePayload[] = rows.map((r) => ({
       date,
@@ -234,11 +256,14 @@ export function DestructionSaisieForm({
         </h2>
 
         <p className="text-xs text-sheriff-paper-muted -mt-2">
-          Dans la colonne <strong>Destruction</strong>, choisissez un type pour chaque ligne : <strong>items du référentiel</strong> ou <strong>armes saisies</strong> (enregistrées sur la page{' '}
+          Dans la colonne <strong>Destruction</strong>, choisissez un type pour chaque ligne :{' '}
+          <strong>items</strong>, <strong>armes</strong> ou <strong>dollars saisis</strong> (enregistrés sur la page{' '}
           <Link href="/saisies" className="sheriff-focus-ring text-sheriff-gold underline decoration-sheriff-gold/50 underline-offset-2 hover:decoration-sheriff-gold rounded">
             Saisies
           </Link>
-          ). La quantité ne peut pas dépasser le stock disponible (saisi − déjà détruit).
+          ). La colonne <strong>Qte</strong> indique la quantité à détruire ; pour les dollars, c’est le{' '}
+          <strong>montant en dollars</strong> (plafonné au total encore saisi). Elle ne peut pas dépasser le stock
+          disponible (saisi − déjà détruit).
         </p>
 
         <div className="flex flex-col gap-4">
@@ -264,7 +289,7 @@ export function DestructionSaisieForm({
                   <span className="sr-only">Actions</span>
                 </th>
                 <th scope="col" className={`${CELL_HEADER} w-[80px] sm:w-[90px]`}>
-                  Qte
+                  Qte / $
                 </th>
                 <th scope="col" className={`${CELL_HEADER} min-w-[160px]`}>
                   Destruction
@@ -295,21 +320,37 @@ export function DestructionSaisieForm({
                     {(() => {
                       const maxQte = maxQtePerRow[row.id];
                       const hasLimit = maxQte != null;
+                      const isCash = isCashDestructionLine(row.destruction);
                       return (
                         <input
                           type="number"
                           min={0}
                           max={hasLimit ? maxQte : undefined}
-                          step={1}
+                          step={isCash ? 100 : 1}
                           value={row.qte === '' ? '' : row.qte}
                           onChange={(e) => {
                             const v = e.target.value;
-                            updateRow(row.id, 'qte', v === '' ? '' : parseInt(v, 10) || 0);
+                            const parsed = v === '' ? '' : parseInt(v, 10) || 0;
+                            if (isCash) {
+                              updateRow(
+                                row.id,
+                                'qte',
+                                parsed === '' ? '' : normalizeCashAmount(Number(parsed))
+                              );
+                            } else {
+                              updateRow(row.id, 'qte', parsed);
+                            }
                           }}
                           placeholder={hasLimit ? `max ${maxQte}` : '0'}
                           className={INPUT_BASE}
-                          aria-label="Quantité"
-                          title={hasLimit ? `Maximum : ${maxQte} (quantité saisie restante)` : undefined}
+                          aria-label={isCash ? 'Montant en dollars à détruire' : 'Quantité'}
+                          title={
+                            hasLimit
+                              ? isCash
+                                ? `Maximum : ${maxQte} $ (dollars encore saisis)`
+                                : `Maximum : ${maxQte} (quantité saisie restante)`
+                              : undefined
+                          }
                         />
                       );
                     })()}

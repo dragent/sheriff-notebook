@@ -137,8 +137,8 @@ export default async function DestructionPage() {
         <PageHeader
           headingId="destruction-heading"
           title="Destruction — Saisie"
-          subtitle="Saisie des lignes de destruction : date, quantité et type (item ou arme)."
-          hint="Choisissez un type parmi les armes et items actuellement saisis (enregistrés sur la page Saisies)."
+          subtitle="Saisie des lignes de destruction : date, quantité et type (item, arme ou dollars saisis)."
+          hint="Types proposés selon les saisies en base : armes, items et dollars (montant à détruire plafonné au reste saisi)."
           icon={PageIcons.destruction}
         />
 

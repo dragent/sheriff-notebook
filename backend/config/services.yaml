@@ -11,6 +11,7 @@ parameters:
     discord_guild_id_default: ''
     discord_bot_token_default: ''
     discord_effectif_channel_id_default: ''
+    discord_planning_channel_id_default: ''
 
 services:
     # default configuration for services in *this* file
@@ -53,6 +54,10 @@ services:
     App\Controller\Api\DiscordEffectifController:
         arguments:
             $effectifChannelId: '%env(default:discord_effectif_channel_id_default:DISCORD_EFFECTIF_CHANNEL_ID)%'
+
+    App\Controller\Api\ServiceRecordController:
+        arguments:
+            $planningLogChannelId: '%env(default:discord_planning_channel_id_default:DISCORD_PLANNING_CHANNEL_ID)%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

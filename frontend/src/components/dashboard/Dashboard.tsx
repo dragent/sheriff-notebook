@@ -377,31 +377,21 @@ export function Dashboard({
     }
     setPatchError(null);
     setCleaningPlanning(true);
-    const cleared: Record<string, boolean> = {};
-    for (const col of PLANNING_COLUMNS) {
-      cleared[col.key] = false;
-    }
     try {
-      for (const r of records) {
-        const res = await fetch(`/api/services/${r.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(cleared),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          const message = (body?.error as string) || res.statusText;
-          if (res.status === 403) {
-            setPatchError(
-              "Réinitialisation réservée au Sheriff de comté, à l'Adjoint ou au Sheriff en chef."
-            );
-          } else if (res.status === 401) {
-            setPatchError("Session expirée. Reconnectez-vous.");
-          } else {
-            setPatchError(`Erreur ${res.status}: ${message}`);
-          }
-          return;
+      const res = await fetch("/api/services/planning/reset", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const message = (body?.error as string) || res.statusText;
+        if (res.status === 403) {
+          setPatchError(
+            "Réinitialisation réservée au Sheriff de comté, à l'Adjoint ou au Sheriff en chef."
+          );
+        } else if (res.status === 401) {
+          setPatchError("Session expirée. Reconnectez-vous.");
+        } else {
+          setPatchError(`Erreur ${res.status}: ${message}`);
         }
+        return;
       }
       router.refresh();
     } catch {

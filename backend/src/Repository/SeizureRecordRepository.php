@@ -60,4 +60,17 @@ class SeizureRecordRepository extends ServiceEntityRepository
         }
         return $qb->getQuery()->getResult();
     }
+
+    /** Saisies cash, plus anciennes d'abord (FIFO sur les montants). */
+    /** @return list<SeizureRecord> */
+    public function findCashOrderedByDateAsc(): array
+    {
+        return $this->createQueryBuilder('s')
+            ->andWhere('s.type = :type')
+            ->setParameter('type', SeizureRecord::TYPE_CASH)
+            ->orderBy('s.date', 'ASC')
+            ->addOrderBy('s.createdAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }
