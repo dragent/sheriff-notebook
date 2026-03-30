@@ -180,16 +180,20 @@ final class ServiceRecordController
 
             $rows = [];
             $checkedCount = 0;
+            /** @var list<array{name: string, grade: string, halfDays: int}> $primeCandidates */
+            $primeCandidates = [];
             foreach ($records as $r) {
                 if (!$r instanceof ServiceRecord) {
                     continue;
                 }
+                $grade = $r->getUser()?->getGrade();
                 $row = [
                     'id' => $r->getId()->toRfc4122(),
                     'name' => $r->getName(),
                     'userId' => $r->getUser()?->getId()?->toRfc4122(),
-                    'grade' => $r->getUser()?->getGrade(),
+                    'grade' => $grade,
                 ];
+                $halfDays = 0;
                 foreach ($planningKeys as $k) {
                     $getter = match ($k) {
                         'monDay' => 'isMonDay',
@@ -210,11 +214,28 @@ final class ServiceRecordController
                     $value = $r->$getter();
                     $row[$k] = $value;
                     if ($value === true) {
-                        $checkedCount++;
+                        ++$halfDays;
+                        ++$checkedCount;
                     }
                 }
+                $row['halfDays'] = $halfDays;
                 $rows[] = $row;
+                if ($halfDays > 3) {
+                    $displayGrade = ($grade !== null && $grade !== '') ? $grade : 'grade non renseigné';
+                    $primeCandidates[] = [
+                        'name' => $r->getName(),
+                        'grade' => $displayGrade,
+                        'halfDays' => $halfDays,
+                    ];
+                }
             }
+            usort($primeCandidates, static function (array $a, array $b): int {
+                if ($a['halfDays'] !== $b['halfDays']) {
+                    return $b['halfDays'] <=> $a['halfDays'];
+                }
+
+                return strcasecmp($a['name'], $b['name']);
+            });
 
             $snapshot = new ServicePlanningSnapshot(
                 actor: $user->getUsername() ?: 'unknown',
@@ -252,12 +273,12 @@ final class ServiceRecordController
 
             $this->entityManager->flush();
 
-            $content = sprintf(
-                "[Planning] Reset des présences effectué.\nActeur: %s%s\nPrésences (demi-journées) validées : %d\nHorodatage: %s",
+            $nowParis = new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris'));
+            $content = self::buildPlanningPrimeDiscordNotice(
                 $user->getUsername(),
-                $user->getGrade() ? ' (' . $user->getGrade() . ')' : '',
-                $checkedCount,
-                (new \DateTimeImmutable('now'))->format('Y-m-d H:i:s')
+                $user->getGrade(),
+                $nowParis,
+                $primeCandidates
             );
             $discordError = $this->discordNotifier->sendMessage($this->planningLogChannelId, $content);
             if ($discordError !== null) {
@@ -289,6 +310,49 @@ final class ServiceRecordController
                 'hint' => $hint,
             ], 500);
         }
+    }
+
+    /**
+     * Discord notice after planning reset: agents with more than 3 validated half-shifts (prime eligibility).
+     *
+     * @param list<array{name: string, grade: string, halfDays: int}> $primeCandidates
+     */
+    private static function buildPlanningPrimeDiscordNotice(
+        string $actorUsername,
+        ?string $actorGrade,
+        \DateTimeImmutable $issuedAt,
+        array $primeCandidates,
+    ): string {
+        $actorLine = trim($actorUsername . ($actorGrade !== null && $actorGrade !== '' ? ', ' . $actorGrade : ''));
+        $dateLine = $issuedAt->format('d/m/Y \à H\hi');
+
+        $header = "**Bureau du Shérif — Annesburg** — *Registre des présences (clôture de grille)*\n\n";
+        $intro = "Messieurs, Dames,\n\n"
+            . "Conformément aux usages du comté, la grille vient d’être **réinitialisée**. "
+            . "Ci-après les **agents dont le relevé compte plus de trois demi-journées de service** enregistrées **avant** cette clôture — dossiers **soumis à la validation des primes** par la paie.\n\n";
+
+        if ($primeCandidates === []) {
+            return $header
+                . $intro
+                . "**Avis.** Aucun membre du bureau n’atteint ce seuil sur la période concernée. Rien à porter à la validation des primes pour ce critère.\n\n"
+                . "— *Acte porté par " . $actorLine . " — " . $dateLine . ".*";
+        }
+
+        $lines = [];
+        foreach ($primeCandidates as $c) {
+            $lines[] = sprintf(
+                '• **%s** — *%s* — **%d** demi-journée(s) retenue(s)',
+                $c['name'],
+                $c['grade'],
+                $c['halfDays']
+            );
+        }
+
+        return $header
+            . $intro
+            . "**Liste à transmettre à la comptabilité :**\n"
+            . implode("\n", $lines)
+            . "\n\n— *Relevé certifié par " . $actorLine . " — " . $dateLine . ".*";
     }
 
     private static function applyPlanning(ServiceRecord $record, array $data): void
