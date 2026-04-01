@@ -1,6 +1,9 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+// Self-hosted (Docker/VPS) setups may block/slow external fetches (e.g. Google Fonts),
+// which can make OG image generation time out and Discord won't show the banner.
+// Node runtime is typically more reliable for self-hosting than edge.
+export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -18,12 +21,18 @@ type OgFont = {
 
 async function loadGoogleFontsForOg(): Promise<OgFont[]> {
   try {
+    const userAgent =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+
     const css = await fetch(GOOGLE_FONT_CSS, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      },
+      headers: { "User-Agent": userAgent },
+      signal: controller.signal,
+      cache: "no-store",
     }).then((r) => r.text());
+    clearTimeout(timeout);
 
     const fonts: OgFont[] = [];
     const seen = new Set<string>();
@@ -44,7 +53,13 @@ async function loadGoogleFontsForOg(): Promise<OgFont[]> {
       }
       seen.add(key);
       const fontUrl = urlMatch[1].replace(/&amp;/g, "&");
-      const data = await fetch(fontUrl).then((r) => r.arrayBuffer());
+      const fontController = new AbortController();
+      const fontTimeout = setTimeout(() => fontController.abort(), 2500);
+      const data = await fetch(fontUrl, {
+        signal: fontController.signal,
+        cache: "force-cache",
+      }).then((r) => r.arrayBuffer());
+      clearTimeout(fontTimeout);
       fonts.push({
         name: family,
         data,

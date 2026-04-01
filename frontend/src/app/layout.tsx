@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Cinzel, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -24,30 +24,47 @@ const sourceSans = Source_Sans_3({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Bureau du Shérif — Annesburg",
-  description:
-    "Registre officiel du bureau du shérif d'Annesburg. Dossiers, enquêtes et communication intercomté.",
-  metadataBase: new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000"),
-  openGraph: {
-    type: "website",
-    title: "Bureau du Shérif — Annesburg",
-    description:
-      "Registre officiel du bureau du shérif d'Annesburg. Dossiers, enquêtes et communication intercomté.",
-    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Bureau du Shérif — Annesburg",
-    description:
-      "Registre officiel du bureau du shérif d'Annesburg. Dossiers, enquêtes et communication intercomté.",
-    images: ["/opengraph-image"],
-  },
-  icons: {
-    icon: [{ url: "/favicon.png", type: "image/png" }],
-    apple: [{ url: "/favicon.png", type: "image/png" }],
-  },
-};
+function getMetadataBaseFromHeadersOrEnv(h: Headers): URL {
+  const forwardedProto = h.get("x-forwarded-proto");
+  const forwardedHost = h.get("x-forwarded-host");
+  const host = forwardedHost ?? h.get("host");
+  const proto =
+    forwardedProto ??
+    (process.env.NEXTAUTH_URL?.startsWith("https://") ? "https" : "http");
+
+  if (host) return new URL(`${proto}://${host}`);
+  return new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000");
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  const metadataBase = getMetadataBaseFromHeadersOrEnv(h);
+  const title = "Bureau du Shérif — Annesburg";
+  const description =
+    "Registre officiel du bureau du shérif d'Annesburg. Dossiers, enquêtes et communication intercomté.";
+
+  return {
+    title,
+    description,
+    metadataBase,
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/opengraph-image"],
+    },
+    icons: {
+      icon: [{ url: "/favicon.png", type: "image/png" }],
+      apple: [{ url: "/favicon.png", type: "image/png" }],
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
