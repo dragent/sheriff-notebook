@@ -13,6 +13,7 @@ import {
   GRADE_ORDER,
   canPlanningAdminActions,
   resolveRowGrade,
+  resolveRowGradeForDemotion,
 } from "@/lib/grades";
 import { normalizeUuidString } from "@/lib/uuidNormalize";
 
@@ -344,6 +345,12 @@ export function Dashboard({
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok) {
+        if (body?.discordRoleError) {
+          window.alert(
+            String(body.discordRoleError) ||
+              "Grade enregistré, mais le rôle Discord n'a pas pu être mis à jour."
+          );
+        }
         router.refresh();
         return;
       }
@@ -554,7 +561,10 @@ export function Dashboard({
                       </td>
                       <td className="whitespace-nowrap px-2 py-2 text-center">
                         {(() => {
-                          const targetGrade = resolveRowGrade(r.grade, sheriff.grade);
+                          const targetGrade = resolveRowGradeForDemotion(
+                            r.grade,
+                            sheriff.grade
+                          );
                           const previousGrade = getNextDemotionGrade(targetGrade);
                           if (!previousGrade || !currentGrade) {
                             return <span className="text-sheriff-paper-muted text-xs">—</span>;

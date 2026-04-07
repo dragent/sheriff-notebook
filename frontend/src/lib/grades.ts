@@ -116,3 +116,24 @@ export function resolveRowGrade(
   return r;
 }
 
+/**
+ * When fiche service and liste sheriffs disagree, pick the **more junior** grade (higher order number).
+ * Used for rétrogradation so we do not target a demotion from a stale "senior" snapshot while the DB
+ * already holds a lower rank (which would no-op setGrade and must not strip Discord roles).
+ */
+export function resolveRowGradeForDemotion(
+  recordGrade: string | null | undefined,
+  sheriffGrade: string
+): string | null {
+  const r = normalizeSheriffGrade(trimGrade(recordGrade));
+  const s = normalizeSheriffGrade(trimGrade(sheriffGrade));
+  if (!r && !s) return null;
+  if (!r) return s;
+  if (!s) return r;
+  if (r === s) return r;
+  const ro = gradeOrderRank(r);
+  const so = gradeOrderRank(s);
+  if (ro !== so) return ro > so ? r : s;
+  return r;
+}
+

@@ -156,11 +156,16 @@ final class UserController
         $this->entityManager->flush();
         $newGrade = $user->getGrade();
         $discordRoleError = null;
-        if ($previousGrade !== null && \in_array($previousGrade, User::getSheriffGradeValues(), true)) {
-            $discordRoleError = $this->discordGuildMemberResolver->clearSheriffRolesForMember($user->getDiscordId());
-        }
-        if ($newGrade !== null && $newGrade !== $previousGrade && \in_array($newGrade, User::getSheriffGradeValues(), true)) {
-            $discordRoleError = $this->discordGuildMemberResolver->addSheriffRoleToMember($user->getDiscordId(), $newGrade);
+        // Only touch Discord when the PATCH actually changed the grade. Otherwise setGrade() may no-op
+        // (e.g. stale UI sends a demotion target that already matches the DB): clearing roles would run
+        // but add would be skipped (newGrade === previousGrade), leaving the member with no sheriff roles.
+        if (array_key_exists('grade', $data) && $newGrade !== $previousGrade) {
+            if ($previousGrade !== null && \in_array($previousGrade, User::getSheriffGradeValues(), true)) {
+                $discordRoleError = $this->discordGuildMemberResolver->clearSheriffRolesForMember($user->getDiscordId());
+            }
+            if ($newGrade !== null && \in_array($newGrade, User::getSheriffGradeValues(), true)) {
+                $discordRoleError = $this->discordGuildMemberResolver->addSheriffRoleToMember($user->getDiscordId(), $newGrade);
+            }
         }
 
         $recruitedAt = $user->getRecruitedAt();
