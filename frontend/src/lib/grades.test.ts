@@ -6,6 +6,7 @@ import {
   canPlanningAdminActions,
   isSheriffGrade,
   compareGrades,
+  normalizeSheriffGrade,
   resolveRowGrade,
 } from "./grades";
 
@@ -61,6 +62,15 @@ describe("grades (matrice grades/formations côté frontend)", () => {
     expect(resolveRowGrade("", "Deputy")).toBe("Deputy");
     expect(resolveRowGrade("   ", "Sheriff Deputy")).toBe("Sheriff Deputy");
     expect(resolveRowGrade(null, "Deputy")).toBe("Deputy");
-    expect(resolveRowGrade("Deputy", "Sheriff")).toBe("Deputy");
+  });
+
+  it("resolveRowGrade — en cas de conflit, garde le grade le plus élevé (snapshot fiche vs liste)", () => {
+    expect(resolveRowGrade("Deputy", "Sheriff")).toBe("Sheriff");
+    expect(resolveRowGrade("Sheriff", "Deputy")).toBe("Sheriff");
+  });
+
+  it("normalizeSheriffGrade mappe les variantes connues", () => {
+    expect(normalizeSheriffGrade("Sheriff adjoint")).toBe("Sheriff Adjoint");
+    expect(normalizeSheriffGrade("Sheriff Adjoint")).toBe("Sheriff Adjoint");
   });
 });

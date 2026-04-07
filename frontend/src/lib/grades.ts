@@ -58,20 +58,61 @@ export function compareGrades(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "base" });
 }
 
+function trimGrade(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const t = typeof value === "string" ? value.trim() : String(value).trim();
+  return t === "" ? null : t;
+}
+
+/** Known DB/UI variants → canonical key in GRADE_ORDER. */
+const GRADE_ALIASES: Record<string, string> = {
+  "Sheriff adjoint": "Sheriff Adjoint",
+};
+
 /**
- * Grade used for a bureau row: service record first, then sheriff list.
- * Empty strings are ignored so `"" ?? sheriffGrade` does not block the fallback (JS ?? only skips null/undefined).
+ * Map variants to the canonical grade string used in GRADE_ORDER (and backend VALID_GRADES).
+ */
+export function normalizeSheriffGrade(
+  grade: string | null | undefined
+): string | null {
+  const t = trimGrade(grade);
+  if (!t) return null;
+  if (GRADE_ORDER[t] !== undefined) return t;
+  const aliased = GRADE_ALIASES[t] ?? GRADE_ALIASES[t.toLowerCase()];
+  if (aliased) return aliased;
+  const found = Object.keys(GRADE_ORDER).find(
+    (k) =>
+      k.localeCompare(t, undefined, { sensitivity: "accent" }) === 0
+  );
+  return found ?? t;
+}
+
+function gradeOrderRank(grade: string | null): number {
+  if (!grade) return 99;
+  const n = normalizeSheriffGrade(grade);
+  if (!n) return 99;
+  return GRADE_ORDER[n] ?? 99;
+}
+
+/**
+ * Grade shown on a bureau row: merge fiche service and liste sheriffs.
+ * After a promotion PATCH, RSC refresh can briefly expose two snapshots; we pick the
+ * **most senior** grade so "Promouvoir" targets the next step for everyone without
+ * requiring a manual full reload between each person.
  */
 export function resolveRowGrade(
   recordGrade: string | null | undefined,
   sheriffGrade: string
 ): string | null {
-  const candidates = [recordGrade, sheriffGrade];
-  for (const c of candidates) {
-    if (c == null) continue;
-    const t = typeof c === "string" ? c.trim() : String(c).trim();
-    if (t !== "") return t;
-  }
-  return null;
+  const r = normalizeSheriffGrade(trimGrade(recordGrade));
+  const s = normalizeSheriffGrade(trimGrade(sheriffGrade));
+  if (!r && !s) return null;
+  if (!r) return s;
+  if (!s) return r;
+  if (r === s) return r;
+  const ro = gradeOrderRank(r);
+  const so = gradeOrderRank(s);
+  if (ro !== so) return ro < so ? r : s;
+  return r;
 }
 
