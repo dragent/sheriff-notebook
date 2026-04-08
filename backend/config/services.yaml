@@ -10,7 +10,7 @@ parameters:
     # Valeurs par défaut uniquement (optionnel) — les vraies valeurs viennent des env DISCORD_* dans .env / .env.local
     discord_guild_id_default: ''
     discord_bot_token_default: ''
-    discord_effectif_channel_id_default: ''
+    discord_effectif_channel_id_default: '1491575814012276948'
     discord_planning_channel_id_default: ''
 
 services:

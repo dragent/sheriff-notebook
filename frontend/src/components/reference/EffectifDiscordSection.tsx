@@ -80,6 +80,8 @@ export function EffectifDiscordSection({
   const [loading, setLoading] = useState(true);
   const [copiedText, setCopiedText] = useState(false);
   const [copiedImage, setCopiedImage] = useState(false);
+  const [sendState, setSendState] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [sendError, setSendError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/discord/effectif", { cache: "no-store" })
@@ -159,6 +161,43 @@ export function EffectifDiscordSection({
     };
 
     void copy();
+  }, [variant]);
+
+  const handleShareDiscord = useCallback(() => {
+    if (variant !== "effectif") return;
+
+    const send = async () => {
+      setSendState("sending");
+      setSendError(null);
+      try {
+        const res = await fetch("/api/discord/effectif/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) {
+          const message =
+            typeof body?.error === "string" && body.error
+              ? body.error
+              : res.status === 401
+                ? "Non authentifié."
+                : res.status === 403
+                  ? "Accès réservé au Sheriff de comté et Adjoint."
+                  : `Erreur ${res.status}`;
+          setSendError(message);
+          setSendState("error");
+          return;
+        }
+        setSendState("success");
+        setTimeout(() => setSendState("idle"), 3500);
+      } catch {
+        setSendError("Impossible de contacter le serveur.");
+        setSendState("error");
+      }
+    };
+
+    void send();
   }, [variant]);
 
   const discordHtml = useMemo(() => discordMarkdownToHtml(markdown), [markdown]);
@@ -245,6 +284,20 @@ export function EffectifDiscordSection({
         >
           {copiedText ? "Texte copié" : "Copier le texte"}
         </button>
+        {variant === "effectif" && (
+          <button
+            type="button"
+            onClick={handleShareDiscord}
+            disabled={sendState === "sending" || !markdown}
+            className="sheriff-focus-ring sheriff-btn-secondary inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold disabled:pointer-events-none disabled:opacity-50"
+          >
+            {sendState === "sending"
+              ? "Publication…"
+              : sendState === "success"
+                ? "Publié sur Discord"
+                : "Partager sur Discord"}
+          </button>
+        )}
         {variant === "recruitment" && (
           <button
             type="button"
@@ -255,6 +308,11 @@ export function EffectifDiscordSection({
           </button>
         )}
       </div>
+      {variant === "effectif" && sendError != null && (
+        <p className="text-sm text-red-300" role="alert">
+          {sendError}
+        </p>
+      )}
     </section>
   );
 }
