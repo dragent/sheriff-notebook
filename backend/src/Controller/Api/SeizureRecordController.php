@@ -11,14 +11,17 @@ use App\Entity\SeizureRecord;
 use App\Entity\SeizureRecordEvent;
 use App\Entity\User;
 use App\Repository\SeizureRecordRepository;
+use App\Security\Voter\SeizureVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/saisies')]
+#[IsGranted(SeizureVoter::MANAGE, message: 'Accès réservé aux shérifs.')]
 final class SeizureRecordController
 {
     public function __construct(
@@ -31,13 +34,6 @@ final class SeizureRecordController
     #[Route('', name: 'api_saisies_list', methods: ['GET'])]
     public function list(#[CurrentUser] User $user): JsonResponse
     {
-        if (!\in_array($user->getGrade(), User::getSheriffGradeValues(), true)) {
-            return new JsonResponse(
-                ['error' => 'Accès réservé aux shérifs.'],
-                403
-            );
-        }
-
         $records = $this->repository->findAllOrderedByDateDesc();
         $items = [];
         foreach ($records as $r) {
@@ -50,13 +46,6 @@ final class SeizureRecordController
     #[Route('', name: 'api_saisies_create', methods: ['POST'])]
     public function create(Request $request, #[CurrentUser] User $user): JsonResponse
     {
-        if (!\in_array($user->getGrade(), User::getSheriffGradeValues(), true)) {
-            return new JsonResponse(
-                ['error' => 'Seuls les shérifs peuvent enregistrer des saisies.'],
-                403
-            );
-        }
-
         $body = json_decode((string) $request->getContent(), true);
         if (!\is_array($body)) {
             return new JsonResponse(['error' => 'JSON invalide'], 400);
@@ -79,9 +68,9 @@ final class SeizureRecordController
             $dto->date,
             $dto->sheriff,
             $dto->quantity,
-            $dto->type === SeizureRecord::TYPE_ITEM ? $dto->itemName : null,
-            $dto->type === SeizureRecord::TYPE_WEAPON ? $dto->weaponModel : null,
-            $dto->type === SeizureRecord::TYPE_CASH ? null : $dto->serialNumber,
+            SeizureRecord::TYPE_ITEM === $dto->type ? $dto->itemName : null,
+            SeizureRecord::TYPE_WEAPON === $dto->type ? $dto->weaponModel : null,
+            SeizureRecord::TYPE_CASH === $dto->type ? null : $dto->serialNumber,
             $dto->possessedBy,
             $dto->notes,
         );
@@ -99,10 +88,6 @@ final class SeizureRecordController
     #[Route('/{id}', name: 'api_saisies_update', methods: ['PATCH'])]
     public function update(string $id, Request $request, #[CurrentUser] User $user): JsonResponse
     {
-        if (!\in_array($user->getGrade(), User::getSheriffGradeValues(), true)) {
-            return new JsonResponse(['error' => 'Seuls les shérifs peuvent modifier des saisies.'], 403);
-        }
-
         try {
             $uuid = \Symfony\Component\Uid\Uuid::fromString($id);
         } catch (\Throwable) {
@@ -126,6 +111,7 @@ final class SeizureRecordController
         $violations = $this->validator->validate($dto);
         if ($violations->count() > 0) {
             $first = $violations->get(0);
+
             return new JsonResponse([
                 'error' => $first->getMessage(),
                 'field' => $first->getPropertyPath(),
@@ -133,14 +119,14 @@ final class SeizureRecordController
         }
 
         // Refuse invalid fields depending on record type (avoid accidental type changes).
-        if ($record->getType() === SeizureRecord::TYPE_ITEM && $dto->weaponModel !== null) {
+        if (SeizureRecord::TYPE_ITEM === $record->getType() && null !== $dto->weaponModel) {
             return new JsonResponse(['error' => 'weaponModel n\'est pas autorisé pour une saisie d\'item.'], 400);
         }
-        if ($record->getType() === SeizureRecord::TYPE_WEAPON && $dto->itemName !== null) {
+        if (SeizureRecord::TYPE_WEAPON === $record->getType() && null !== $dto->itemName) {
             return new JsonResponse(['error' => 'itemName n\'est pas autorisé pour une saisie d\'arme.'], 400);
         }
-        if ($record->getType() === SeizureRecord::TYPE_CASH) {
-            if ($dto->itemName !== null || $dto->weaponModel !== null || $dto->serialNumber !== null) {
+        if (SeizureRecord::TYPE_CASH === $record->getType()) {
+            if (null !== $dto->itemName || null !== $dto->weaponModel || null !== $dto->serialNumber) {
                 return new JsonResponse(['error' => 'Les champs item/arme/série ne sont pas autorisés pour une saisie de cash.'], 400);
             }
         }
@@ -148,14 +134,30 @@ final class SeizureRecordController
         $before = $this->recordToArray($record);
 
         // Apply updates (only non-null fields).
-        if ($dto->quantity !== null) $record->setQuantity($dto->quantity);
-        if ($dto->date !== null) $record->setDate($dto->date);
-        if ($dto->sheriff !== null) $record->setSheriff($dto->sheriff);
-        if ($dto->itemName !== null) $record->setItemName($dto->itemName);
-        if ($dto->weaponModel !== null) $record->setWeaponModel($dto->weaponModel);
-        if ($dto->serialNumber !== null) $record->setSerialNumber($dto->serialNumber);
-        if ($dto->possessedBy !== null) $record->setPossessedBy($dto->possessedBy);
-        if ($dto->notes !== null) $record->setNotes($dto->notes);
+        if (null !== $dto->quantity) {
+            $record->setQuantity($dto->quantity);
+        }
+        if (null !== $dto->date) {
+            $record->setDate($dto->date);
+        }
+        if (null !== $dto->sheriff) {
+            $record->setSheriff($dto->sheriff);
+        }
+        if (null !== $dto->itemName) {
+            $record->setItemName($dto->itemName);
+        }
+        if (null !== $dto->weaponModel) {
+            $record->setWeaponModel($dto->weaponModel);
+        }
+        if (null !== $dto->serialNumber) {
+            $record->setSerialNumber($dto->serialNumber);
+        }
+        if (null !== $dto->possessedBy) {
+            $record->setPossessedBy($dto->possessedBy);
+        }
+        if (null !== $dto->notes) {
+            $record->setNotes($dto->notes);
+        }
 
         $after = $this->recordToArray($record);
         $diff = ['before' => $before, 'after' => $after];
@@ -175,10 +177,6 @@ final class SeizureRecordController
     #[Route('/{id}/cancel', name: 'api_saisies_cancel', methods: ['POST'])]
     public function cancel(string $id, Request $request, #[CurrentUser] User $user): JsonResponse
     {
-        if (!\in_array($user->getGrade(), User::getSheriffGradeValues(), true)) {
-            return new JsonResponse(['error' => 'Seuls les shérifs peuvent annuler des saisies.'], 403);
-        }
-
         try {
             $uuid = \Symfony\Component\Uid\Uuid::fromString($id);
         } catch (\Throwable) {
@@ -202,6 +200,7 @@ final class SeizureRecordController
         $violations = $this->validator->validate($dto);
         if ($violations->count() > 0) {
             $first = $violations->get(0);
+
             return new JsonResponse([
                 'error' => $first->getMessage(),
                 'field' => $first->getPropertyPath(),

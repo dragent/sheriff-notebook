@@ -31,7 +31,7 @@ final class SheriffControllerTest extends WebTestCase
     public function testSheriffsListReturnsOnlyUsersWithGrade(): void
     {
         $client = self::createClient();
-        [$userWithGrade, ] = $this->createUserAndJwt($client, [
+        [$userWithGrade] = $this->createUserAndJwt($client, [
             'username' => 'SheriffListed',
             'grade' => 'Sheriff Deputy',
         ]);

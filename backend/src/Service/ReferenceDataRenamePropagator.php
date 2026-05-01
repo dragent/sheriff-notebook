@@ -107,7 +107,6 @@ final class ReferenceDataRenamePropagator
         return $this->iterativeSingletonRenamesMultisets($labelsBefore, $labelsAfter);
     }
 
-    /** @param mixed $rows */
     private function contraventionLabelsList(mixed $rows): array
     {
         if (!\is_array($rows)) {
@@ -134,9 +133,9 @@ final class ReferenceDataRenamePropagator
         $oldList = $this->formationsAsIdLabelRows($before['formations'] ?? []);
         $newList = $this->formationsAsIdLabelRows($after['formations'] ?? []);
         $acc = [];
-        while ($oldList !== [] && $newList !== []) {
+        while ([] !== $oldList && [] !== $newList) {
             $step = $this->formationStepMapByUniqueLabels($oldList, $newList);
-            if ($step === []) {
+            if ([] === $step) {
                 break;
             }
             foreach ($step as $oldId => $newId) {
@@ -170,7 +169,7 @@ final class ReferenceDataRenamePropagator
             if (!\is_array($f) || !isset($f['id'], $f['label']) || !\is_string($f['id']) || !\is_string($f['label'])) {
                 continue;
             }
-            if ($f['id'] === '' || trim($f['label']) === '') {
+            if ('' === $f['id'] || '' === trim($f['label'])) {
                 continue;
             }
             $out[] = ['id' => $f['id'], 'label' => $f['label']];
@@ -190,7 +189,7 @@ final class ReferenceDataRenamePropagator
         $oldByLabel = [];
         foreach ($oldList as $row) {
             $l = mb_strtolower(trim($row['label']));
-            if ($l === '') {
+            if ('' === $l) {
                 continue;
             }
             $oldByLabel[$l][] = $row['id'];
@@ -198,7 +197,7 @@ final class ReferenceDataRenamePropagator
         $newByLabel = [];
         foreach ($newList as $row) {
             $l = mb_strtolower(trim($row['label']));
-            if ($l === '') {
+            if ('' === $l) {
                 continue;
             }
             $newByLabel[$l][] = $row['id'];
@@ -206,11 +205,11 @@ final class ReferenceDataRenamePropagator
 
         $step = [];
         foreach ($oldByLabel as $l => $oldIds) {
-            if (\count($oldIds) !== 1) {
+            if (1 !== \count($oldIds)) {
                 continue;
             }
             $newIds = $newByLabel[$l] ?? [];
-            if (\count($newIds) !== 1) {
+            if (1 !== \count($newIds)) {
                 continue;
             }
             if ($oldIds[0] === $newIds[0]) {
@@ -219,7 +218,7 @@ final class ReferenceDataRenamePropagator
             $step[$oldIds[0]] = $newIds[0];
         }
 
-        if ($step === []) {
+        if ([] === $step) {
             return [];
         }
 
@@ -251,9 +250,9 @@ final class ReferenceDataRenamePropagator
         $old = array_values(array_map(static fn (string $s): string => trim($s), $beforeList));
         $new = array_values(array_map(static fn (string $s): string => trim($s), $afterList));
         $acc = [];
-        while ($old !== [] && $new !== []) {
+        while ([] !== $old && [] !== $new) {
             $pair = $this->singletonRenameMap($old, $new);
-            if ($pair === []) {
+            if ([] === $pair) {
                 break;
             }
             $from = array_key_first($pair);
@@ -289,7 +288,7 @@ final class ReferenceDataRenamePropagator
      */
     private function propagateFormationValidations(array $idMap): int
     {
-        if ($idMap === []) {
+        if ([] === $idMap) {
             return 0;
         }
         $repo = $this->entityManager->getRepository(ServiceRecord::class);
@@ -299,12 +298,12 @@ final class ReferenceDataRenamePropagator
                 continue;
             }
             $fv = $sr->getFormationValidations();
-            if ($fv === []) {
+            if ([] === $fv) {
                 continue;
             }
             $next = [];
             foreach ($fv as $id => $valid) {
-                if ($valid !== true) {
+                if (true !== $valid) {
                     continue;
                 }
                 $canonical = $idMap[$id] ?? $id;
@@ -324,7 +323,7 @@ final class ReferenceDataRenamePropagator
      */
     private function propagateComptaReasons(array $renameMap): int
     {
-        if ($renameMap === []) {
+        if ([] === $renameMap) {
             return 0;
         }
         $repo = $this->entityManager->getRepository(ComptaEntry::class);
@@ -334,7 +333,7 @@ final class ReferenceDataRenamePropagator
                 continue;
             }
             $r = $e->getReason();
-            if ($r !== '' && isset($renameMap[$r])) {
+            if ('' !== $r && isset($renameMap[$r])) {
                 $e->setReason($renameMap[$r]);
                 ++$updated;
             }
@@ -348,7 +347,7 @@ final class ReferenceDataRenamePropagator
      */
     private function propagateSeizureNotes(array $renameMap): int
     {
-        if ($renameMap === []) {
+        if ([] === $renameMap) {
             return 0;
         }
         $repo = $this->entityManager->getRepository(SeizureRecord::class);
@@ -358,7 +357,7 @@ final class ReferenceDataRenamePropagator
                 continue;
             }
             $notes = $record->getNotes();
-            if ($notes === null || $notes === '') {
+            if (null === $notes || '' === $notes) {
                 continue;
             }
             $trimmed = trim($notes);
@@ -378,7 +377,7 @@ final class ReferenceDataRenamePropagator
      */
     private function propagateServiceRecordCartBoat(array $renameMap): int
     {
-        if ($renameMap === []) {
+        if ([] === $renameMap) {
             return 0;
         }
         $repo = $this->entityManager->getRepository(ServiceRecord::class);
@@ -413,17 +412,17 @@ final class ReferenceDataRenamePropagator
      */
     private function applyRenameToMultilinePreservingLayout(?string $text, array $renameMap): ?string
     {
-        if ($text === null || trim($text) === '') {
+        if (null === $text || '' === trim($text)) {
             return $text;
         }
         $lines = preg_split('/\R/u', $text);
-        if ($lines === false) {
+        if (false === $lines) {
             return $text;
         }
         $out = [];
         foreach ($lines as $line) {
             $t = trim($line);
-            if ($t !== '' && isset($renameMap[$t])) {
+            if ('' !== $t && isset($renameMap[$t])) {
                 $out[] = $renameMap[$t];
             } else {
                 $out[] = $line;
@@ -443,16 +442,16 @@ final class ReferenceDataRenamePropagator
     {
         $bu = array_values(array_unique(array_values(array_filter(
             array_map(static fn (string $s): string => trim($s), $beforeNames),
-            static fn (string $s): bool => $s !== ''
+            static fn (string $s): bool => '' !== $s
         ))));
         $au = array_values(array_unique(array_values(array_filter(
             array_map(static fn (string $s): string => trim($s), $afterNames),
-            static fn (string $s): bool => $s !== ''
+            static fn (string $s): bool => '' !== $s
         ))));
 
         $oldOnly = array_values(array_diff($bu, $au));
         $newOnly = array_values(array_diff($au, $bu));
-        if (\count($oldOnly) !== 1 || \count($newOnly) !== 1) {
+        if (1 !== \count($oldOnly) || 1 !== \count($newOnly)) {
             return [];
         }
 
@@ -468,7 +467,7 @@ final class ReferenceDataRenamePropagator
     private function mergeRenameMaps(array $base, array $add): array
     {
         foreach ($add as $old => $new) {
-            if ($old === '' || $new === '' || $old === $new) {
+            if ('' === $old || '' === $new || $old === $new) {
                 continue;
             }
             if (!isset($base[$old])) {
@@ -511,7 +510,7 @@ final class ReferenceDataRenamePropagator
         }
         $out = [];
         foreach ($categories as $c) {
-            if (!\is_array($c) || !isset($c['id']) || !\is_string($c['id']) || $c['id'] === '') {
+            if (!\is_array($c) || !isset($c['id']) || !\is_string($c['id']) || '' === $c['id']) {
                 continue;
             }
             $out[$c['id']] = $c;
@@ -543,7 +542,7 @@ final class ReferenceDataRenamePropagator
      */
     private function propagateSeizureItemWeapon(array $renameMap): int
     {
-        if ($renameMap === []) {
+        if ([] === $renameMap) {
             return 0;
         }
         $repo = $this->entityManager->getRepository(SeizureRecord::class);
@@ -552,15 +551,15 @@ final class ReferenceDataRenamePropagator
             if (!$record instanceof SeizureRecord) {
                 continue;
             }
-            if ($record->getType() === SeizureRecord::TYPE_ITEM) {
+            if (SeizureRecord::TYPE_ITEM === $record->getType()) {
                 $name = $record->getItemName();
-                if ($name !== null && $name !== '' && isset($renameMap[$name])) {
+                if (null !== $name && '' !== $name && isset($renameMap[$name])) {
                     $record->setItemName($renameMap[$name]);
                     ++$updated;
                 }
-            } elseif ($record->getType() === SeizureRecord::TYPE_WEAPON) {
+            } elseif (SeizureRecord::TYPE_WEAPON === $record->getType()) {
                 $model = $record->getWeaponModel();
-                if ($model !== null && $model !== '' && isset($renameMap[$model])) {
+                if (null !== $model && '' !== $model && isset($renameMap[$model])) {
                     $record->setWeaponModel($renameMap[$model]);
                     ++$updated;
                 }
@@ -575,7 +574,7 @@ final class ReferenceDataRenamePropagator
      */
     private function propagateDestructions(array $renameMap): int
     {
-        if ($renameMap === []) {
+        if ([] === $renameMap) {
             return 0;
         }
         $repo = $this->entityManager->getRepository(DestructionRecord::class);
@@ -591,7 +590,7 @@ final class ReferenceDataRenamePropagator
                     continue;
                 }
                 $d = $line['destruction'] ?? '';
-                if (!\is_string($d) || $d === '' || $d === SeizureRecord::DESTRUCTION_LINE_KEY_CASH) {
+                if (!\is_string($d) || '' === $d || SeizureRecord::DESTRUCTION_LINE_KEY_CASH === $d) {
                     continue;
                 }
                 $newD = $this->applyRenameToDestructionToken($d, $renameMap);
@@ -618,8 +617,8 @@ final class ReferenceDataRenamePropagator
             $parts = explode('|', $token, 2);
             $model = trim($parts[0]);
             $serial = $parts[1] ?? '';
-            if ($model !== '' && isset($renameMap[$model])) {
-                return $renameMap[$model] . '|' . $serial;
+            if ('' !== $model && isset($renameMap[$model])) {
+                return $renameMap[$model].'|'.$serial;
             }
 
             return $token;
@@ -636,7 +635,7 @@ final class ReferenceDataRenamePropagator
      */
     private function propagateBureauWeapons(array $renameMap): int
     {
-        if ($renameMap === []) {
+        if ([] === $renameMap) {
             return 0;
         }
         $repo = $this->entityManager->getRepository(BureauWeapon::class);
@@ -646,7 +645,7 @@ final class ReferenceDataRenamePropagator
                 continue;
             }
             $model = $w->getModel();
-            if ($model !== '' && isset($renameMap[$model])) {
+            if ('' !== $model && isset($renameMap[$model])) {
                 $w->setModel($renameMap[$model]);
                 ++$updated;
             }
@@ -660,7 +659,7 @@ final class ReferenceDataRenamePropagator
      */
     private function propagateServiceRecordWeapons(array $renameMap): int
     {
-        if ($renameMap === []) {
+        if ([] === $renameMap) {
             return 0;
         }
         $repo = $this->entityManager->getRepository(ServiceRecord::class);
@@ -671,13 +670,13 @@ final class ReferenceDataRenamePropagator
             }
             $changed = false;
             $pairs = [
-                [$sr->getPrimaryWeapon(), fn (?string $v) => $sr->setPrimaryWeapon($v)],
-                [$sr->getSecondaryWeapon(), fn (?string $v) => $sr->setSecondaryWeapon($v)],
-                [$sr->getThirdWeapon(), fn (?string $v) => $sr->setThirdWeapon($v)],
-                [$sr->getTranquilizerWeapon(), fn (?string $v) => $sr->setTranquilizerWeapon($v)],
+                [$sr->getPrimaryWeapon(), static fn (?string $v) => $sr->setPrimaryWeapon($v)],
+                [$sr->getSecondaryWeapon(), static fn (?string $v) => $sr->setSecondaryWeapon($v)],
+                [$sr->getThirdWeapon(), static fn (?string $v) => $sr->setThirdWeapon($v)],
+                [$sr->getTranquilizerWeapon(), static fn (?string $v) => $sr->setTranquilizerWeapon($v)],
             ];
             foreach ($pairs as [$current, $setter]) {
-                if ($current === null || $current === '') {
+                if (null === $current || '' === $current) {
                     continue;
                 }
                 if (isset($renameMap[$current])) {

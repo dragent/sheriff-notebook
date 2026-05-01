@@ -792,7 +792,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                         index % 2 === 1 ? 'bg-sheriff-charcoal/60' : 'bg-sheriff-charcoal/40'
                       } ${row.cancelledAt ? 'opacity-60' : 'hover:bg-sheriff-gold/5'}`}
                     >
-                      <td className={CELL_BASE + ' py-1.5 whitespace-nowrap'}>{row.date}</td>
+                      <td className={CELL_BASE + ' font-stamp py-1.5 whitespace-nowrap'}>{row.date}</td>
                       <td className={CELL_BASE + ' py-1.5'}>{row.sheriff || '—'}</td>
                       <td className={CELL_BASE + ' py-1.5'}>
                         <span className="inline-flex rounded bg-sheriff-gold/10 px-1.5 py-0.5 font-heading text-[10px] font-semibold uppercase tracking-wider text-sheriff-gold">
@@ -1041,8 +1041,8 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                                     key={row.id}
                                     className={i % 2 === 1 ? 'bg-sheriff-charcoal/50' : ''}
                                   >
-                                    <td className="py-1 pr-3 text-sheriff-paper-muted">{row.date}</td>
-                                    <td className="py-1 font-mono text-sheriff-paper-muted">
+                                    <td className="font-stamp py-1 pr-3 text-sheriff-paper-muted">{row.date}</td>
+                                    <td className="font-stamp py-1 text-sheriff-paper-muted">
                                       {row.serialNumber || '—'}
                                     </td>
                                   </tr>
@@ -1470,7 +1470,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                       type="text"
                       value={form.serialNumber}
                       onChange={(e) => setForm((f) => ({ ...f, serialNumber: e.target.value }))}
-                      className={`${INPUT_BASE} font-mono text-[11px] sm:text-xs`}
+                      className={`${INPUT_BASE} font-stamp text-[11px] sm:text-xs`}
                       placeholder="Optionnel"
                     />
                   </div>

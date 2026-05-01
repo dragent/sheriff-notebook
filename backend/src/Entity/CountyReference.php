@@ -22,6 +22,14 @@ class CountyReference
     #[ORM\Column]
     private \DateTimeImmutable $updatedAt;
 
+    /**
+     * Optimistic lock revision incremented by Doctrine on each successful flush.
+     * Prevents two simultaneous PUT /api/reference from silently overwriting each other.
+     */
+    #[ORM\Version]
+    #[ORM\Column(type: 'integer', options: ['default' => 1])]
+    private int $version = 1;
+
     public function __construct()
     {
         $this->id = Uuid::v7();
@@ -78,7 +86,7 @@ class CountyReference
                 }
                 foreach ($items as $i => $item) {
                     $name = $item['name'] ?? '';
-                    if ($name !== '' && isset($destructionByName[$name])) {
+                    if ('' !== $name && isset($destructionByName[$name])) {
                         $items[$i]['destructionValue'] = $destructionByName[$name];
                     }
                 }
@@ -114,6 +122,7 @@ class CountyReference
             'formations',
             'formationsByGrade',
         ];
+
         return array_intersect_key($result, array_flip($keys));
     }
 
@@ -126,14 +135,14 @@ class CountyReference
         foreach ($arr as $el) {
             if (\is_string($el)) {
                 $name = trim($el);
-                if ($name !== '') {
+                if ('' !== $name) {
                     $out[] = ['name' => $name, 'destructionValue' => ''];
                 }
                 continue;
             }
             if (\is_array($el) && isset($el['name']) && \is_string($el['name'])) {
                 $name = trim($el['name']);
-                if ($name !== '') {
+                if ('' !== $name) {
                     $out[] = [
                         'name' => $name,
                         'destructionValue' => isset($el['destructionValue']) && \is_string($el['destructionValue'])
@@ -142,6 +151,7 @@ class CountyReference
                 }
             }
         }
+
         return $out;
     }
 
@@ -149,10 +159,11 @@ class CountyReference
     private function hasUnifiedItems(array $items): bool
     {
         foreach ($items as $item) {
-            if (array_key_exists('destructionValue', $item)) {
+            if (\array_key_exists('destructionValue', $item)) {
                 return true;
             }
         }
+
         return false;
     }
 
@@ -190,16 +201,16 @@ class CountyReference
         $newData = [];
         $weaponKeysList = ['fusil', 'carabine', 'fusilAPompe', 'revolver', 'pistolet', 'armeBlanche'];
         foreach ($keys as $key) {
-            if (isset($data[$key]) && \is_array($data[$key]) && $data[$key] !== []) {
+            if (isset($data[$key]) && \is_array($data[$key]) && [] !== $data[$key]) {
                 // Tableau non vide : enregistrer les données reçues (normaliser les armes).
                 if (\in_array($key, $weaponKeysList, true)) {
                     $newData[$key] = $this->normalizeWeaponArray($data[$key]);
-                } elseif ($key === 'itemCategories') {
+                } elseif ('itemCategories' === $key) {
                     $newData[$key] = $this->sanitizeItemCategories($data[$key]);
                 } else {
                     $newData[$key] = $data[$key];
                 }
-            } elseif (isset($data[$key]) && \is_array($data[$key]) && $data[$key] === []) {
+            } elseif (isset($data[$key]) && \is_array($data[$key]) && [] === $data[$key]) {
                 // Ne pas écraser par des tableaux vides (garder l’existant ou défaut).
                 $newData[$key] = $this->data[$key] ?? $default[$key];
             } elseif (isset($this->data[$key])) {
@@ -216,6 +227,11 @@ class CountyReference
     public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    public function getVersion(): int
+    {
+        return $this->version;
     }
 
     /**
@@ -254,6 +270,7 @@ class CountyReference
      * Remove deprecated "value" key from reference items.
      *
      * @param list<array<string, mixed>> $categories
+     *
      * @return list<array<string, mixed>>
      */
     private function sanitizeItemCategories(array $categories): array

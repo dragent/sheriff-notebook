@@ -49,7 +49,7 @@ export function ProfilSections({
           id="profil-panel-informations-personnelles"
           aria-labelledby="profil-tab-informations-personnelles"
           aria-label="Informations personnelles"
-          className="sheriff-card w-full overflow-hidden rounded-lg border border-sheriff-gold/40 bg-sheriff-wood shadow-md"
+          className="sheriff-card sheriff-card--paper w-full overflow-hidden rounded-lg border border-sheriff-gold/40 shadow-md"
         >
           <div className="border-b border-sheriff-gold/40 bg-sheriff-charcoal/80 px-4 py-4">
             <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-sheriff-gold">
@@ -76,7 +76,7 @@ export function ProfilSections({
           id="profil-panel-formations"
           aria-labelledby="profil-tab-formations"
           aria-label="Formations"
-          className="sheriff-card w-full overflow-hidden rounded-lg border border-sheriff-gold/40 bg-sheriff-wood shadow-md"
+          className="sheriff-card sheriff-card--paper w-full overflow-hidden rounded-lg border border-sheriff-gold/40 shadow-md"
         >
           <div className="border-b border-sheriff-gold/40 bg-sheriff-charcoal/80 px-4 py-4">
             <h2 className="font-heading text-sm font-semibold uppercase tracking-wider text-sheriff-gold">

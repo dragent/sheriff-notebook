@@ -12,6 +12,16 @@ parameters:
     discord_bot_token_default: ''
     discord_effectif_channel_id_default: '1491575814012276948'
     discord_planning_channel_id_default: ''
+    discord_recruitment_hierarchy_role_ids:
+        - '1478333880925819014'
+        - '1478334122404483215'
+        - '1478334176695685213'
+        - '1478334303619514419'
+        - '1478334349072928808'
+        - '1482747651668574218'
+    discord_sheriff_papier_role_id: '1479909556044697700'
+    jwt_claim_empty: ''
+    planning_reset_timezone_default: 'Europe/Paris'
 
 services:
     # default configuration for services in *this* file
@@ -26,12 +36,24 @@ services:
     App\:
         resource: '../src/'
 
+    App\Monolog\RequestIdProcessor:
+        tags:
+            - { name: monolog.processor }
+
     # Pseudo serveur Discord (nickname) via API Bot (optionnel) — token / guild ID uniquement via .env
     App\Service\DiscordGuildMemberResolver:
         arguments:
             $guildId: '%env(default:discord_guild_id_default:DISCORD_GUILD_ID)%'
             $botToken: '%env(default:discord_bot_token_default:DISCORD_BOT_TOKEN)%'
-            $appEnv: '%env(APP_ENV)%'
+            $cache: '@cache.app'
+            $logger: '@logger'
+            $recruitmentExcludedHierarchyRoleIds: '%discord_recruitment_hierarchy_role_ids%'
+            $sheriffPapierRoleId: '%discord_sheriff_papier_role_id%'
+
+    App\Security\DiscordJwtAuthenticator:
+        arguments:
+            $jwtIssuer: '%env(default:jwt_claim_empty:BACKEND_JWT_ISS)%'
+            $jwtAudience: '%env(default:jwt_claim_empty:BACKEND_JWT_AUD)%'
 
     App\Controller\Api\DiscordDebugController:
         arguments:
@@ -49,7 +71,11 @@ services:
     App\Service\DiscordChannelNotifier:
         arguments:
             $botToken: '%env(default:discord_bot_token_default:DISCORD_BOT_TOKEN)%'
-            $appEnv: '%env(APP_ENV)%'
+            $logger: '@monolog.logger.discord'
+
+    App\Controller\Api\CountyReferenceController:
+        arguments:
+            $logger: '@monolog.logger.business'
 
     App\Controller\Api\DiscordEffectifController:
         arguments:
@@ -58,6 +84,7 @@ services:
     App\Controller\Api\ServiceRecordController:
         arguments:
             $planningLogChannelId: '%env(default:discord_planning_channel_id_default:DISCORD_PLANNING_CHANNEL_ID)%'
+            $planningResetTimezone: '%env(default:planning_reset_timezone_default:PLANNING_RESET_TIMEZONE)%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

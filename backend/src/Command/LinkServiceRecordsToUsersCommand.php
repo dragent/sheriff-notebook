@@ -40,31 +40,32 @@ final class LinkServiceRecordsToUsersCommand extends Command
 
         foreach ($records as $record) {
             $name = trim($record->getName());
-            if ($name === '') {
+            if ('' === $name) {
                 continue;
             }
 
             $user = $this->userRepository->findOneBy(['username' => $name]);
-            if ($user === null) {
+            if (null === $user) {
                 $users = $this->userRepository->findBy([], ['username' => 'ASC']);
                 foreach ($users as $u) {
-                    if (strcasecmp(trim($u->getUsername()), $name) === 0) {
+                    if (0 === strcasecmp(trim($u->getUsername()), $name)) {
                         $user = $u;
                         break;
                     }
                 }
             }
 
-            if ($user !== null && $user->getServiceRecord() === null) {
+            if (null !== $user && null === $user->getServiceRecord()) {
                 $record->setUser($user);
                 $user->setServiceRecord($record);
-                $linked++;
-                $io->text(sprintf('  Lié "%s" → user %s', $name, $user->getUsername()));
+                ++$linked;
+                $io->text(\sprintf('  Lié "%s" → user %s', $name, $user->getUsername()));
             }
         }
 
         $this->entityManager->flush();
-        $io->success(sprintf('%d fiche(s) liée(s) à un user.', $linked));
+        $io->success(\sprintf('%d fiche(s) liée(s) à un user.', $linked));
+
         return Command::SUCCESS;
     }
 }

@@ -4,38 +4,37 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Domain\Grade;
+use App\Domain\GradeHierarchy;
 use App\Entity\User;
 use App\Repository\UserRepository;
+use App\Security\Voter\ReferenceVoter;
 use App\Service\DiscordChannelNotifier;
 use App\Service\EffectifMessageBuilder;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api/discord/effectif')]
+#[IsGranted(ReferenceVoter::MANAGE, message: 'Accès réservé au Sheriff de comté et Adjoint.')]
 final class DiscordEffectifController
 {
-    private const ALLOWED_GRADES = ['Sheriff de comté', 'Sheriff Adjoint', 'Sheriff adjoint'];
-
     public function __construct(
         private readonly UserRepository $userRepository,
         private readonly EffectifMessageBuilder $messageBuilder,
         private readonly DiscordChannelNotifier $channelNotifier,
+        private readonly ClockInterface $clock,
         private readonly string $effectifChannelId = '',
     ) {
     }
 
     #[Route('', name: 'api_discord_effectif_preview', methods: ['GET'])]
-    public function preview(#[CurrentUser] User $user): JsonResponse
+    public function preview(): JsonResponse
     {
-        $grade = $user->getGrade();
-        if ($grade === null || !\in_array($grade, self::ALLOWED_GRADES, true)) {
-            return new JsonResponse(['error' => 'Accès réservé au Sheriff de comté et Adjoint.'], Response::HTTP_FORBIDDEN);
-        }
-
         $sheriffs = $this->getSheriffsList();
-        $now = new \DateTimeImmutable('now');
+        $now = $this->clock->now();
         $markdown = $this->messageBuilder->build($sheriffs, $now);
 
         return new JsonResponse([
@@ -48,25 +47,20 @@ final class DiscordEffectifController
     }
 
     #[Route('/send', name: 'api_discord_effectif_send', methods: ['POST'])]
-    public function send(#[CurrentUser] User $user): JsonResponse
+    public function send(): JsonResponse
     {
-        $grade = $user->getGrade();
-        if ($grade === null || !\in_array($grade, self::ALLOWED_GRADES, true)) {
-            return new JsonResponse(['error' => 'Accès réservé au Sheriff de comté et Adjoint.'], Response::HTTP_FORBIDDEN);
-        }
-
-        if ($this->effectifChannelId === '') {
+        if ('' === $this->effectifChannelId) {
             return new JsonResponse([
                 'error' => 'Canal Discord non configuré (DISCORD_EFFECTIF_CHANNEL_ID).',
             ], Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
         $sheriffs = $this->getSheriffsList();
-        $now = new \DateTimeImmutable('now');
+        $now = $this->clock->now();
         $markdown = $this->messageBuilder->build($sheriffs, $now);
 
         $err = $this->channelNotifier->sendMessage($this->effectifChannelId, $markdown);
-        if ($err !== null) {
+        if (null !== $err) {
             return new JsonResponse(['error' => $err], Response::HTTP_BAD_GATEWAY);
         }
 
@@ -82,44 +76,34 @@ final class DiscordEffectifController
     /** @return list<array{username: string, grade: string, badge?: string, telegram?: string}> */
     private function getSheriffsList(): array
     {
-        $users = $this->userRepository->findBy([], ['username' => 'ASC']);
-        $order = [
-            'Sheriff de comté' => 0,
-            'Sheriff Adjoint' => 1,
-            'Sheriff en chef' => 2,
-            'Sheriff' => 3,
-            'Sheriff Deputy' => 4,
-            'Deputy' => 5,
-        ];
-        $candidates = [];
-        foreach ($users as $u) {
-            $grade = $u->getGrade();
-            if ($grade === null || $grade === '') {
-                continue;
-            }
-            $candidates[] = $u;
-        }
-        usort($candidates, static function (User $a, User $b) use ($order): int {
-            $ga = $a->getGrade() ?? '';
-            $gb = $b->getGrade() ?? '';
-            $oa = $order[$ga] ?? 99;
-            $ob = $order[$gb] ?? 99;
+        // Filter graded users at SQL level + eager-load service record so getTelegramForUser() does not trigger N+1.
+        $candidates = $this->userRepository->createQueryBuilder('u')
+            ->leftJoin('u.serviceRecord', 'sr')->addSelect('sr')
+            ->andWhere('u.grade IN (:grades)')
+            ->setParameter('grades', Grade::labels())
+            ->orderBy('u.username', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        usort($candidates, static function (User $a, User $b): int {
+            $oa = Grade::tryFromLabel($a->getGrade())?->order() ?? 99;
+            $ob = Grade::tryFromLabel($b->getGrade())?->order() ?? 99;
             if ($oa !== $ob) {
                 return $oa <=> $ob;
             }
             $da = $a->getRecruitedAt();
             $db = $b->getRecruitedAt();
-            if ($da === null && $db === null) {
+            if (null === $da && null === $db) {
                 return strcasecmp($a->getUsername(), $b->getUsername());
             }
-            if ($da === null) {
+            if (null === $da) {
                 return 1;
             }
-            if ($db === null) {
+            if (null === $db) {
                 return -1;
             }
             $cmp = $da <=> $db;
-            if ($cmp !== 0) {
+            if (0 !== $cmp) {
                 return $cmp;
             }
 
@@ -129,7 +113,7 @@ final class DiscordEffectifController
         $sheriffs = [];
         foreach ($candidates as $u) {
             $grade = $u->getGrade();
-            if ($grade === null || $grade === '') {
+            if (null === $grade || '' === $grade) {
                 continue;
             }
             $badge = $this->getBadgeForUser($u);
@@ -153,25 +137,25 @@ final class DiscordEffectifController
     private function getTelegramForUser(User $user): ?string
     {
         $record = $user->getServiceRecord();
-        if ($record === null) {
+        if (null === $record) {
             return null;
         }
         $telegram = $record->getTelegramPrimary();
-        return $telegram !== null && $telegram !== '' ? trim($telegram) : null;
+
+        return null !== $telegram && '' !== $telegram ? trim($telegram) : null;
     }
 
     /** @param list<array{username: string, grade: string, badge?: string, telegram?: string}> $sheriffs */
     private function getRecruitmentTelegrams(array $sheriffs): array
     {
-        $allowed = ['Sheriff de comté', 'Sheriff Adjoint', 'Sheriff adjoint'];
         $telegrams = [];
         foreach ($sheriffs as $sheriff) {
             $grade = $sheriff['grade'] ?? null;
             $telegram = $sheriff['telegram'] ?? null;
-            if (!\is_string($grade) || !\in_array($grade, $allowed, true)) {
+            if (!\is_string($grade) || !GradeHierarchy::canManageReference(Grade::tryFromLabel($grade))) {
                 continue;
             }
-            if (!\is_string($telegram) || $telegram === '') {
+            if (!\is_string($telegram) || '' === $telegram) {
                 continue;
             }
             $telegrams[] = $telegram;

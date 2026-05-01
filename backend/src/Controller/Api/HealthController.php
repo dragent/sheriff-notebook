@@ -15,4 +15,3 @@ final class HealthController
         return new JsonResponse(['ok' => true]);
     }
 }
-

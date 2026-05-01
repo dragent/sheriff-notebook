@@ -24,4 +24,3 @@ class ServiceRecordRepository extends ServiceEntityRepository
         return $this->findOneBy(['user' => $user], []);
     }
 }
-

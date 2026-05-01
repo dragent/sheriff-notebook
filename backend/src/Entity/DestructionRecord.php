@@ -55,7 +55,7 @@ class DestructionRecord
     {
         $this->id = Uuid::v7();
         $this->lines = $lines;
-        $this->createdBy = $createdBy !== null && $createdBy !== '' ? $createdBy : null;
+        $this->createdBy = null !== $createdBy && '' !== $createdBy ? $createdBy : null;
         $this->createdAt = new \DateTimeImmutable('now');
     }
 
@@ -103,10 +103,10 @@ class DestructionRecord
      */
     public function validate(string $newStatus): void
     {
-        if ($this->status !== self::STATUS_PENDING) {
+        if (self::STATUS_PENDING !== $this->status) {
             throw new \DomainException('Cette destruction a déjà été validée.');
         }
-        if ($newStatus !== self::STATUS_REUSSIE && $newStatus !== self::STATUS_PERDUE) {
+        if (self::STATUS_REUSSIE !== $newStatus && self::STATUS_PERDUE !== $newStatus) {
             throw new \InvalidArgumentException('Statut invalide : reussie ou perdue attendu.');
         }
         $this->status = $newStatus;

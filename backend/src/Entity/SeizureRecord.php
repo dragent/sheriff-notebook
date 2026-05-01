@@ -129,18 +129,18 @@ class SeizureRecord
         ?string $weaponModel = null,
         ?string $serialNumber = null,
         ?string $possessedBy = null,
-        ?string $notes = null
+        ?string $notes = null,
     ) {
         $this->id = Uuid::v7();
         $this->type = $type;
         $this->date = $date;
         $this->sheriff = $sheriff;
         $this->quantity = $quantity;
-        $this->itemName = $itemName !== null && $itemName !== '' ? $itemName : null;
-        $this->weaponModel = $weaponModel !== null && $weaponModel !== '' ? $weaponModel : null;
-        $this->serialNumber = $serialNumber !== null && $serialNumber !== '' ? $serialNumber : null;
-        $this->possessedBy = $possessedBy !== null && $possessedBy !== '' ? $possessedBy : null;
-        $this->notes = $notes !== null && $notes !== '' ? $notes : null;
+        $this->itemName = null !== $itemName && '' !== $itemName ? $itemName : null;
+        $this->weaponModel = null !== $weaponModel && '' !== $weaponModel ? $weaponModel : null;
+        $this->serialNumber = null !== $serialNumber && '' !== $serialNumber ? $serialNumber : null;
+        $this->possessedBy = null !== $possessedBy && '' !== $possessedBy ? $possessedBy : null;
+        $this->notes = null !== $notes && '' !== $notes ? $notes : null;
         $now = new \DateTimeImmutable('now');
         $this->createdAt = $now;
         $this->updatedAt = $now;
@@ -196,7 +196,7 @@ class SeizureRecord
 
     public function setItemName(?string $itemName): void
     {
-        $this->itemName = $itemName !== null && trim($itemName) !== '' ? trim($itemName) : null;
+        $this->itemName = null !== $itemName && '' !== trim($itemName) ? trim($itemName) : null;
         $this->updatedAt = new \DateTimeImmutable('now');
     }
 
@@ -207,7 +207,7 @@ class SeizureRecord
 
     public function setWeaponModel(?string $weaponModel): void
     {
-        $this->weaponModel = $weaponModel !== null && trim($weaponModel) !== '' ? trim($weaponModel) : null;
+        $this->weaponModel = null !== $weaponModel && '' !== trim($weaponModel) ? trim($weaponModel) : null;
         $this->updatedAt = new \DateTimeImmutable('now');
     }
 
@@ -218,7 +218,7 @@ class SeizureRecord
 
     public function setSerialNumber(?string $serialNumber): void
     {
-        $this->serialNumber = $serialNumber !== null && trim($serialNumber) !== '' ? trim($serialNumber) : null;
+        $this->serialNumber = null !== $serialNumber && '' !== trim($serialNumber) ? trim($serialNumber) : null;
         $this->updatedAt = new \DateTimeImmutable('now');
     }
 
@@ -229,7 +229,7 @@ class SeizureRecord
 
     public function setPossessedBy(?string $possessedBy): void
     {
-        $this->possessedBy = $possessedBy !== null && trim($possessedBy) !== '' ? trim($possessedBy) : null;
+        $this->possessedBy = null !== $possessedBy && '' !== trim($possessedBy) ? trim($possessedBy) : null;
         $this->updatedAt = new \DateTimeImmutable('now');
     }
 
@@ -240,7 +240,7 @@ class SeizureRecord
 
     public function setNotes(?string $notes): void
     {
-        $this->notes = $notes !== null && trim($notes) !== '' ? trim($notes) : null;
+        $this->notes = null !== $notes && '' !== trim($notes) ? trim($notes) : null;
         $this->updatedAt = new \DateTimeImmutable('now');
     }
 
@@ -256,7 +256,7 @@ class SeizureRecord
 
     public function isCancelled(): bool
     {
-        return $this->cancelledAt !== null;
+        return null !== $this->cancelledAt;
     }
 
     public function getCancelledAt(): ?\DateTimeImmutable
@@ -277,8 +277,8 @@ class SeizureRecord
     public function cancel(string $reason, string $actor): void
     {
         $this->cancelledAt = new \DateTimeImmutable('now');
-        $this->cancelledReason = trim($reason) !== '' ? trim($reason) : null;
-        $this->cancelledBy = trim($actor) !== '' ? trim($actor) : null;
+        $this->cancelledReason = '' !== trim($reason) ? trim($reason) : null;
+        $this->cancelledBy = '' !== trim($actor) ? trim($actor) : null;
         $this->updatedAt = new \DateTimeImmutable('now');
     }
 }

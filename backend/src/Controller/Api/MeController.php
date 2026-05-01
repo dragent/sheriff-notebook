@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Domain\Grade;
 use App\Entity\User;
 use App\Repository\CountyReferenceRepository;
 use App\Service\DiscordGuildMemberResolver;
@@ -16,16 +17,6 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 final class MeController
 {
-    private const GRADE_ORDER = [
-        'Sheriff de comté' => 0,
-        'Sheriff Adjoint' => 1,
-        'Sheriff adjoint' => 1,
-        'Sheriff en chef' => 2,
-        'Sheriff' => 3,
-        'Sheriff Deputy' => 4,
-        'Deputy' => 5,
-    ];
-
     public function __construct(
         private readonly CountyReferenceRepository $referenceRepository,
         private readonly DiscordGuildMemberResolver $discordGuildMemberResolver,
@@ -36,23 +27,19 @@ final class MeController
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
     public function __invoke(#[CurrentUser] User $user): JsonResponse
     {
-        $serverDisplayName = $this->discordGuildMemberResolver->getServerDisplayName($user->getDiscordId());
-        if ($serverDisplayName !== null && $serverDisplayName !== '') {
-            $user->setUsername($serverDisplayName);
-            $this->entityManager->flush();
-        }
-
+        $this->refreshUsernameFromDiscordIfNeeded($user);
         $grade = $user->getGrade();
         $allowedFormations = $this->getAllowedFormationsForGrade($grade);
         $allFormations = $this->getAllFormations();
         $recruitedAt = $user->getRecruitedAt();
+
         return new JsonResponse([
             'id' => $user->getId()->toRfc4122(),
             'discordId' => $user->getDiscordId(),
             'username' => $user->getUsername(),
             'avatarUrl' => $user->getAvatarUrl(),
             'grade' => $grade,
-            'recruitedAt' => $recruitedAt !== null ? $recruitedAt->format(\DateTimeInterface::ATOM) : null,
+            'recruitedAt' => null !== $recruitedAt ? $recruitedAt->format(\DateTimeInterface::ATOM) : null,
             'allowedFormations' => $allowedFormations,
             'allFormations' => $allFormations,
             'roles' => $user->getRoles(),
@@ -66,13 +53,13 @@ final class MeController
         $data = \is_string($body) ? json_decode($body, true) : null;
         $accessToken = isset($data['accessToken']) && \is_string($data['accessToken']) ? trim($data['accessToken']) : '';
 
-        if ($accessToken === '') {
+        if ('' === $accessToken) {
             return new JsonResponse(['error' => 'Corps de requête invalide (accessToken requis).'], Response::HTTP_BAD_REQUEST);
         }
 
         $grade = $user->getGrade();
         $error = $this->discordGuildMemberResolver->addMemberToGuildWithSheriffDeputyRole($user->getDiscordId(), $accessToken, $grade);
-        if ($error !== null) {
+        if (null !== $error) {
             return new JsonResponse(['error' => $error], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
@@ -100,13 +87,13 @@ final class MeController
                 if (!\is_string($configGrade) || !\is_array($ids)) {
                     continue;
                 }
-                $order = self::GRADE_ORDER[$configGrade] ?? null;
-                if ($order === null) {
+                $order = Grade::tryFromLabel($configGrade)?->order();
+                if (null === $order) {
                     continue;
                 }
                 foreach ($ids as $id) {
-                    if (\is_string($id) && $id !== '') {
-                        $maxOrderByFormationId[$id] = \max($maxOrderByFormationId[$id] ?? -1, $order);
+                    if (\is_string($id) && '' !== $id) {
+                        $maxOrderByFormationId[$id] = max($maxOrderByFormationId[$id] ?? -1, $order);
                     }
                 }
             }
@@ -121,7 +108,17 @@ final class MeController
                 ];
             }
         }
+
         return $result;
+    }
+
+    private function refreshUsernameFromDiscordIfNeeded(User $user): void
+    {
+        $display = $this->discordGuildMemberResolver->getServerDisplayName($user->getDiscordId());
+        if (null !== $display && '' !== $display && $user->getUsername() !== $display) {
+            $user->setUsername($display);
+            $this->entityManager->flush();
+        }
     }
 
     /** Formations allowed for this grade (from reference formations + formationsByGrade); higher grades inherit lower-grade formations.
@@ -129,16 +126,13 @@ final class MeController
      */
     private function getAllowedFormationsForGrade(?string $grade): array
     {
-        if ($grade === null || $grade === 'Sheriff de comté') {
+        $parsed = Grade::tryFromLabel($grade);
+        if (null === $parsed || Grade::CountySheriff === $parsed) {
             return [];
         }
 
-        $currentOrder = self::GRADE_ORDER[$grade] ?? null;
-        if ($currentOrder === null) {
-            return [];
-        }
         // Deputy has same formation access as Sheriff Deputy (order 4).
-        $effectiveOrder = $grade === 'Deputy' ? 4 : $currentOrder;
+        $effectiveOrder = Grade::Deputy === $parsed ? Grade::SheriffDeputy->order() : $parsed->order();
 
         $ref = $this->referenceRepository->getSingleton();
         $data = $ref->getData();
@@ -165,12 +159,12 @@ final class MeController
             if (!\is_string($configGrade) || !\is_array($ids)) {
                 continue;
             }
-            $configOrder = self::GRADE_ORDER[$configGrade] ?? null;
-            if ($configOrder === null || $configOrder < $effectiveOrder) {
+            $configOrder = Grade::tryFromLabel($configGrade)?->order();
+            if (null === $configOrder || $configOrder < $effectiveOrder) {
                 continue;
             }
             foreach ($ids as $id) {
-                if (\is_string($id) && $id !== '') {
+                if (\is_string($id) && '' !== $id) {
                     $formationIds[$id] = true;
                 }
             }

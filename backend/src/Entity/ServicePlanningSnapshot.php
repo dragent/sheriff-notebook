@@ -32,7 +32,7 @@ final class ServicePlanningSnapshot
     public function __construct(string $actor, array $data)
     {
         $this->id = Uuid::v7();
-        $this->actor = $actor !== '' ? $actor : 'unknown';
+        $this->actor = '' !== $actor ? $actor : 'unknown';
         $this->data = $data;
         $this->createdAt = new \DateTimeImmutable('now');
     }
@@ -58,4 +58,3 @@ final class ServicePlanningSnapshot
         return $this->createdAt;
     }
 }
-

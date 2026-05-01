@@ -54,10 +54,11 @@ class SeizureRecordRepository extends ServiceEntityRepository
             ->setParameter('model', $weaponModel)
             ->orderBy('s.date', 'ASC')
             ->addOrderBy('s.createdAt', 'ASC');
-        if ($serialNumber !== null && $serialNumber !== '') {
+        if (null !== $serialNumber && '' !== $serialNumber) {
             $qb->andWhere('s.serialNumber = :serial')
                 ->setParameter('serial', $serialNumber);
         }
+
         return $qb->getQuery()->getResult();
     }
 
@@ -72,5 +73,59 @@ class SeizureRecordRepository extends ServiceEntityRepository
             ->addOrderBy('s.createdAt', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Aggregated seized quantities indexed by stock-key:
+     *   - cash type → SeizureRecord::DESTRUCTION_LINE_KEY_CASH
+     *   - item type → item name
+     *   - weapon type → "model" AND "model|serial" (when serial known)
+     *
+     * Replaces an in-memory loop over every seizure row with a single SQL aggregation.
+     *
+     * @return array<string, int>
+     */
+    public function getSeizedQuantityByKey(): array
+    {
+        $rows = $this->createQueryBuilder('s')
+            ->select('s.type AS type, s.itemName AS itemName, s.weaponModel AS weaponModel, s.serialNumber AS serialNumber, SUM(s.quantity) AS qty')
+            ->where('s.cancelledAt IS NULL')
+            ->groupBy('s.type, s.itemName, s.weaponModel, s.serialNumber')
+            ->getQuery()
+            ->getArrayResult();
+
+        $out = [];
+        foreach ($rows as $row) {
+            $qty = (int) $row['qty'];
+            if ($qty <= 0) {
+                continue;
+            }
+            switch ($row['type']) {
+                case SeizureRecord::TYPE_CASH:
+                    $key = SeizureRecord::DESTRUCTION_LINE_KEY_CASH;
+                    $out[$key] = ($out[$key] ?? 0) + $qty;
+                    break;
+                case SeizureRecord::TYPE_ITEM:
+                    $name = (string) ($row['itemName'] ?? '');
+                    if ('' !== $name) {
+                        $out[$name] = ($out[$name] ?? 0) + $qty;
+                    }
+                    break;
+                case SeizureRecord::TYPE_WEAPON:
+                    $model = (string) ($row['weaponModel'] ?? '');
+                    if ('' === $model) {
+                        break;
+                    }
+                    $out[$model] = ($out[$model] ?? 0) + $qty;
+                    $serial = (string) ($row['serialNumber'] ?? '');
+                    if ('' !== $serial) {
+                        $compositeKey = $model.'|'.$serial;
+                        $out[$compositeKey] = ($out[$compositeKey] ?? 0) + $qty;
+                    }
+                    break;
+            }
+        }
+
+        return $out;
     }
 }

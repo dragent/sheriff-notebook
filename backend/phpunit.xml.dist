@@ -9,8 +9,17 @@
         <env name="KERNEL_CLASS" value="App\Kernel"/>
         <env name="APP_SECRET" value="test-app-secret-phpunit"/>
         <env name="BACKEND_JWT_SECRET" value="test-jwt-secret-phpunit-min-32-chars-for-hs256"/>
+        <env name="BACKEND_JWT_ISS" value=""/>
+        <env name="BACKEND_JWT_AUD" value=""/>
         <!-- SQLite pour exécuter les tests sans PostgreSQL (cwd = backend, schéma à créer avec APP_ENV=test php bin/console doctrine:schema:create). -->
         <env name="DATABASE_URL" value="sqlite:///./var/data_test.db"/>
+
+        <!-- ###+ symfony/messenger ### -->
+        <!-- Choose one of the transports below -->
+        <!-- MESSENGER_TRANSPORT_DSN=amqp://guest:guest@localhost:5672/%2f/messages -->
+        <!-- MESSENGER_TRANSPORT_DSN=redis://localhost:6379/messages -->
+        <env name="MESSENGER_TRANSPORT_DSN" value="sync://"/>
+        <!-- ###- symfony/messenger ### -->
     </php>
     <testsuites>
         <testsuite name="Project Test Suite">

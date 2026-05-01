@@ -20,7 +20,7 @@ final class UserServiceRecordProvisioner
 
     public function provisionForNewUser(User $user): void
     {
-        if ($user->getServiceRecord() !== null) {
+        if (null !== $user->getServiceRecord()) {
             return;
         }
 

@@ -18,4 +18,3 @@ final class ServicePlanningSnapshotRepository extends ServiceEntityRepository
         parent::__construct($registry, ServicePlanningSnapshot::class);
     }
 }
-

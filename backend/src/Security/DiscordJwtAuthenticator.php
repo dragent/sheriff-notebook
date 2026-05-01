@@ -6,7 +6,6 @@ namespace App\Security;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
-use App\Service\DiscordGuildMemberResolver;
 use App\Service\UserServiceRecordProvisioner;
 use Doctrine\ORM\EntityManagerInterface;
 use Firebase\JWT\JWT;
@@ -26,85 +25,128 @@ final class DiscordJwtAuthenticator extends AbstractAuthenticator implements Aut
 {
     private string $jwtSecret;
 
+    private string $jwtIssuer;
+
+    private string $jwtAudience;
+
     public function __construct(
         private readonly UserRepository $userRepository,
         private readonly EntityManagerInterface $entityManager,
         string $jwtSecret,
-        private readonly DiscordGuildMemberResolver $discordGuildMemberResolver,
         private readonly UserServiceRecordProvisioner $userServiceRecordProvisioner,
+        string $jwtIssuer = '',
+        string $jwtAudience = '',
     ) {
         $this->jwtSecret = trim($jwtSecret);
+        $this->jwtIssuer = trim($jwtIssuer);
+        $this->jwtAudience = trim($jwtAudience);
     }
 
     private static function getTokenFromRequest(Request $request): string
     {
         $auth = $request->headers->get('Authorization');
-        if ($auth !== null && str_starts_with($auth, 'Bearer ')) {
+        if (null !== $auth && str_starts_with($auth, 'Bearer ')) {
             return trim(substr($auth, 7));
         }
         $xToken = $request->headers->get('X-Bearer-Token');
-        return $xToken !== null ? trim($xToken) : '';
+
+        return null !== $xToken ? trim($xToken) : '';
     }
 
     public function supports(Request $request): ?bool
     {
-        return self::getTokenFromRequest($request) !== '';
+        return '' !== self::getTokenFromRequest($request);
     }
 
     public function authenticate(Request $request): SelfValidatingPassport
     {
-        if ($this->jwtSecret === '') {
+        if ('' === $this->jwtSecret) {
             throw new CustomUserMessageAuthenticationException('Server misconfigured: missing BACKEND_JWT_SECRET.');
         }
 
         $token = self::getTokenFromRequest($request);
-        if ($token === '') {
+        if ('' === $token) {
             throw new CustomUserMessageAuthenticationException('Missing bearer token.');
         }
 
         try {
-            /** @var object{sub?:string,username?:string,avatarUrl?:string} $payload */
+            /** @var object{sub?:string,username?:string,avatarUrl?:string,iss?:string,aud?:string|list<string>} $payload */
             $payload = JWT::decode($token, new Key($this->jwtSecret, 'HS256'));
         } catch (\Throwable $e) {
             throw new CustomUserMessageAuthenticationException('Invalid token.');
         }
 
+        if ('' !== $this->jwtIssuer) {
+            $iss = isset($payload->iss) ? trim((string) $payload->iss) : '';
+            if ($iss !== $this->jwtIssuer) {
+                throw new CustomUserMessageAuthenticationException('Invalid token issuer.');
+            }
+        }
+
+        if ('' !== $this->jwtAudience) {
+            if (!$this->tokenHasAudience($payload->aud ?? null, $this->jwtAudience)) {
+                throw new CustomUserMessageAuthenticationException('Invalid token audience.');
+            }
+        }
+
         $discordId = isset($payload->sub) ? trim((string) $payload->sub) : '';
         $username = isset($payload->username) ? trim((string) $payload->username) : '';
         $avatarUrl = isset($payload->avatarUrl) ? trim((string) $payload->avatarUrl) : null;
-        if ($avatarUrl === '') {
+        if ('' === $avatarUrl) {
             $avatarUrl = null;
         }
 
-        if ($discordId === '' || $username === '') {
+        if ('' === $discordId || '' === $username) {
             throw new CustomUserMessageAuthenticationException('Invalid token payload.');
         }
 
-        $serverDisplayName = $this->discordGuildMemberResolver->getServerDisplayName($discordId);
-        // Prefer guild nickname; fall back to global username. Do not overwrite existing username when Discord API fails.
-        $displayUsername = ($serverDisplayName !== null && $serverDisplayName !== '') ? $serverDisplayName : $username;
+        // Guild nickname refresh is deferred to GET /api/me (see MeController) to avoid one Discord HTTP call per API request.
 
         return new SelfValidatingPassport(
-            new UserBadge($discordId, function (string $userIdentifier) use ($discordId, $displayUsername, $serverDisplayName, $avatarUrl): UserInterface {
+            new UserBadge($discordId, function (string $userIdentifier) use ($discordId, $username, $avatarUrl): UserInterface {
                 $user = $this->userRepository->findOneBy(['discordId' => $userIdentifier]);
                 if (!$user instanceof User) {
-                    $user = new User($discordId, $displayUsername);
+                    $user = new User($discordId, $username);
                     $user->setAvatarUrl($avatarUrl);
                     $this->entityManager->persist($user);
                     $this->userServiceRecordProvisioner->provisionForNewUser($user);
                     $this->entityManager->flush();
+
                     return $user;
                 }
 
-                if ($serverDisplayName !== null && $serverDisplayName !== '') {
-                    $user->setUsername($serverDisplayName);
+                $changed = false;
+                if ($user->getUsername() !== $username) {
+                    $user->setUsername($username);
+                    $changed = true;
                 }
-                $user->setAvatarUrl($avatarUrl);
-                $this->entityManager->flush();
+                if ($user->getAvatarUrl() !== $avatarUrl) {
+                    $user->setAvatarUrl($avatarUrl);
+                    $changed = true;
+                }
+                if ($changed) {
+                    $this->entityManager->flush();
+                }
 
                 return $user;
             }),
         );
+    }
+
+    private function tokenHasAudience(mixed $aud, string $expected): bool
+    {
+        if (\is_string($aud)) {
+            return trim($aud) === $expected;
+        }
+        if (\is_array($aud)) {
+            foreach ($aud as $item) {
+                if (\is_string($item) && trim($item) === $expected) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public function onAuthenticationSuccess(Request $request, \Symfony\Component\Security\Core\Authentication\Token\TokenInterface $token, string $firewallName): ?Response

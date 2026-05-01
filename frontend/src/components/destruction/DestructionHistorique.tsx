@@ -196,7 +196,7 @@ export function DestructionHistorique({ records, onValidate, loading = false }: 
                   )}
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <span className="font-medium text-sheriff-paper">
+                      <span className="font-stamp font-medium text-sheriff-paper">
                         {formatDate(record.createdAt)}
                       </span>
                       {record.createdBy && (
@@ -275,9 +275,9 @@ export function DestructionHistorique({ records, onValidate, loading = false }: 
                     <tbody>
                       {record.lines.map((line, idx) => (
                         <tr key={idx} className="border-b border-sheriff-gold/10 last:border-0">
-                          <td className="px-2 py-1.5 text-sheriff-paper-muted">{formatLineDate(line.date)}</td>
-                          <td className="px-2 py-1.5 text-right tabular-nums text-sheriff-paper">{line.qte}</td>
-                          <td className="px-2 py-1.5 text-sheriff-paper">{formatDestructionLabel(line.destruction ?? '')}</td>
+                          <td className="font-stamp px-2 py-1.5 text-sheriff-paper-muted">{formatLineDate(line.date)}</td>
+                          <td className="font-stamp px-2 py-1.5 text-right tabular-nums text-sheriff-paper">{line.qte}</td>
+                          <td className="font-stamp px-2 py-1.5 text-sheriff-paper">{formatDestructionLabel(line.destruction ?? '')}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -1,5 +1,5 @@
-import { PageLoadingSkeleton } from "@/components/layout/PageLoadingSkeleton";
+import { PageLoadingTelegraph } from "@/components/layout/PageLoadingSkeleton";
 
 export default function MainSegmentLoading() {
-  return <PageLoadingSkeleton />;
+  return <PageLoadingTelegraph />;
 }

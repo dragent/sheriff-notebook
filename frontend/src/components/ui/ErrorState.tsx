@@ -30,7 +30,7 @@ const variantStyles: Record<
     { card: "border-[var(--sheriff-warning-border)] bg-[var(--sheriff-warning-bg)]", iconBg: "bg-[var(--sheriff-warning-icon-bg)]", iconColor: "text-[var(--sheriff-warning-icon)]" },
   /** Couleurs du thème dark (charcoal/wood/gold), sans teinte erreur/warning */
   neutral:
-    { card: "border-sheriff-gold/25 bg-sheriff-charcoal/60 shadow-[inset_0_0_0_1px_rgba(184,184,184,0.06)]", iconBg: "bg-[var(--sheriff-warning-icon-bg)]", iconColor: "text-[var(--sheriff-warning-icon)]" },
+    { card: "sheriff-card-rule border-sheriff-gold/25 bg-sheriff-charcoal/60", iconBg: "bg-[var(--sheriff-warning-icon-bg)]", iconColor: "text-[var(--sheriff-warning-icon)]" },
 };
 
 const defaultIcon = (

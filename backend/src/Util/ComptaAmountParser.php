@@ -12,7 +12,7 @@ final class ComptaAmountParser
     public static function parseToFloat(string $amount): float
     {
         $s = trim($amount);
-        if ($s === '') {
+        if ('' === $s) {
             return 0.0;
         }
 
@@ -23,7 +23,7 @@ final class ComptaAmountParser
 
         $s = str_replace(["\u{00A0}", '$', '€'], '', $s); // narrow NBSP + currency
         $s = str_replace(' ', '', $s);
-        if ($s === '') {
+        if ('' === $s) {
             return 0.0;
         }
 

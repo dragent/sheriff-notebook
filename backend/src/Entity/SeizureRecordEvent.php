@@ -60,8 +60,7 @@ final class SeizureRecordEvent
         $this->action = $action;
         $this->actor = $actor;
         $this->diff = $diff;
-        $this->reason = $reason !== null && trim($reason) !== '' ? trim($reason) : null;
+        $this->reason = null !== $reason && '' !== trim($reason) ? trim($reason) : null;
         $this->createdAt = new \DateTimeImmutable('now');
     }
 }
-

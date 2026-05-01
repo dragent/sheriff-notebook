@@ -76,13 +76,13 @@ final readonly class SeizureRecordCreateDto
     #[Assert\Callback]
     public function validateCombination(\Symfony\Component\Validator\Context\ExecutionContextInterface $context): void
     {
-        if ($this->type === SeizureRecord::TYPE_ITEM && ($this->itemName === null || $this->itemName === '')) {
+        if (SeizureRecord::TYPE_ITEM === $this->type && (null === $this->itemName || '' === $this->itemName)) {
             $context->buildViolation('itemName est requis pour une saisie d\'item.')
                 ->atPath('itemName')
                 ->addViolation();
         }
 
-        if ($this->type === SeizureRecord::TYPE_WEAPON && ($this->weaponModel === null || $this->weaponModel === '')) {
+        if (SeizureRecord::TYPE_WEAPON === $this->type && (null === $this->weaponModel || '' === $this->weaponModel)) {
             $context->buildViolation('weaponModel est requis pour une saisie d\'arme.')
                 ->atPath('weaponModel')
                 ->addViolation();
@@ -97,7 +97,7 @@ final readonly class SeizureRecordCreateDto
         $sheriff = isset($data['sheriff']) && \is_string($data['sheriff']) ? trim($data['sheriff']) : '';
 
         $quantity = 0;
-        if (isset($data['quantity']) && (is_int($data['quantity']) || is_numeric($data['quantity']))) {
+        if (isset($data['quantity']) && (\is_int($data['quantity']) || is_numeric($data['quantity']))) {
             $quantity = (int) $data['quantity'];
         }
 

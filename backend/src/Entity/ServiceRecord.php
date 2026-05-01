@@ -16,6 +16,13 @@ class ServiceRecord
     #[ORM\Column(type: 'uuid', unique: true)]
     private Uuid $id;
 
+    /**
+     * Optimistic lock for concurrent PATCH /api/services/{id} (optional If-Match / __version from client).
+     */
+    #[ORM\Version]
+    #[ORM\Column(type: 'integer', options: ['default' => 1])]
+    private int $version = 1;
+
     /** Un enregistrement par utilisateur (1 user = 1 service record). */
     #[ORM\OneToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: true, unique: true, onDelete: 'CASCADE')]
@@ -200,6 +207,11 @@ class ServiceRecord
     public function getId(): Uuid
     {
         return $this->id;
+    }
+
+    public function getVersion(): int
+    {
+        return $this->version;
     }
 
     public function getUser(): ?User
@@ -829,7 +841,7 @@ class ServiceRecord
     {
         $filtered = [];
         foreach ($formationValidations as $id => $valid) {
-            if (\is_string($id) && $id !== '' && $valid === true) {
+            if (\is_string($id) && '' !== $id && true === $valid) {
                 $filtered[$id] = true;
             }
         }
@@ -857,11 +869,11 @@ class ServiceRecord
 
     private static function normalizeNullableString(?string $value): ?string
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
         $trimmed = trim($value);
-        return $trimmed === '' ? null : $trimmed;
+
+        return '' === $trimmed ? null : $trimmed;
     }
 }
-

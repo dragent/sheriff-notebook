@@ -4,37 +4,35 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Domain\Grade;
+use App\Domain\GradeHierarchy;
 use App\Entity\User;
+use App\Message\Discord\SetSheriffRoleMessage;
 use App\Repository\UserRepository;
 use App\Service\DiscordGuildMemberResolver;
 use App\Service\UserServiceRecordProvisioner;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Uuid;
-use Symfony\Bundle\SecurityBundle\Security;
 
 #[Route('/api/users')]
 final class UserController
 {
-    public const VALID_GRADES = ['Sheriff de comté', 'Sheriff Adjoint', 'Sheriff en chef', 'Sheriff', 'Sheriff Deputy', 'Deputy'];
-
-    private const GRADE_ORDER = [
-        'Sheriff de comté' => 0,
-        'Sheriff Adjoint' => 1,
-        'Sheriff en chef' => 2,
-        'Sheriff' => 3,
-        'Sheriff Deputy' => 4,
-        'Deputy' => 5,
-    ];
-
     public function __construct(
         private readonly UserRepository $userRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly DiscordGuildMemberResolver $discordGuildMemberResolver,
         private readonly UserServiceRecordProvisioner $userServiceRecordProvisioner,
         private readonly Security $security,
+        private readonly MessageBusInterface $messageBus,
+        #[Autowire(service: 'limiter.api_user_grade_patch')]
+        private readonly RateLimiterFactory $userGradePatchLimiter,
     ) {
     }
 
@@ -42,14 +40,15 @@ final class UserController
     public function list(): JsonResponse
     {
         $users = $this->userRepository->findBy([], ['username' => 'ASC']);
-        $list = array_map(function (User $user): array {
+        $list = array_map(static function (User $user): array {
             $recruitedAt = $user->getRecruitedAt();
+
             return [
                 'id' => $user->getId()->toRfc4122(),
                 'username' => $user->getUsername(),
                 'avatarUrl' => $user->getAvatarUrl(),
                 'grade' => $user->getGrade(),
-                'recruitedAt' => $recruitedAt !== null ? $recruitedAt->format(\DateTimeInterface::ATOM) : null,
+                'recruitedAt' => null !== $recruitedAt ? $recruitedAt->format(\DateTimeInterface::ATOM) : null,
             ];
         }, $users);
 
@@ -60,25 +59,24 @@ final class UserController
     public function patch(string $id, Request $request): JsonResponse
     {
         $user = null;
-        $previousGrade = null;
 
         if (str_starts_with($id, 'discord-')) {
             $discordId = substr($id, \strlen('discord-'));
-            if ($discordId === '') {
+            if ('' === $discordId) {
                 return new JsonResponse(['error' => 'Invalid user id'], 400);
             }
             $user = $this->userRepository->findOneBy(['discordId' => $discordId]);
-            if ($user === null) {
+            if (null === $user) {
                 $member = $this->discordGuildMemberResolver->getMember($discordId);
-                if ($member === null || !isset($member['user']['id'], $member['user']['username'])) {
+                if (null === $member || !isset($member['user']['id'], $member['user']['username'])) {
                     return new JsonResponse(['error' => 'Membre Discord introuvable ou bot sans accès au serveur'], 404);
                 }
-                $username = isset($member['nick']) && \is_string($member['nick']) && trim($member['nick']) !== ''
+                $username = isset($member['nick']) && \is_string($member['nick']) && '' !== trim($member['nick'])
                     ? trim($member['nick'])
                     : (string) $member['user']['username'];
                 $avatarUrl = null;
                 if (isset($member['user']['avatar']) && \is_string($member['user']['avatar'])) {
-                    $avatarUrl = 'https://cdn.discordapp.com/avatars/' . $discordId . '/' . $member['user']['avatar'] . '.png';
+                    $avatarUrl = 'https://cdn.discordapp.com/avatars/'.$discordId.'/'.$member['user']['avatar'].'.png';
                 }
                 $user = new User($discordId, $username);
                 $user->setAvatarUrl($avatarUrl);
@@ -97,56 +95,41 @@ final class UserController
             }
         }
 
-        $previousGrade = $user instanceof User ? $user->getGrade() : null;
-        $actor = $this->security->getUser();
+        $previousGrade = $user instanceof User ? Grade::tryFromLabel($user->getGrade()) : null;
+        $actorEntity = $this->security->getUser();
+        $actor = $actorEntity instanceof User ? Grade::tryFromLabel($actorEntity->getGrade()) : null;
 
         $data = json_decode((string) $request->getContent(), true);
         if (!\is_array($data)) {
             return new JsonResponse(['error' => 'Invalid JSON'], 400);
         }
 
-        if (array_key_exists('grade', $data)) {
-            $grade = $data['grade'];
-            if ($grade !== null && $grade !== '') {
-                $grade = trim((string) $grade);
-                if (!\in_array($grade, self::VALID_GRADES, true)) {
+        if (\array_key_exists('grade', $data)) {
+            if (!$this->userGradePatchLimiter->create((string) ($request->getClientIp() ?? 'anon'))->consume()->isAccepted()) {
+                return new JsonResponse(['error' => 'Trop de modifications de grade. Réessayez dans une minute.'], 429);
+            }
+            $rawGrade = $data['grade'];
+            if (null !== $rawGrade && '' !== $rawGrade) {
+                $newGrade = Grade::tryFromLabel((string) $rawGrade);
+                if (null === $newGrade) {
                     return new JsonResponse(
-                        ['error' => 'Invalid grade. Use: ' . implode(', ', self::VALID_GRADES)],
+                        ['error' => 'Invalid grade. Use: '.implode(', ', Grade::labels())],
                         400,
                     );
                 }
 
-                if ($actor instanceof User && $user instanceof User && !$actor->getId()->equals($user->getId())) {
-                    $actorGrade = $actor->getGrade();
-                    $targetCurrentGrade = $user->getGrade();
-                    $actorOrder = $actorGrade !== null ? (self::GRADE_ORDER[$actorGrade] ?? null) : null;
-                    $targetOrder = $targetCurrentGrade !== null ? (self::GRADE_ORDER[$targetCurrentGrade] ?? 99) : 99;
-                    if ($actorOrder === null || $actorOrder > 1 || $actorOrder >= $targetOrder) {
+                if ($actorEntity instanceof User && !$actorEntity->getId()->equals($user->getId())) {
+                    if (!GradeHierarchy::canChangeGradeOf($actor, $previousGrade)) {
                         return new JsonResponse(['error' => 'Promotion non autorisée (grade insuffisant pour modifier ce sheriff).'], 403);
                     }
                 }
 
-                $user->setGrade($grade);
+                $user->setGrade($newGrade->value);
             } else {
-                if ($actor instanceof User) {
-                    $targetGrade = $user->getGrade();
-                    $actorGrade = $actor->getGrade();
-                    if ($targetGrade !== null && $actorGrade !== null) {
-                        $targetOrder = self::GRADE_ORDER[$targetGrade] ?? null;
-                        $actorOrder = self::GRADE_ORDER[$actorGrade] ?? null;
-                        if ($targetOrder !== null && $actorOrder !== null) {
-                            $allowed = false;
-                            if ($actorOrder === 0) {
-                                $allowed = true;
-                            } elseif ($actorOrder === 1 && $actorOrder < $targetOrder) {
-                                $allowed = true;
-                            }
-
-                            if (!$allowed) {
-                                return new JsonResponse(['error' => 'Suppression de grade non autorisée (grade insuffisant).'], 403);
-                            }
-                        }
-                    }
+                // Clearing a grade is gated only when the target currently HAS a grade. The legacy
+                // controller skipped the auth check on a null-to-null no-op; we preserve that.
+                if (null !== $previousGrade && !GradeHierarchy::canClearGradeOf($actor, $previousGrade)) {
+                    return new JsonResponse(['error' => 'Suppression de grade non autorisée (grade insuffisant).'], 403);
                 }
 
                 $user->setGrade(null);
@@ -155,27 +138,29 @@ final class UserController
 
         $this->entityManager->flush();
         $newGrade = $user->getGrade();
-        $discordRoleError = null;
-        // Only touch Discord when the PATCH actually changed the grade. Otherwise setGrade() may no-op
-        // (e.g. stale UI sends a demotion target that already matches the DB): clearing roles would run
-        // but add would be skipped (newGrade === previousGrade), leaving the member with no sheriff roles.
-        if (array_key_exists('grade', $data) && $newGrade !== $previousGrade) {
-            if ($previousGrade !== null && \in_array($previousGrade, User::getSheriffGradeValues(), true)) {
-                $discordRoleError = $this->discordGuildMemberResolver->clearSheriffRolesForMember($user->getDiscordId());
-            }
-            if ($newGrade !== null && \in_array($newGrade, User::getSheriffGradeValues(), true)) {
-                $discordRoleError = $this->discordGuildMemberResolver->addSheriffRoleToMember($user->getDiscordId(), $newGrade);
+        $discordRoleQueued = false;
+        if (\array_key_exists('grade', $data) && $newGrade !== $previousGrade?->value) {
+            $previousIsSheriff = null !== $previousGrade;
+            $newIsSheriff = null !== $newGrade && null !== Grade::tryFromLabel($newGrade);
+            if ($previousIsSheriff || $newIsSheriff) {
+                $this->messageBus->dispatch(new SetSheriffRoleMessage(
+                    $user->getDiscordId(),
+                    $newIsSheriff ? $newGrade : null,
+                ));
+                $discordRoleQueued = true;
             }
         }
 
         $recruitedAt = $user->getRecruitedAt();
+
         return new JsonResponse([
             'id' => $user->getId()->toRfc4122(),
             'username' => $user->getUsername(),
             'avatarUrl' => $user->getAvatarUrl(),
             'grade' => $user->getGrade(),
-            'recruitedAt' => $recruitedAt !== null ? $recruitedAt->format(\DateTimeInterface::ATOM) : null,
-            'discordRoleError' => $discordRoleError,
+            'recruitedAt' => null !== $recruitedAt ? $recruitedAt->format(\DateTimeInterface::ATOM) : null,
+            'discordRoleQueued' => $discordRoleQueued,
+            'discordRoleError' => null,
         ]);
     }
 }

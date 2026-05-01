@@ -18,7 +18,7 @@ trait ApiTestHelperTrait
      */
     protected function createUserAndJwt(KernelBrowser $client, array $overrides = []): array
     {
-        $discordId = $overrides['discordId'] ?? ('test-discord-' . uniqid());
+        $discordId = $overrides['discordId'] ?? ('test-discord-'.uniqid());
         $username = $overrides['username'] ?? 'TestUser';
         $grade = $overrides['grade'] ?? null;
 
@@ -26,7 +26,7 @@ trait ApiTestHelperTrait
         /** @var EntityManagerInterface $em */
         $em = $container->get(EntityManagerInterface::class);
         $user = new User($discordId, $username);
-        if ($grade !== null) {
+        if (null !== $grade) {
             $user->setGrade($grade);
         }
         $em->persist($user);
@@ -49,7 +49,7 @@ trait ApiTestHelperTrait
     protected function requestWithJwt(KernelBrowser $client, string $method, string $uri, string $token, ?string $body = null): void
     {
         $client->request($method, $uri, [], [], [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $token,
+            'HTTP_AUTHORIZATION' => 'Bearer '.$token,
             'CONTENT_TYPE' => 'application/json',
         ], $body ?? '');
     }

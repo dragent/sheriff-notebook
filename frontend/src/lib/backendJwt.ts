@@ -19,16 +19,21 @@ export function createBackendJwt(session: Session): string {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  return jwt.sign(
-    {
-      sub: discordId,
-      username,
-      avatarUrl,
-      iat: now,
-      exp: now + JWT_EXPIRY_SECONDS,
-    },
-    secret,
-    { algorithm: "HS256" },
-  );
+  const iss = trimEnv(process.env.BACKEND_JWT_ISS);
+  const aud = trimEnv(process.env.BACKEND_JWT_AUD);
+  const payload: Record<string, unknown> = {
+    sub: discordId,
+    username,
+    avatarUrl,
+    iat: now,
+    exp: now + JWT_EXPIRY_SECONDS,
+  };
+  if (iss) {
+    payload.iss = iss;
+  }
+  if (aud) {
+    payload.aud = aud;
+  }
+  return jwt.sign(payload, secret, { algorithm: "HS256" });
 }
 

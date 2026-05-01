@@ -212,6 +212,8 @@ export function ProfilForm({
   }
 
   const inputClass = `${SHERIFF_FIELD_COMFORTABLE} placeholder:text-sheriff-paper-muted/70`;
+  /** Registry / typewriter input — used for telegrams, serial numbers, registry marks. */
+  const inputClassStamp = `${inputClass} font-stamp`;
   const labelClass = "mb-1 block text-sm font-medium text-sheriff-paper-muted";
 
   function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -246,7 +248,7 @@ export function ProfilForm({
           type="text"
           value={telegramPrimary}
           onChange={(e) => setTelegramPrimary(e.target.value)}
-          className={inputClass}
+          className={inputClassStamp}
           placeholder="ex. LGW-6938"
           maxLength={32}
         />
@@ -291,7 +293,7 @@ export function ProfilForm({
                 type="text"
                 value={primaryWeaponSerial}
                 onChange={(e) => setPrimaryWeaponSerial(e.target.value)}
-                className={inputClass}
+                className={inputClassStamp}
                 placeholder="ex. 1753109400-7921"
                 maxLength={32}
               />
@@ -345,7 +347,7 @@ export function ProfilForm({
                 type="text"
                 value={secondaryWeaponSerial}
                 onChange={(e) => setSecondaryWeaponSerial(e.target.value)}
-                className={inputClass}
+                className={inputClassStamp}
                 placeholder="optionnel"
                 maxLength={32}
               />
@@ -399,7 +401,7 @@ export function ProfilForm({
                 type="text"
                 value={thirdWeaponSerial}
                 onChange={(e) => setThirdWeaponSerial(e.target.value)}
-                className={inputClass}
+                className={inputClassStamp}
                 placeholder="optionnel"
                 maxLength={32}
               />
@@ -453,7 +455,7 @@ export function ProfilForm({
                 type="text"
                 value={tranquilizerWeaponSerial}
                 onChange={(e) => setTranquilizerWeaponSerial(e.target.value)}
-                className={inputClass}
+                className={inputClassStamp}
                 placeholder="optionnel"
                 maxLength={32}
               />

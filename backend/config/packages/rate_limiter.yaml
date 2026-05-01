@@ -1,0 +1,15 @@
+framework:
+    rate_limiter:
+        limiters:
+            api_reference_write:
+                policy: fixed_window
+                limit: 30
+                interval: '1 minute'
+            api_user_grade_patch:
+                policy: fixed_window
+                limit: 60
+                interval: '1 minute'
+            api_planning_reset:
+                policy: fixed_window
+                limit: 5
+                interval: '1 hour'

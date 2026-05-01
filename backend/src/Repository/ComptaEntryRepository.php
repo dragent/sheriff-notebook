@@ -37,7 +37,7 @@ class ComptaEntryRepository extends ServiceEntityRepository
         $total = 0.0;
         foreach ($this->findAll() as $e) {
             $amount = ComptaAmountParser::parseToFloat($e->getAmount());
-            $total += $e->getType() === ComptaEntry::TYPE_ENTREE ? $amount : -$amount;
+            $total += ComptaEntry::TYPE_ENTREE === $e->getType() ? $amount : -$amount;
         }
 
         return $total;
