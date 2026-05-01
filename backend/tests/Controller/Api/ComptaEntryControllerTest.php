@@ -143,7 +143,7 @@ final class ComptaEntryControllerTest extends WebTestCase
                 'sheriff' => 'Sheriff Test',
                 'raison' => 'Caisse',
                 'somme' => 500,
-            ], JSON_THROW_ON_ERROR)
+            ], \JSON_THROW_ON_ERROR)
         );
         self::assertResponseStatusCodeSame(201);
 
@@ -158,7 +158,7 @@ final class ComptaEntryControllerTest extends WebTestCase
                 'sheriff' => 'Sheriff Test',
                 'raison' => 'Achat fournitures',
                 'somme' => 160,
-            ], JSON_THROW_ON_ERROR)
+            ], \JSON_THROW_ON_ERROR)
         );
 
         self::assertResponseStatusCodeSame(201);

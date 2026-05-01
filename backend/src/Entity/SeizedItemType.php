@@ -75,7 +75,7 @@ class SeizedItemType
 
     public function setUnitPrice(?string $unitPrice): void
     {
-        $unitPrice = $unitPrice !== null ? (trim($unitPrice) ?: null) : null;
+        $unitPrice = null !== $unitPrice ? (trim($unitPrice) ?: null) : null;
         if ($unitPrice === $this->unitPrice) {
             return;
         }
@@ -90,7 +90,7 @@ class SeizedItemType
 
     public function setDestructionPrice(?string $destructionPrice): void
     {
-        $destructionPrice = $destructionPrice !== null ? (trim($destructionPrice) ?: null) : null;
+        $destructionPrice = null !== $destructionPrice ? (trim($destructionPrice) ?: null) : null;
         if ($destructionPrice === $this->destructionPrice) {
             return;
         }
@@ -105,7 +105,7 @@ class SeizedItemType
 
     public function setTotalValue(?string $totalValue): void
     {
-        $totalValue = $totalValue !== null ? (trim($totalValue) ?: null) : null;
+        $totalValue = null !== $totalValue ? (trim($totalValue) ?: null) : null;
         if ($totalValue === $this->totalValue) {
             return;
         }

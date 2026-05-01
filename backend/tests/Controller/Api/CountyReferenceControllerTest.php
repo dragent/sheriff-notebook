@@ -90,5 +90,4 @@ final class CountyReferenceControllerTest extends WebTestCase
             ['name' => 'Bolt', 'destructionValue' => ''],
         ], $data['data']['fusil'] ?? null);
     }
-
 }

@@ -1,0 +1,8 @@
+framework:
+    messenger:
+        transports:
+            app: '%env(MESSENGER_TRANSPORT_DSN)%'
+
+        routing:
+            App\Message\Discord\SetSheriffRoleMessage: app
+            App\Message\Discord\PostChannelMessage: app

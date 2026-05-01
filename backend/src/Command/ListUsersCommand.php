@@ -7,10 +7,10 @@ namespace App\Command;
 use App\Repository\UserRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Console\Helper\Table;
 
 #[AsCommand(
     name: 'app:users:list',
@@ -29,8 +29,9 @@ final class ListUsersCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $users = $this->userRepository->findBy([], ['username' => 'ASC']);
 
-        if ($users === []) {
+        if ([] === $users) {
             $io->warning('Aucun utilisateur en base.');
+
             return Command::SUCCESS;
         }
 
@@ -55,7 +56,8 @@ final class ListUsersCommand extends Command
         $table->setRows($rows);
         $table->render();
 
-        $io->success(sprintf('%d utilisateur(s) affiché(s).', count($users)));
+        $io->success(\sprintf('%d utilisateur(s) affiché(s).', \count($users)));
+
         return Command::SUCCESS;
     }
 }

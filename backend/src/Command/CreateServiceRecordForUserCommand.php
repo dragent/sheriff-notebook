@@ -49,23 +49,26 @@ final class CreateServiceRecordForUserCommand extends Command
         try {
             $uuid = Uuid::fromString($userId);
         } catch (\ValueError) {
-            $io->error('UUID invalide: ' . $userId);
+            $io->error('UUID invalide: '.$userId);
+
             return Command::FAILURE;
         }
 
         $user = $this->userRepository->find($uuid);
         if (!$user instanceof User) {
-            $io->error('Utilisateur non trouvé: ' . $userId);
+            $io->error('Utilisateur non trouvé: '.$userId);
+
             return Command::FAILURE;
         }
 
         $existing = $this->serviceRecordRepository->findOneByUser($user);
         if ($existing instanceof ServiceRecord) {
-            $io->warning(sprintf(
+            $io->warning(\sprintf(
                 'L\'utilisateur "%s" a déjà une fiche de service (id: %s).',
                 $user->getUsername(),
                 $existing->getId()->toRfc4122(),
             ));
+
             return Command::SUCCESS;
         }
 
@@ -75,12 +78,13 @@ final class CreateServiceRecordForUserCommand extends Command
         $this->entityManager->persist($record);
         $this->entityManager->flush();
 
-        $io->success(sprintf(
+        $io->success(\sprintf(
             'Fiche de service créée pour "%s" (user %s). Id fiche: %s',
             $user->getUsername(),
             $user->getId()->toRfc4122(),
             $record->getId()->toRfc4122(),
         ));
+
         return Command::SUCCESS;
     }
 }

@@ -34,8 +34,9 @@ final class ResetFormationsCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $records = $this->serviceRecordRepository->findAll();
-        if ($records === []) {
+        if ([] === $records) {
             $io->warning('Aucune fiche de service trouvée. Rien à réinitialiser.');
+
             return Command::SUCCESS;
         }
 
@@ -62,9 +63,8 @@ final class ResetFormationsCommand extends Command
 
         $this->entityManager->flush();
 
-        $io->success(sprintf('Formations réinitialisées à false pour %d fiche(s) de service.', $count));
+        $io->success(\sprintf('Formations réinitialisées à false pour %d fiche(s) de service.', $count));
 
         return Command::SUCCESS;
     }
 }
-

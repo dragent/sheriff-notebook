@@ -56,5 +56,7 @@ final class ServiceRecordControllerTest extends WebTestCase
         self::assertSame($user->getUsername(), $data['name']);
         self::assertArrayHasKey('monDay', $data);
         self::assertArrayHasKey('primaryWeapon', $data);
+        self::assertArrayHasKey('version', $data);
+        self::assertIsInt($data['version']);
     }
 }

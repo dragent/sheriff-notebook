@@ -46,7 +46,7 @@ final class ComptaEntryController
                 'raison' => $e->getReason(),
                 'somme' => $somme,
             ];
-            if ($e->getType() === ComptaEntry::TYPE_ENTREE) {
+            if (ComptaEntry::TYPE_ENTREE === $e->getType()) {
                 $entrees[] = $row;
             } else {
                 $sorties[] = $row;
@@ -81,7 +81,7 @@ final class ComptaEntryController
         }
 
         // Business rule: reject withdrawals that would make balance negative.
-        if ($dto->type === ComptaEntry::TYPE_SORTIE) {
+        if (ComptaEntry::TYPE_SORTIE === $dto->type) {
             $soldeCourant = $this->repository->getCurrentSolde();
             $nouveauSolde = $soldeCourant - $dto->somme;
 

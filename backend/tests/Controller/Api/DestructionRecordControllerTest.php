@@ -200,7 +200,7 @@ final class DestructionRecordControllerTest extends WebTestCase
         $id = $record->getId()->toRfc4122();
 
         [, $token] = $this->createUserAndJwt($client, ['grade' => 'Sheriff Adjoint']);
-        $this->requestWithJwt($client, 'PATCH', '/api/destructions/' . $id, $token, '{"status":"invalid"}');
+        $this->requestWithJwt($client, 'PATCH', '/api/destructions/'.$id, $token, '{"status":"invalid"}');
 
         self::assertResponseStatusCodeSame(400);
         $data = json_decode($client->getResponse()->getContent(), true);
@@ -227,7 +227,7 @@ final class DestructionRecordControllerTest extends WebTestCase
         $id = $record->getId()->toRfc4122();
 
         [, $token] = $this->createUserAndJwt($client, ['grade' => 'Sheriff Adjoint']);
-        $this->requestWithJwt($client, 'PATCH', '/api/destructions/' . $id, $token, '{"status":"perdue"}');
+        $this->requestWithJwt($client, 'PATCH', '/api/destructions/'.$id, $token, '{"status":"perdue"}');
 
         self::assertResponseIsSuccessful();
         $data = json_decode($client->getResponse()->getContent(), true);

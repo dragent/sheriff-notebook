@@ -143,7 +143,7 @@ class BureauWeapon
 
     public function setComments(?string $comments): void
     {
-        $comments = $comments !== null ? (trim($comments) ?: null) : null;
+        $comments = null !== $comments ? (trim($comments) ?: null) : null;
         if ($comments === $this->comments) {
             return;
         }

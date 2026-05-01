@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Service\DiscordGuildMemberResolver;
+use Symfony\Component\DependencyInjection\Attribute\When;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
  * Diagnostic de la connexion Discord (guild / pseudo serveur).
- * À utiliser en dev uniquement — en prod, désactiver ou protéger cette route.
+ *
+ * Defense-in-depth: the #[When('dev')] attribute removes this controller from the service
+ * container outside dev, so the route is not registered at all in prod/staging. The runtime
+ * appEnv check is kept as a safety net for misconfigured pipelines.
  */
+#[When('dev')]
 final class DiscordDebugController
 {
     public function __construct(
@@ -22,10 +27,15 @@ final class DiscordDebugController
     ) {
     }
 
-    #[Route('/api/debug/discord', name: 'api_debug_discord', methods: ['GET'])]
+    #[Route(
+        '/api/debug/discord',
+        name: 'api_debug_discord',
+        methods: ['GET'],
+        condition: "env('APP_ENV') === 'dev'",
+    )]
     public function __invoke(): JsonResponse
     {
-        if ($this->appEnv !== 'dev') {
+        if ('dev' !== $this->appEnv) {
             return new JsonResponse(['error' => 'Disponible uniquement en environnement dev.'], 404);
         }
 
@@ -33,7 +43,7 @@ final class DiscordDebugController
 
         return new JsonResponse([
             'connected' => $result['ok'],
-            'guildId' => $this->guildId !== '' ? $this->guildId : null,
+            'guildId' => '' !== $this->guildId ? $this->guildId : null,
             'guildName' => $result['guildName'],
             'requiredPrivilegedIntents' => $this->discordGuildMemberResolver->getRequiredPrivilegedIntents(),
             'message' => $result['ok']

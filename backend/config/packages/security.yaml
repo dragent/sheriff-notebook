@@ -42,7 +42,6 @@ security:
     # Note: Only the *first* matching rule is applied
     access_control:
         - { path: ^/api/health$, roles: PUBLIC_ACCESS }
-        - { path: ^/api/debug/, roles: PUBLIC_ACCESS }
         - { path: ^/api/sheriffs$, roles: PUBLIC_ACCESS }
         - { path: ^/api/home-info$, roles: PUBLIC_ACCESS }
         # Gestion des utilisateurs et recrutement : réservé aux shérifs adjoints et comté (hiérarchie incluse).

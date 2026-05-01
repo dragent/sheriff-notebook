@@ -23,4 +23,3 @@ final readonly class SeizureRecordCancelDto
         return new self($reason);
     }
 }
-

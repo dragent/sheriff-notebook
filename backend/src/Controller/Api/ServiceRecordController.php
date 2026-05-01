@@ -4,36 +4,40 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Entity\ServiceRecord;
+use App\Domain\Grade;
+use App\Domain\GradeHierarchy;
 use App\Entity\ServicePlanningSnapshot;
+use App\Entity\ServiceRecord;
 use App\Entity\User;
+use App\Message\Discord\PostChannelMessage;
 use App\Repository\CountyReferenceRepository;
 use App\Repository\ServiceRecordRepository;
-use App\Service\DiscordChannelNotifier;
+use App\Security\Voter\ServicePlanningVoter;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\OptimisticLockException;
+use Symfony\Component\Clock\ClockInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Uuid;
 
 #[Route('/api/services')]
 final class ServiceRecordController
 {
-    private const GRADE_ORDER = [
-        'Sheriff de comté' => 0,
-        'Sheriff Adjoint' => 1,
-        'Sheriff en chef' => 2,
-        'Sheriff' => 3,
-        'Sheriff Deputy' => 4,
-        'Deputy' => 5,
-    ];
-
     public function __construct(
         private readonly ServiceRecordRepository $repository,
         private readonly CountyReferenceRepository $referenceRepository,
         private readonly EntityManagerInterface $entityManager,
-        private readonly DiscordChannelNotifier $discordNotifier,
+        private readonly ClockInterface $clock,
+        private readonly MessageBusInterface $messageBus,
+        #[Autowire(service: 'limiter.api_planning_reset')]
+        private readonly RateLimiterFactory $planningResetLimiter,
+        private readonly string $planningResetTimezone = 'Europe/Paris',
         private readonly string $planningLogChannelId = '',
     ) {
     }
@@ -82,12 +86,15 @@ final class ServiceRecordController
         }
 
         $recordUser = $record->getUser();
-        $isOwnRecord = $recordUser?->getId()?->equals($user->getId()) === true;
+        $isOwnRecord = true === $recordUser?->getId()?->equals($user->getId());
 
         $data = json_decode((string) $request->getContent(), true);
         if (!\is_array($data)) {
             return new JsonResponse(['error' => 'Invalid JSON'], 400);
         }
+
+        $expectedVersion = self::extractExpectedServiceVersion($request, $data);
+        unset($data['__version']);
 
         $planningKeys = [
             'monDay', 'monNight', 'tueDay', 'tueNight',
@@ -103,18 +110,18 @@ final class ServiceRecordController
             'tranquilizerWeapon', 'tranquilizerWeaponSerial', 'tranquilizerHasScope',
             'cartInfo', 'boatInfo',
         ];
-        $hasFormationUpdate = array_key_exists('formationValidations', $data);
+        $hasFormationUpdate = \array_key_exists('formationValidations', $data);
 
         $hasPlanningUpdate = false;
         foreach ($planningKeys as $key) {
-            if (array_key_exists($key, $data)) {
+            if (\array_key_exists($key, $data)) {
                 $hasPlanningUpdate = true;
                 break;
             }
         }
         $hasEquipmentUpdate = false;
         foreach ($equipmentKeys as $key) {
-            if (array_key_exists($key, $data)) {
+            if (\array_key_exists($key, $data)) {
                 $hasEquipmentUpdate = true;
                 break;
             }
@@ -130,8 +137,7 @@ final class ServiceRecordController
         }
 
         if ($hasFormationUpdate && $isOwnRecord) {
-            $actorOrder = self::GRADE_ORDER[$user->getGrade()] ?? null;
-            if ($actorOrder !== 0) {
+            if (Grade::CountySheriff !== Grade::tryFromLabel($user->getGrade())) {
                 return new JsonResponse(['error' => 'Forbidden: only County Sheriff can validate their own formations'], 403);
             }
         }
@@ -141,23 +147,39 @@ final class ServiceRecordController
             }
         }
 
-        self::applyPlanning($record, $data);
-        self::applyEquipment($record, $data);
-        $this->applyFormationValidations($record, $data);
+        try {
+            $this->entityManager->wrapInTransaction(function () use ($record, $data, $expectedVersion): void {
+                $this->entityManager->refresh($record);
+                if (null !== $expectedVersion && $record->getVersion() !== $expectedVersion) {
+                    throw new OptimisticLockException(\sprintf('Version mismatch: expected %d, got %d.', $expectedVersion, $record->getVersion()), $record);
+                }
 
-        $this->entityManager->flush();
+                self::applyPlanning($record, $data);
+                self::applyEquipment($record, $data);
+                $this->applyFormationValidations($record, $data);
+                $this->entityManager->flush();
+            });
+        } catch (OptimisticLockException) {
+            $this->entityManager->refresh($record);
+
+            return new JsonResponse([
+                'error' => 'La fiche de service a été modifiée entre-temps. Rechargez la page.',
+                'currentVersion' => $record->getVersion(),
+            ], 409);
+        }
 
         return new JsonResponse(self::toArray($record));
     }
 
     #[Route('/planning/reset', name: 'api_services_planning_reset', methods: ['POST'])]
-    public function resetPlanning(#[CurrentUser] User $user): JsonResponse
+    #[IsGranted(ServicePlanningVoter::RESET, message: 'Forbidden')]
+    public function resetPlanning(Request $request, #[CurrentUser] User $user): JsonResponse
     {
-        if (!self::canEditOthersPlanning($user)) {
-            return new JsonResponse(['error' => 'Forbidden'], 403);
+        if (!$this->planningResetLimiter->create((string) ($request->getClientIp() ?? 'anon'))->consume()->isAccepted()) {
+            return new JsonResponse(['error' => 'Trop de réinitialisations de planning. Réessayez plus tard.'], 429);
         }
 
-        if ($this->planningLogChannelId === '') {
+        if ('' === $this->planningLogChannelId) {
             return new JsonResponse([
                 'error' => 'Canal Discord non configuré (DISCORD_PLANNING_CHANNEL_ID).',
             ], 503);
@@ -213,7 +235,7 @@ final class ServiceRecordController
                     };
                     $value = $r->$getter();
                     $row[$k] = $value;
-                    if ($value === true) {
+                    if (true === $value) {
                         ++$halfDays;
                         ++$checkedCount;
                     }
@@ -221,7 +243,7 @@ final class ServiceRecordController
                 $row['halfDays'] = $halfDays;
                 $rows[] = $row;
                 if ($halfDays > 3) {
-                    $displayGrade = ($grade !== null && $grade !== '') ? $grade : 'grade non renseigné';
+                    $displayGrade = (null !== $grade && '' !== $grade) ? $grade : 'grade non renseigné';
                     $primeCandidates[] = [
                         'name' => $r->getName(),
                         'grade' => $displayGrade,
@@ -241,7 +263,7 @@ final class ServiceRecordController
                 actor: $user->getUsername() ?: 'unknown',
                 data: [
                     'kind' => 'planning_reset',
-                    'createdAt' => (new \DateTimeImmutable('now'))->format(\DateTimeInterface::ATOM),
+                    'createdAt' => $this->clock->now()->format(\DateTimeInterface::ATOM),
                     'actorUserId' => $user->getId()->toRfc4122(),
                     'actorGrade' => $user->getGrade(),
                     'checkedCount' => $checkedCount,
@@ -273,17 +295,14 @@ final class ServiceRecordController
 
             $this->entityManager->flush();
 
-            $nowParis = new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris'));
+            $nowParis = $this->clock->now()->setTimezone(new \DateTimeZone($this->planningResetTimezone));
             $content = self::buildPlanningPrimeDiscordNotice(
                 $user->getUsername(),
                 $user->getGrade(),
                 $nowParis,
                 $primeCandidates
             );
-            $discordError = $this->discordNotifier->sendMessage($this->planningLogChannelId, $content);
-            if ($discordError !== null) {
-                return new JsonResponse(['error' => $discordError], 502);
-            }
+            $this->messageBus->dispatch(new PostChannelMessage($this->planningLogChannelId, $content));
 
             return new JsonResponse([
                 'ok' => true,
@@ -291,17 +310,17 @@ final class ServiceRecordController
                 'checkedCount' => $checkedCount,
                 'discord' => [
                     'channelId' => $this->planningLogChannelId,
-                    'ok' => true,
+                    'queued' => true,
                     'error' => null,
                 ],
             ]);
         } catch (\Throwable $e) {
             $message = $e->getMessage();
             $hint = null;
-            if (stripos($message, 'service_planning_snapshot') !== false) {
+            if (false !== stripos($message, 'service_planning_snapshot')) {
                 $hint = 'Migration manquante : exécutez les migrations Doctrine pour créer la table service_planning_snapshot.';
             }
-            if ($hint === null && stripos($message, 'does not exist') !== false) {
+            if (null === $hint && false !== stripos($message, 'does not exist')) {
                 $hint = 'Vérifiez que les migrations Doctrine sont à jour.';
             }
 
@@ -323,24 +342,24 @@ final class ServiceRecordController
         \DateTimeImmutable $issuedAt,
         array $primeCandidates,
     ): string {
-        $actorLine = trim($actorUsername . ($actorGrade !== null && $actorGrade !== '' ? ', ' . $actorGrade : ''));
+        $actorLine = trim($actorUsername.(null !== $actorGrade && '' !== $actorGrade ? ', '.$actorGrade : ''));
         $dateLine = $issuedAt->format('d/m/Y \à H\hi');
 
         $header = "**Bureau du Shérif — Annesburg** — *Registre des présences (clôture de grille)*\n\n";
         $intro = "Messieurs, Dames,\n\n"
-            . "Conformément aux usages du comté, la grille vient d’être **réinitialisée**. "
-            . "Ci-après les **agents dont le relevé compte plus de trois demi-journées de service** enregistrées **avant** cette clôture — dossiers **soumis à la validation des primes** par la paie.\n\n";
+            .'Conformément aux usages du comté, la grille vient d’être **réinitialisée**. '
+            ."Ci-après les **agents dont le relevé compte plus de trois demi-journées de service** enregistrées **avant** cette clôture — dossiers **soumis à la validation des primes** par la paie.\n\n";
 
-        if ($primeCandidates === []) {
+        if ([] === $primeCandidates) {
             return $header
-                . $intro
-                . "**Avis.** Aucun membre du bureau n’atteint ce seuil sur la période concernée. Rien à porter à la validation des primes pour ce critère.\n\n"
-                . "— *Acte porté par " . $actorLine . " — " . $dateLine . ".*";
+                .$intro
+                ."**Avis.** Aucun membre du bureau n’atteint ce seuil sur la période concernée. Rien à porter à la validation des primes pour ce critère.\n\n"
+                .'— *Acte porté par '.$actorLine.' — '.$dateLine.'.*';
         }
 
         $lines = [];
         foreach ($primeCandidates as $c) {
-            $lines[] = sprintf(
+            $lines[] = \sprintf(
                 '• **%s** — *%s* — **%d** demi-journée(s) retenue(s)',
                 $c['name'],
                 $c['grade'],
@@ -349,10 +368,10 @@ final class ServiceRecordController
         }
 
         return $header
-            . $intro
-            . "**Liste à transmettre à la comptabilité :**\n"
-            . implode("\n", $lines)
-            . "\n\n— *Relevé certifié par " . $actorLine . " — " . $dateLine . ".*";
+            .$intro
+            ."**Liste à transmettre à la comptabilité :**\n"
+            .implode("\n", $lines)
+            ."\n\n— *Relevé certifié par ".$actorLine.' — '.$dateLine.'.*';
     }
 
     private static function applyPlanning(ServiceRecord $record, array $data): void
@@ -367,7 +386,7 @@ final class ServiceRecordController
             'sunDay' => 'setSunDay', 'sunNight' => 'setSunNight',
         ];
         foreach ($setters as $key => $setter) {
-            if (array_key_exists($key, $data)) {
+            if (\array_key_exists($key, $data)) {
                 $record->$setter((bool) $data[$key]);
             }
         }
@@ -375,59 +394,59 @@ final class ServiceRecordController
 
     private static function applyEquipment(ServiceRecord $record, array $data): void
     {
-        if (array_key_exists('telegramPrimary', $data)) {
-            $record->setTelegramPrimary($data['telegramPrimary'] !== null ? trim((string) $data['telegramPrimary']) : null);
+        if (\array_key_exists('telegramPrimary', $data)) {
+            $record->setTelegramPrimary(null !== $data['telegramPrimary'] ? trim((string) $data['telegramPrimary']) : null);
         }
-        if (array_key_exists('primaryWeapon', $data)) {
-            $record->setPrimaryWeapon($data['primaryWeapon'] !== null ? trim((string) $data['primaryWeapon']) : null);
+        if (\array_key_exists('primaryWeapon', $data)) {
+            $record->setPrimaryWeapon(null !== $data['primaryWeapon'] ? trim((string) $data['primaryWeapon']) : null);
         }
-        if (array_key_exists('primaryWeaponSerial', $data)) {
-            $record->setPrimaryWeaponSerial($data['primaryWeaponSerial'] !== null ? trim((string) $data['primaryWeaponSerial']) : null);
+        if (\array_key_exists('primaryWeaponSerial', $data)) {
+            $record->setPrimaryWeaponSerial(null !== $data['primaryWeaponSerial'] ? trim((string) $data['primaryWeaponSerial']) : null);
         }
-        if (array_key_exists('hasScope', $data)) {
+        if (\array_key_exists('hasScope', $data)) {
             $record->setHasScope((bool) $data['hasScope']);
         }
-        if (array_key_exists('primaryHasScope', $data)) {
+        if (\array_key_exists('primaryHasScope', $data)) {
             $record->setHasScope((bool) $data['primaryHasScope']);
         }
-        if (array_key_exists('secondaryWeapon', $data)) {
-            $record->setSecondaryWeapon($data['secondaryWeapon'] !== null ? trim((string) $data['secondaryWeapon']) : null);
+        if (\array_key_exists('secondaryWeapon', $data)) {
+            $record->setSecondaryWeapon(null !== $data['secondaryWeapon'] ? trim((string) $data['secondaryWeapon']) : null);
         }
-        if (array_key_exists('secondaryWeaponSerial', $data)) {
-            $record->setSecondaryWeaponSerial($data['secondaryWeaponSerial'] !== null ? trim((string) $data['secondaryWeaponSerial']) : null);
+        if (\array_key_exists('secondaryWeaponSerial', $data)) {
+            $record->setSecondaryWeaponSerial(null !== $data['secondaryWeaponSerial'] ? trim((string) $data['secondaryWeaponSerial']) : null);
         }
-        if (array_key_exists('secondaryHasScope', $data)) {
+        if (\array_key_exists('secondaryHasScope', $data)) {
             $record->setSecondaryHasScope((bool) $data['secondaryHasScope']);
         }
-        if (array_key_exists('thirdWeapon', $data)) {
-            $record->setThirdWeapon($data['thirdWeapon'] !== null ? trim((string) $data['thirdWeapon']) : null);
+        if (\array_key_exists('thirdWeapon', $data)) {
+            $record->setThirdWeapon(null !== $data['thirdWeapon'] ? trim((string) $data['thirdWeapon']) : null);
         }
-        if (array_key_exists('thirdWeaponSerial', $data)) {
-            $record->setThirdWeaponSerial($data['thirdWeaponSerial'] !== null ? trim((string) $data['thirdWeaponSerial']) : null);
+        if (\array_key_exists('thirdWeaponSerial', $data)) {
+            $record->setThirdWeaponSerial(null !== $data['thirdWeaponSerial'] ? trim((string) $data['thirdWeaponSerial']) : null);
         }
-        if (array_key_exists('thirdHasScope', $data)) {
+        if (\array_key_exists('thirdHasScope', $data)) {
             $record->setThirdHasScope((bool) $data['thirdHasScope']);
         }
-        if (array_key_exists('tranquilizerWeapon', $data)) {
-            $record->setTranquilizerWeapon($data['tranquilizerWeapon'] !== null ? trim((string) $data['tranquilizerWeapon']) : null);
+        if (\array_key_exists('tranquilizerWeapon', $data)) {
+            $record->setTranquilizerWeapon(null !== $data['tranquilizerWeapon'] ? trim((string) $data['tranquilizerWeapon']) : null);
         }
-        if (array_key_exists('tranquilizerWeaponSerial', $data)) {
-            $record->setTranquilizerWeaponSerial($data['tranquilizerWeaponSerial'] !== null ? trim((string) $data['tranquilizerWeaponSerial']) : null);
+        if (\array_key_exists('tranquilizerWeaponSerial', $data)) {
+            $record->setTranquilizerWeaponSerial(null !== $data['tranquilizerWeaponSerial'] ? trim((string) $data['tranquilizerWeaponSerial']) : null);
         }
-        if (array_key_exists('tranquilizerHasScope', $data)) {
+        if (\array_key_exists('tranquilizerHasScope', $data)) {
             $record->setTranquilizerHasScope((bool) $data['tranquilizerHasScope']);
         }
-        if (array_key_exists('cartInfo', $data)) {
-            $record->setCartInfo($data['cartInfo'] !== null ? trim((string) $data['cartInfo']) : null);
+        if (\array_key_exists('cartInfo', $data)) {
+            $record->setCartInfo(null !== $data['cartInfo'] ? trim((string) $data['cartInfo']) : null);
         }
-        if (array_key_exists('boatInfo', $data)) {
-            $record->setBoatInfo($data['boatInfo'] !== null ? trim((string) $data['boatInfo']) : null);
+        if (\array_key_exists('boatInfo', $data)) {
+            $record->setBoatInfo(null !== $data['boatInfo'] ? trim((string) $data['boatInfo']) : null);
         }
     }
 
     private function applyFormationValidations(ServiceRecord $record, array $data): void
     {
-        if (!array_key_exists('formationValidations', $data) || !\is_array($data['formationValidations'])) {
+        if (!\array_key_exists('formationValidations', $data) || !\is_array($data['formationValidations'])) {
             return;
         }
         $ref = $this->referenceRepository->getSingleton();
@@ -435,13 +454,13 @@ final class ServiceRecordController
         $catalog = $refData['formations'] ?? [];
         $allowedIds = [];
         foreach ($catalog as $item) {
-            if (\is_array($item) && isset($item['id']) && \is_string($item['id']) && $item['id'] !== '') {
+            if (\is_array($item) && isset($item['id']) && \is_string($item['id']) && '' !== $item['id']) {
                 $allowedIds[$item['id']] = true;
             }
         }
         $filtered = [];
         foreach ($data['formationValidations'] as $id => $valid) {
-            if (\is_string($id) && isset($allowedIds[$id]) && $valid === true) {
+            if (\is_string($id) && isset($allowedIds[$id]) && true === $valid) {
                 $filtered[$id] = true;
             }
         }
@@ -452,6 +471,7 @@ final class ServiceRecordController
     {
         return [
             'id' => $record->getId()->toRfc4122(),
+            'version' => $record->getVersion(),
             'userId' => $record->getUser()?->getId()?->toRfc4122(),
             'name' => $record->getName(),
             'grade' => $record->getUser()?->getGrade(),
@@ -493,48 +513,39 @@ final class ServiceRecordController
     /** County Sheriff, Deputy, or Chief may PATCH planning fields on another user's service record. */
     private static function canEditOthersPlanning(User $user): bool
     {
-        $order = self::gradeOrderForPlanning($user->getGrade());
-
-        return $order !== null && $order <= 2;
-    }
-
-    /** Same canonicalization as frontend COMTE_ADJOINT_GRADES / GRADE_ORDER. */
-    private static function gradeOrderForPlanning(?string $grade): ?int
-    {
-        if ($grade === null || $grade === '') {
-            return null;
-        }
-        if ($grade === 'Sheriff adjoint') {
-            $grade = 'Sheriff Adjoint';
-        }
-
-        return self::GRADE_ORDER[$grade] ?? null;
+        return GradeHierarchy::canEditOthersPlanning(Grade::tryFromLabel($user->getGrade()));
     }
 
     /** County Sheriff / Deputy / Chief can validate formations only for strictly lower grades. */
     private static function canValidateFormationFor(User $actor, ?User $target): bool
     {
-        if ($target === null) {
+        if (null === $target) {
             return false;
         }
 
-        $actorGrade = $actor->getGrade();
-        $targetGrade = $target->getGrade();
-        if ($actorGrade === null || $targetGrade === null) {
-            return false;
+        return GradeHierarchy::canValidateFormationFor(
+            Grade::tryFromLabel($actor->getGrade()),
+            Grade::tryFromLabel($target->getGrade()),
+        );
+    }
+
+    /**
+     * Optional optimistic-lock token from `If-Match` or JSON `__version` (same semantics as CountyReference).
+     */
+    private static function extractExpectedServiceVersion(Request $request, array $body): ?int
+    {
+        $headerValue = $request->headers->get('If-Match');
+        if (null !== $headerValue) {
+            $stripped = trim($headerValue, "\" \t");
+            if ('' !== $stripped && ctype_digit($stripped)) {
+                return (int) $stripped;
+            }
         }
 
-        $actorOrder = self::GRADE_ORDER[$actorGrade] ?? null;
-        $targetOrder = self::GRADE_ORDER[$targetGrade] ?? null;
-        if ($actorOrder === null || $targetOrder === null) {
-            return false;
+        if (isset($body['__version']) && (\is_int($body['__version']) || is_numeric($body['__version']))) {
+            return (int) $body['__version'];
         }
 
-        if ($actorOrder > 2) {
-            return false;
-        }
-
-        return $actorOrder < $targetOrder;
+        return null;
     }
 }
-

@@ -48,10 +48,10 @@ final class UserControllerTest extends WebTestCase
     public function testPatchWithoutAuthReturns401(): void
     {
         $client = self::createClient();
-        [$user,] = $this->createUserAndJwt($client, ['username' => 'PatchTarget']);
+        [$user] = $this->createUserAndJwt($client, ['username' => 'PatchTarget']);
         $id = $user->getId()->toRfc4122();
 
-        $client->request('PATCH', '/api/users/' . $id, [], [], [
+        $client->request('PATCH', '/api/users/'.$id, [], [], [
             'CONTENT_TYPE' => 'application/json',
         ], '{"grade":"Sheriff Deputy"}');
 
@@ -73,7 +73,7 @@ final class UserControllerTest extends WebTestCase
         $this->requestWithJwt(
             $client,
             'PATCH',
-            '/api/users/' . $id,
+            '/api/users/'.$id,
             $token,
             '{"grade":"GradeInvalide"}'
         );
@@ -121,7 +121,7 @@ final class UserControllerTest extends WebTestCase
         $this->requestWithJwt(
             $client,
             'PATCH',
-            '/api/users/' . $id,
+            '/api/users/'.$id,
             $token,
             '{"grade":"Sheriff Deputy"}'
         );
@@ -133,5 +133,8 @@ final class UserControllerTest extends WebTestCase
         self::assertArrayHasKey('username', $data);
         self::assertArrayHasKey('grade', $data);
         self::assertSame('Sheriff Deputy', $data['grade']);
+        self::assertArrayHasKey('discordRoleQueued', $data);
+        self::assertTrue($data['discordRoleQueued']);
+        self::assertNull($data['discordRoleError']);
     }
 }

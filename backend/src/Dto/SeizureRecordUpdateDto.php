@@ -61,14 +61,14 @@ final readonly class SeizureRecordUpdateDto
     public function validateAtLeastOne(\Symfony\Component\Validator\Context\ExecutionContextInterface $context): void
     {
         if (
-            $this->date === null
-            && $this->sheriff === null
-            && $this->quantity === null
-            && $this->itemName === null
-            && $this->weaponModel === null
-            && $this->serialNumber === null
-            && $this->possessedBy === null
-            && $this->notes === null
+            null === $this->date
+            && null === $this->sheriff
+            && null === $this->quantity
+            && null === $this->itemName
+            && null === $this->weaponModel
+            && null === $this->serialNumber
+            && null === $this->possessedBy
+            && null === $this->notes
         ) {
             $context->buildViolation('Aucun champ à mettre à jour.')
                 ->addViolation();
@@ -82,8 +82,8 @@ final readonly class SeizureRecordUpdateDto
         $sheriff = isset($data['sheriff']) && \is_string($data['sheriff']) ? trim($data['sheriff']) : null;
 
         $quantity = null;
-        if (array_key_exists('quantity', $data)) {
-            if (is_int($data['quantity']) || is_numeric($data['quantity'])) {
+        if (\array_key_exists('quantity', $data)) {
+            if (\is_int($data['quantity']) || is_numeric($data['quantity'])) {
                 $quantity = (int) $data['quantity'];
             }
         }
@@ -106,4 +106,3 @@ final readonly class SeizureRecordUpdateDto
         );
     }
 }
-

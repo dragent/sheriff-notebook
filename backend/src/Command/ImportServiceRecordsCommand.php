@@ -32,15 +32,17 @@ final class ImportServiceRecordsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $csvPath = $this->kernel->getProjectDir().DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'data'.DIRECTORY_SEPARATOR.'infos_prises_service.csv';
+        $csvPath = $this->kernel->getProjectDir().\DIRECTORY_SEPARATOR.'..'.\DIRECTORY_SEPARATOR.'data'.\DIRECTORY_SEPARATOR.'infos_prises_service.csv';
         if (!is_file($csvPath)) {
-            $io->error(sprintf('CSV not found: %s', $csvPath));
+            $io->error(\sprintf('CSV not found: %s', $csvPath));
+
             return Command::FAILURE;
         }
 
-        $handle = fopen($csvPath, 'rb');
-        if ($handle === false) {
+        $handle = fopen($csvPath, 'r');
+        if (false === $handle) {
             $io->error('Unable to open CSV.');
+
             return Command::FAILURE;
         }
 
@@ -51,19 +53,19 @@ final class ImportServiceRecordsCommand extends Command
 
         try {
             while (($row = fgetcsv($handle, 0, ',')) !== false) {
-                if (!is_array($row)) {
-                    $skipped++;
+                if (!\is_array($row)) {
+                    ++$skipped;
                     continue;
                 }
 
                 $cells = self::normalizeRow($row);
-                if ($cells === []) {
-                    $skipped++;
+                if ([] === $cells) {
+                    ++$skipped;
                     continue;
                 }
 
                 if (!$headerSeen) {
-                    if (in_array('NOM', $cells, true) && in_array('Jour', $cells, true) && in_array('Soir', $cells, true)) {
+                    if (\in_array('NOM', $cells, true) && \in_array('Jour', $cells, true) && \in_array('Soir', $cells, true)) {
                         $headerSeen = true;
                     }
                     continue;
@@ -71,8 +73,8 @@ final class ImportServiceRecordsCommand extends Command
 
                 $name = $cells[2] ?? '';
                 $name = trim($name);
-                if ($name === '') {
-                    $skipped++;
+                if ('' === $name) {
+                    ++$skipped;
                     continue;
                 }
 
@@ -83,9 +85,9 @@ final class ImportServiceRecordsCommand extends Command
                 if (!$record instanceof ServiceRecord) {
                     $record = new ServiceRecord($name);
                     $this->entityManager->persist($record);
-                    $created++;
+                    ++$created;
                 } else {
-                    $updated++;
+                    ++$updated;
                 }
 
                 $record->setTotal(self::toNullableInt($total));
@@ -112,7 +114,8 @@ final class ImportServiceRecordsCommand extends Command
 
         $this->entityManager->flush();
 
-        $io->success(sprintf('Import complete. created=%d updated=%d skipped=%d', $created, $updated, $skipped));
+        $io->success(\sprintf('Import complete. created=%d updated=%d skipped=%d', $created, $updated, $skipped));
+
         return Command::SUCCESS;
     }
 
@@ -120,16 +123,17 @@ final class ImportServiceRecordsCommand extends Command
      * The exported CSV has leading empty columns; normalize to real columns.
      *
      * @param list<string|null> $row
+     *
      * @return list<string>
      */
     private static function normalizeRow(array $row): array
     {
         $cells = array_map(
-            static fn ($v) => is_string($v) ? trim($v) : '',
+            static fn ($v) => \is_string($v) ? trim($v) : '',
             $row,
         );
 
-        while ($cells !== [] && $cells[0] === '') {
+        while ([] !== $cells && '' === $cells[0]) {
             array_shift($cells);
         }
 
@@ -138,7 +142,7 @@ final class ImportServiceRecordsCommand extends Command
             $out[] = $cell;
         }
 
-        while ($out !== [] && $out[count($out) - 1] === '') {
+        while ([] !== $out && '' === $out[\count($out) - 1]) {
             array_pop($out);
         }
 
@@ -147,22 +151,23 @@ final class ImportServiceRecordsCommand extends Command
 
     private static function toBool(?string $value): bool
     {
-        if ($value === null) {
+        if (null === $value) {
             return false;
         }
 
         $v = strtolower(trim($value));
-        return $v === 'true' || $v === '1' || $v === 'yes';
+
+        return 'true' === $v || '1' === $v || 'yes' === $v;
     }
 
     private static function toNullableInt(?string $value): ?int
     {
-        if ($value === null) {
+        if (null === $value) {
             return null;
         }
 
         $v = trim($value);
-        if ($v === '') {
+        if ('' === $v) {
             return null;
         }
 
@@ -173,4 +178,3 @@ final class ImportServiceRecordsCommand extends Command
         return (int) $v;
     }
 }
-

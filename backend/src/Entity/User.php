@@ -131,10 +131,10 @@ class User implements UserInterface
         // on the current grade mapping for sheriff roles, not on stale stored values.
         $roles = array_values(array_filter(
             $this->roles,
-            fn (string $role): bool => !\in_array($role, self::SHERIFF_ROLES, true)
+            static fn (string $role): bool => !\in_array($role, self::SHERIFF_ROLES, true)
         ));
         $roles[] = 'ROLE_USER';
-        if ($this->grade !== null && isset(self::GRADE_TO_ROLE[$this->grade])) {
+        if (null !== $this->grade && isset(self::GRADE_TO_ROLE[$this->grade])) {
             $roles[] = self::GRADE_TO_ROLE[$this->grade];
         }
 
@@ -159,8 +159,8 @@ class User implements UserInterface
             return;
         }
 
-        $this->grade = $grade !== null && $grade !== '' ? $grade : null;
-        if ($this->grade !== null && $this->recruitedAt === null) {
+        $this->grade = null !== $grade && '' !== $grade ? $grade : null;
+        if (null !== $this->grade && null === $this->recruitedAt) {
             $this->recruitedAt = new \DateTimeImmutable('now');
         }
         $this->touch();
@@ -203,7 +203,7 @@ class User implements UserInterface
 
     public function setServiceRecord(?ServiceRecord $serviceRecord): void
     {
-        if ($serviceRecord !== null && $serviceRecord->getUser() !== $this) {
+        if (null !== $serviceRecord && $serviceRecord->getUser() !== $this) {
             $serviceRecord->setUser($this);
         }
         $this->serviceRecord = $serviceRecord;

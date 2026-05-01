@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\BureauWeaponWriteDto;
 use App\Entity\BureauWeapon;
-use App\Entity\User;
 use App\Repository\BureauWeaponRepository;
+use App\Security\Voter\BureauVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Uuid;
 
 #[Route('/api/bureau-weapons')]
+#[IsGranted(BureauVoter::MANAGE, message: 'Accès réservé au Sheriff de comté, au Sheriff en chef et à l\'Adjoint.')]
 final class BureauWeaponController
 {
-    private const ALLOWED_GRADES = ['Sheriff de comté', 'Sheriff Adjoint', 'Sheriff adjoint', 'Sheriff en chef'];
-
     public function __construct(
         private readonly BureauWeaponRepository $repository,
         private readonly EntityManagerInterface $entityManager,
@@ -27,15 +27,8 @@ final class BureauWeaponController
     }
 
     #[Route('', name: 'api_bureau_weapons_list', methods: ['GET'])]
-    public function list(#[CurrentUser] User $user): JsonResponse
+    public function list(): JsonResponse
     {
-        if (!\in_array($user->getGrade(), self::ALLOWED_GRADES, true)) {
-            return new JsonResponse(
-                ['error' => 'Accès réservé au Sheriff de comté, au Sheriff en chef et à l\'Adjoint.'],
-                Response::HTTP_FORBIDDEN
-            );
-        }
-
         $rows = [];
         foreach ($this->repository->findBy([], ['updatedAt' => 'DESC']) as $w) {
             $rows[] = $this->serializeWeapon($w);
@@ -45,39 +38,22 @@ final class BureauWeaponController
     }
 
     #[Route('', name: 'api_bureau_weapons_create', methods: ['POST'])]
-    public function create(Request $request, #[CurrentUser] User $user): JsonResponse
+    public function create(#[MapRequestPayload] BureauWeaponWriteDto $payload): JsonResponse
     {
-        if (!\in_array($user->getGrade(), self::ALLOWED_GRADES, true)) {
-            return new JsonResponse(
-                ['error' => 'Seuls le Sheriff de comté, le Sheriff en chef et l\'Adjoint peuvent modifier le recensement.'],
-                Response::HTTP_FORBIDDEN
-            );
-        }
-
-        $body = json_decode((string) $request->getContent(), true);
-        if (!\is_array($body)) {
-            return new JsonResponse(['error' => 'JSON invalide'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $model = isset($body['model']) && \is_string($body['model']) ? trim($body['model']) : null;
-        $serialNumber = isset($body['serialNumber']) && \is_string($body['serialNumber']) ? trim($body['serialNumber']) : null;
-        $onLoan = isset($body['onLoan']) ? (bool) $body['onLoan'] : false;
-        $inChest = isset($body['inChest']) ? (bool) $body['inChest'] : false;
-        $hasScope = isset($body['hasScope']) ? (bool) $body['hasScope'] : false;
-        $comments = isset($body['comments']) && \is_string($body['comments']) ? $body['comments'] : null;
-
-        if ($model === null || $model === '' || $serialNumber === null || $serialNumber === '') {
+        $model = null !== $payload->model ? trim($payload->model) : '';
+        $serialNumber = null !== $payload->serialNumber ? trim($payload->serialNumber) : '';
+        if ('' === $model || '' === $serialNumber) {
             return new JsonResponse(
                 ['error' => 'Champs requis : model (string), serialNumber (string).'],
-                Response::HTTP_BAD_REQUEST
+                Response::HTTP_BAD_REQUEST,
             );
         }
 
         $weapon = new BureauWeapon($model, $serialNumber);
-        $weapon->setOnLoan($onLoan);
-        $weapon->setInChest($inChest);
-        $weapon->setHasScope($hasScope);
-        $weapon->setComments($comments);
+        $weapon->setOnLoan((bool) $payload->onLoan);
+        $weapon->setInChest((bool) $payload->inChest);
+        $weapon->setHasScope((bool) $payload->hasScope);
+        $weapon->setComments($payload->comments);
 
         $this->entityManager->persist($weapon);
         $this->entityManager->flush();
@@ -85,16 +61,14 @@ final class BureauWeaponController
         return new JsonResponse($this->serializeWeapon($weapon), Response::HTTP_CREATED);
     }
 
+    /**
+     * PATCH semantics: only fields explicitly present in the JSON body are applied. We keep manual
+     * payload parsing here to distinguish "absent" from "explicit null" (which DTOs cannot preserve
+     * without a custom denormalizer).
+     */
     #[Route('/{id}', name: 'api_bureau_weapons_patch', methods: ['PATCH'])]
-    public function patch(string $id, Request $request, #[CurrentUser] User $user): JsonResponse
+    public function patch(string $id, \Symfony\Component\HttpFoundation\Request $request): JsonResponse
     {
-        if (!\in_array($user->getGrade(), self::ALLOWED_GRADES, true)) {
-            return new JsonResponse(
-                ['error' => 'Seuls le Sheriff de comté, le Sheriff en chef et l\'Adjoint peuvent modifier le recensement.'],
-                Response::HTTP_FORBIDDEN
-            );
-        }
-
         try {
             $uuid = Uuid::fromString($id);
         } catch (\Throwable) {
@@ -136,15 +110,8 @@ final class BureauWeaponController
     }
 
     #[Route('/{id}', name: 'api_bureau_weapons_delete', methods: ['DELETE'])]
-    public function delete(string $id, #[CurrentUser] User $user): JsonResponse
+    public function delete(string $id): JsonResponse
     {
-        if (!\in_array($user->getGrade(), self::ALLOWED_GRADES, true)) {
-            return new JsonResponse(
-                ['error' => 'Seuls le Sheriff de comté, le Sheriff en chef et l\'Adjoint peuvent modifier le recensement.'],
-                Response::HTTP_FORBIDDEN
-            );
-        }
-
         try {
             $uuid = Uuid::fromString($id);
         } catch (\Throwable) {
@@ -178,4 +145,3 @@ final class BureauWeaponController
         ];
     }
 }
-

@@ -36,11 +36,33 @@ final class RecruitController
     {
         $excludedRoleIds = $this->discordGuildMemberResolver->getRecruitmentExcludedRoleIds();
         $members = $this->discordGuildMemberResolver->listGuildMembersWithoutRoles($excludedRoleIds);
+        if ([] === $members) {
+            return [];
+        }
+
+        // Replace the per-member findOneBy() (N+1 against the users table) by a single IN (...) query
+        // indexed by discordId so the controller scales linearly with the guild size.
+        $discordIds = array_values(array_filter(
+            array_map(static fn (array $m): string => (string) ($m['discord_id'] ?? ''), $members),
+            static fn (string $id): bool => '' !== $id,
+        ));
+        $usersByDiscordId = [];
+        if ([] !== $discordIds) {
+            $loaded = $this->userRepository->createQueryBuilder('u')
+                ->andWhere('u.discordId IN (:ids)')
+                ->setParameter('ids', $discordIds)
+                ->getQuery()
+                ->getResult();
+            foreach ($loaded as $u) {
+                $usersByDiscordId[$u->getDiscordId()] = $u;
+            }
+        }
 
         $list = [];
         foreach ($members as $m) {
-            $user = $this->userRepository->findOneBy(['discordId' => $m['discord_id']]);
-            if ($user !== null) {
+            $discordId = (string) ($m['discord_id'] ?? '');
+            $user = $usersByDiscordId[$discordId] ?? null;
+            if (null !== $user) {
                 $list[] = [
                     'id' => $user->getId()->toRfc4122(),
                     'username' => $user->getUsername(),
@@ -50,7 +72,7 @@ final class RecruitController
                 ];
             } else {
                 $list[] = [
-                    'id' => 'discord-' . $m['discord_id'],
+                    'id' => 'discord-'.$discordId,
                     'username' => $m['username'],
                     'avatarUrl' => $m['avatar_url'],
                     'grade' => null,
@@ -58,6 +80,7 @@ final class RecruitController
                 ];
             }
         }
+
         return $list;
     }
 }
