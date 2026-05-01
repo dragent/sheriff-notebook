@@ -8,7 +8,7 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const GOOGLE_FONT_CSS =
-  "https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Source+Sans+3:wght@400;600&display=swap";
+  "https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Source+Sans+3:wght@400;600&family=Special+Elite&display=swap";
 
 type OgFontWeight = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
 
@@ -118,13 +118,24 @@ export default async function OpengraphImage() {
               maxWidth: 640,
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div
                 style={{
-                  fontFamily: '"Cinzel", serif',
-                  fontSize: 56,
-                  fontWeight: 700,
-                  letterSpacing: 0.5,
+                  fontFamily: '"Special Elite", "Courier New", monospace',
+                  fontSize: 22,
+                  letterSpacing: 4,
+                  textTransform: "uppercase",
+                  color: "rgba(184, 153, 104, 0.85)",
+                }}
+              >
+                Registre officiel · Est. 1899
+              </div>
+              <div
+                style={{
+                  fontFamily: '"IM Fell English SC", serif',
+                  fontSize: 60,
+                  fontWeight: 400,
+                  letterSpacing: 1.5,
                   lineHeight: 1.08,
                   color: "#f7f4ee",
                 }}
@@ -133,10 +144,10 @@ export default async function OpengraphImage() {
               </div>
               <div
                 style={{
-                  fontFamily: '"Cinzel", serif',
-                  fontSize: 48,
-                  fontWeight: 700,
-                  letterSpacing: 1.2,
+                  fontFamily: '"IM Fell English SC", serif',
+                  fontSize: 50,
+                  fontWeight: 400,
+                  letterSpacing: 2.4,
                   lineHeight: 1.05,
                   color: "rgba(235, 224, 200, 0.92)",
                 }}

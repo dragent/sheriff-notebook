@@ -12,6 +12,7 @@ import { PageIcons } from "@/components/layout/PageIcons";
 import { PageIntroBlock } from "@/components/layout/PageIntroBlock";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ProfilSections } from "@/components/profil/ProfilSections";
+import { GradeBadge } from "@/components/ui/GradeBadge";
 import type { ProfilRecord } from "@/components/profil/ProfilForm";
 import {
   getWeaponsByCategory,
@@ -240,7 +241,7 @@ export default async function ProfilPage() {
           />
           {/* Carte d'identité — nom, grade, recrutement */}
           <div
-            className="mt-6 flex flex-wrap items-center gap-4 rounded-lg border border-sheriff-gold/25 bg-sheriff-charcoal/60 px-4 py-4 shadow-[inset_0_0_0_1px_rgba(184,184,184,0.06)] sm:flex-nowrap sm:gap-6"
+            className="sheriff-card-rule mt-6 flex flex-wrap items-center gap-4 rounded-lg border border-sheriff-gold/25 bg-sheriff-charcoal/60 px-4 py-4 sm:flex-nowrap sm:gap-6"
             aria-label="Identité"
           >
             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-sheriff-gold/50 bg-sheriff-gold/15">
@@ -263,10 +264,10 @@ export default async function ProfilPage() {
                 {myRecord.name || "Shérif"}
               </p>
               {me?.grade && (
-                <span className="sheriff-grade-tag">{me.grade}</span>
+                <GradeBadge grade={me.grade} size="sm" />
               )}
               {me?.recruitedAt && (
-                <p className="text-xs text-sheriff-paper-muted">
+                <p className="font-stamp text-xs text-sheriff-paper-muted">
                   Recruté le{" "}
                   {new Date(me.recruitedAt).toLocaleDateString("fr-FR", {
                     day: "numeric",

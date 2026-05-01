@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { cookies, headers } from "next/headers";
-import { Cinzel, Source_Sans_3 } from "next/font/google";
+import { IM_Fell_English_SC, Source_Sans_3, Special_Elite } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { MainContent } from "@/components/layout/MainContent";
@@ -12,15 +12,31 @@ import { getBackendMeForLayout } from "@/lib/backendMe";
 import { THEME_STORAGE_KEY } from "@/lib/theme";
 import type { Theme } from "@/lib/theme";
 
-const cinzel = Cinzel({
-  variable: "--font-cinzel",
+/**
+ * IM Fell English SC: small-caps display serif, period-correct for a late-XIXth
+ * sheriff registry. Replaces Cinzel (which read as Roman / inscription).
+ */
+const imFellEnglishSc = IM_Fell_English_SC({
+  variable: "--font-im-fell-sc",
   subsets: ["latin"],
+  weight: "400",
   display: "swap",
 });
 
 const sourceSans = Source_Sans_3({
   variable: "--font-source-sans",
   subsets: ["latin"],
+  display: "swap",
+});
+
+/**
+ * Special Elite: typewriter face for "stamp" content (serial numbers, dates,
+ * telegrams, registry marks). Loaded once, exposed as --font-stamp.
+ */
+const specialElite = Special_Elite({
+  variable: "--font-special-elite",
+  subsets: ["latin"],
+  weight: "400",
   display: "swap",
 });
 
@@ -60,7 +76,10 @@ export async function generateMetadata(): Promise<Metadata> {
       images: ["/opengraph-image"],
     },
     icons: {
-      icon: [{ url: "/favicon.png", type: "image/png" }],
+      icon: [
+        { url: "/favicon.svg", type: "image/svg+xml" },
+        { url: "/favicon.png", type: "image/png" },
+      ],
       apple: [{ url: "/favicon.png", type: "image/png" }],
     },
   };
@@ -98,7 +117,7 @@ export default async function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${cinzel.variable} ${sourceSans.variable}`}
+      className={`${imFellEnglishSc.variable} ${sourceSans.variable} ${specialElite.variable}`}
       data-theme={initialTheme}
       suppressHydrationWarning
     >

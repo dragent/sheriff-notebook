@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
+import { SectionOrnament } from "@/components/ui/SectionOrnament";
 
 export type PageHeaderProps = {
   /** Titre de la page (h1) */
@@ -56,7 +57,7 @@ export function PageHeader({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
           <span
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-sheriff-gold/40 bg-sheriff-charcoal/80 text-sheriff-gold shadow-sm"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-sheriff-brass/55 bg-sheriff-brass-soft text-sheriff-brass shadow-sm"
             aria-hidden
           >
             {icon}
@@ -89,7 +90,7 @@ export function PageHeader({
         </div>
       </div>
       {children != null && <div className="mt-4">{children}</div>}
-      <div className="sheriff-divider mt-6" aria-hidden />
+      <SectionOrnament tone="brass" className="mt-6" />
     </header>
   );
 }

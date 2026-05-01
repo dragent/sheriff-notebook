@@ -9,7 +9,10 @@ import { useSession, signOut } from "next-auth/react";
 import { COMTE_ADJOINT_GRADES, isSheriffGrade } from "@/lib/grades";
 import { ROUTES } from "@/lib/routes";
 import { canAccessDestructionPage, canAccessSaisiesPage } from "@/lib/sheriffAuth";
+import { hasSheriffRole, canSeeReferenceByRoles } from "@/lib/roles";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { SheriffStarSvg } from "@/components/ui/SheriffStarSvg";
+import { GradeBadge } from "@/components/ui/GradeBadge";
 
 export { ROUTES };
 
@@ -19,16 +22,6 @@ export { ROUTES };
 function canSeeReferenceLink(grade: string | null | undefined): boolean {
   return grade != null && COMTE_ADJOINT_GRADES.has(grade);
 }
-
-const SHERIFF_ROLES = ["ROLE_SHERIFF_COMTE", "ROLE_SHERIFF_ADJOINT", "ROLE_SHERIFF_EN_CHEF", "ROLE_SHERIFF", "ROLE_SHERIFF_DEPUTY"];
-function hasSheriffRole(roles: string[] | null | undefined): boolean {
-  return !!roles?.some((r) => SHERIFF_ROLES.includes(r));
-}
-function canSeeReferenceByRoles(roles: string[] | null | undefined): boolean {
-  return !!roles?.some((r) => r === "ROLE_SHERIFF_COMTE" || r === "ROLE_SHERIFF_ADJOINT");
-}
-
-const MAIN_LINKS: { href: string; label: string; short?: string; auth?: boolean }[] = [];
 
 const NAV_LINK_BASE =
   "block shrink-0 rounded-md px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all duration-200 ease-out focus-visible:outline-2 focus-visible:outline-sheriff-gold focus-visible:outline-offset-2 min-h-[44px] min-w-[44px] flex items-center justify-center lg:min-h-0 lg:min-w-0 lg:justify-start active:scale-[0.98]";
@@ -67,6 +60,78 @@ function NavLink({
   );
 }
 
+/** Spec d'un lien de navigation principal (rendu identique desktop/mobile). */
+type NavLinkSpec = {
+  key: string;
+  href: string;
+  label: string;
+};
+
+type Visibility = {
+  showSaisiesLink: boolean;
+  showDestructionLink: boolean;
+  showCoffresLink: boolean;
+  showComptabiliteLink: boolean;
+  showReferenceLink: boolean;
+};
+
+/**
+ * Construit la liste des liens visibles dans l'ordre canonique
+ * (Saisies, Destruction, Coffres, Comptabilité, Référentiel).
+ *
+ * Source unique de vérité pour les rendus desktop et mobile : éviter de
+ * dupliquer la cascade de blocs `{showXxxLink && <NavLink ... />}`.
+ */
+function getVisibleNavLinks(visibility: Visibility): NavLinkSpec[] {
+  const links: NavLinkSpec[] = [];
+  if (visibility.showSaisiesLink) {
+    links.push({ key: "saisies", href: ROUTES.SAISIES, label: "Saisies" });
+  }
+  if (visibility.showDestructionLink) {
+    links.push({ key: "destruction", href: ROUTES.DESTRUCTION, label: "Destruction" });
+  }
+  if (visibility.showCoffresLink) {
+    links.push({ key: "coffres", href: ROUTES.COFFRES, label: "Coffres" });
+  }
+  if (visibility.showComptabiliteLink) {
+    links.push({ key: "comptabilite", href: ROUTES.COMPTABILITE, label: "Comptabilité" });
+  }
+  if (visibility.showReferenceLink) {
+    links.push({ key: "reference", href: ROUTES.REFERENCE, label: "Référentiel" });
+  }
+  return links;
+}
+
+/**
+ * Liste de NavLink dérivée d'un tableau de specs.
+ *
+ * `onItemClick` est utile pour fermer le menu mobile après navigation ;
+ * sur desktop on ne le passe pas.
+ */
+function NavLinks({
+  links,
+  pathname,
+  onItemClick,
+}: {
+  links: NavLinkSpec[];
+  pathname: string | null;
+  onItemClick?: () => void;
+}) {
+  return (
+    <>
+      {links.map((link) => (
+        <NavLink
+          key={link.key}
+          href={link.href}
+          label={link.label}
+          isActive={pathname === link.href}
+          onClick={onItemClick}
+        />
+      ))}
+    </>
+  );
+}
+
 type NavbarProps = {
   /** Username, grade et rôles remontés du layout (un seul appel GET /api/me côté serveur). */
   serverUsername?: string | null;
@@ -93,9 +158,6 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
   const showCoffresByGrade =
     grade === "Sheriff en chef" || showRefByGradeOrRoles;
 
-  const visibleLinks = MAIN_LINKS.filter(
-    (link) => !link.auth || status === "authenticated"
-  );
   const showReferenceLink = status === "authenticated" && showRefByGradeOrRoles;
   const showComptabiliteLink = status === "authenticated" && showRefByGradeOrRoles;
   const showCoffresLink = status === "authenticated" && showCoffresByGrade;
@@ -104,8 +166,22 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
   const showSaisiesLink = status === "authenticated" && showSaisiesByGradeOrRoles;
   const showDestructionLink = status === "authenticated" && canAccessDestructionPage(grade);
 
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const visibleLinks = getVisibleNavLinks({
+    showSaisiesLink,
+    showDestructionLink,
+    showCoffresLink,
+    showComptabiliteLink,
+    showReferenceLink,
+  });
+  const hasAnyMainLink = visibleLinks.length > 0;
 
+  const headerRef = useRef<HTMLElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+  /** Tracks the previous open state to restore focus on close (skip the initial mount). */
+  const wasOpenRef = useRef(false);
+
+  /** Lock background scroll while the mobile menu is open. */
   useEffect(() => {
     if (!mobileOpen) return;
     const prevOverflow = document.body.style.overflow;
@@ -115,9 +191,100 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
     };
   }, [mobileOpen]);
 
+  /**
+   * Mark the rest of the page as `inert` while the mobile menu is open.
+   *
+   * `inert` removes everything outside the dialog from the tab order and
+   * pointer events, which is the modern equivalent of the old
+   * `aria-hidden` + `tabindex=-1` recipe and is honored by both AT and
+   * native focus management.
+   */
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const header = headerRef.current;
+    const siblings = Array.from(document.body.children).filter(
+      (el) => el !== header,
+    );
+    for (const el of siblings) {
+      el.setAttribute("inert", "");
+      el.setAttribute("aria-hidden", "true");
+    }
+    return () => {
+      for (const el of siblings) {
+        el.removeAttribute("inert");
+        el.removeAttribute("aria-hidden");
+      }
+    };
+  }, [mobileOpen]);
+
+  /**
+   * Keyboard a11y while the mobile menu is open:
+   * - `Escape` closes the menu
+   * - `Tab` / `Shift+Tab` are trapped inside the menu (cycle on the edges)
+   *
+   * Also focuses the first interactive element when the menu opens, so
+   * keyboard users land somewhere meaningful.
+   */
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const menuEl: HTMLDivElement | null = mobileMenuRef.current;
+    if (!menuEl) return;
+    /** Captured non-null alias — keeps TypeScript narrowing inside the
+     *  keydown closure (nested functions otherwise widen the ref type). */
+    const trapEl: HTMLDivElement = menuEl;
+
+    const FOCUSABLE_SELECTOR =
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])';
+
+    const queueFocus = window.requestAnimationFrame(() => {
+      const first = trapEl.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      first?.focus();
+    });
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobileOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusables = Array.from(
+        trapEl.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((el) => !el.hasAttribute("disabled"));
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey) {
+        if (active === first || !trapEl.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(queueFocus);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileOpen]);
+
+  /** Restore focus to the hamburger button when the menu closes. */
+  useEffect(() => {
+    if (wasOpenRef.current && !mobileOpen) {
+      hamburgerRef.current?.focus();
+    }
+    wasOpenRef.current = mobileOpen;
+  }, [mobileOpen]);
+
   return (
     <header
-      className="sticky top-0 z-50 h-16 min-h-[4rem] border-b border-sheriff-gold/40 bg-sheriff-wood/95 sheriff-header-shadow backdrop-blur-sm sm:h-[4.25rem] sm:min-h-[4.25rem]"
+      ref={headerRef}
+      className="sticky top-0 z-50 h-16 min-h-16 border-b border-sheriff-gold/40 bg-sheriff-wood/95 sheriff-header-shadow backdrop-blur-sm sm:h-17 sm:min-h-17"
       role="banner"
     >
       {/* Skip link — premier élément focusable pour l'accessibilité */}
@@ -128,7 +295,7 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
         Aller au contenu principal
       </a>
 
-      <div className="mx-auto flex h-full min-h-[4rem] max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:min-h-[4.25rem] sm:px-6 lg:px-8 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
+      <div className="mx-auto flex h-full min-h-16 max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:min-h-17 sm:px-6 lg:px-8 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
         {/* Marque */}
         <Link
           href={ROUTES.HOME}
@@ -148,7 +315,9 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
                 onError={() => setLogoError(true)}
               />
             </span>
-          ) : null}
+          ) : (
+            <SheriffStarSvg tone="brass" className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" />
+          )}
           <span
             className={
               logoError
@@ -161,60 +330,13 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
         </Link>
 
         {/* Navigation desktop */}
-        {(visibleLinks.length > 0 || showReferenceLink || showComptabiliteLink || showCoffresLink || showSaisiesLink || showDestructionLink) && (
-        <nav
-          className="hidden shrink-0 items-center gap-1 lg:flex"
-          aria-label="Navigation principale"
-        >
-          {visibleLinks.map((link) => (
-            <NavLink
-              key={link.href}
-              href={link.href}
-              label={link.label}
-              shortLabel={"short" in link ? link.short : undefined}
-              isActive={
-                link.href === ROUTES.HOME
-                  ? pathname === ROUTES.HOME
-                  : pathname.startsWith(link.href)
-              }
-            />
-          ))}
-          {showSaisiesLink && (
-            <NavLink
-              href={ROUTES.SAISIES}
-              label="Saisies"
-              isActive={pathname === ROUTES.SAISIES}
-            />
-          )}
-          {showDestructionLink && (
-            <NavLink
-              href={ROUTES.DESTRUCTION}
-              label="Destruction"
-              isActive={pathname === ROUTES.DESTRUCTION}
-            />
-          )}
-          {showCoffresLink && (
-            <NavLink
-              href={ROUTES.COFFRES}
-              label="Coffres"
-              isActive={pathname === ROUTES.COFFRES}
-            />
-          )}
-          {showComptabiliteLink && (
-            <NavLink
-              href={ROUTES.COMPTABILITE}
-              label="Comptabilité"
-              isActive={pathname === ROUTES.COMPTABILITE}
-            />
-          )}
-          {showReferenceLink && (
-            <NavLink
-              href={ROUTES.REFERENCE}
-              label="Référentiel"
-              isActive={pathname === ROUTES.REFERENCE}
-            />
-          )}
-        </nav>
+        {hasAnyMainLink && (
+          <nav
+            className="hidden shrink-0 items-center gap-1 lg:flex"
+            aria-label="Navigation principale"
+          >
+            <NavLinks links={visibleLinks} pathname={pathname} />
+          </nav>
         )}
 
         {/* Bloc thème + utilisateur + CTA desktop */}
@@ -242,8 +364,13 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
                   {(displayName ?? "?").charAt(0).toUpperCase()}
                 </span>
               )}
-              <span className="max-w-[100px] truncate text-sm text-sheriff-paper-muted sm:max-w-[140px]">
-                {displayName ?? "Connecté"}
+              <span className="flex min-w-0 flex-col items-start leading-tight">
+                <span className="max-w-[100px] truncate text-sm text-sheriff-paper-muted sm:max-w-[140px]">
+                  {displayName ?? "Connecté"}
+                </span>
+                {grade && (
+                  <GradeBadge grade={grade} size="xs" className="-mt-0.5" />
+                )}
               </span>
             </Link>
           )}
@@ -268,10 +395,12 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
             </span>
           )}
           <button
+            ref={hamburgerRef}
             type="button"
             onClick={() => setMobileOpen((o) => !o)}
             aria-expanded={mobileOpen}
             aria-controls="nav-mobile-menu"
+            aria-haspopup="dialog"
             aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
             className="sheriff-focus-ring flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-sheriff-gold/40 bg-sheriff-charcoal/60 text-sheriff-gold transition-all duration-200 hover:bg-sheriff-gold/15 active:bg-sheriff-gold/20"
           >
@@ -311,68 +440,24 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
       <div
         ref={mobileMenuRef}
         id="nav-mobile-menu"
-        className={`fixed left-0 right-0 top-16 z-40 max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-sheriff-gold/30 bg-sheriff-wood shadow-xl transition-all duration-300 ease-out sm:top-[4.25rem] sm:max-h-[calc(100vh-4.25rem)] lg:hidden ${
+        className={`fixed left-0 right-0 top-16 z-40 max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-sheriff-gold/30 bg-sheriff-wood shadow-xl transition-all duration-300 ease-out sm:top-17 sm:max-h-[calc(100vh-4.25rem)] lg:hidden ${
           mobileOpen ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0 pointer-events-none"
         }`}
+        role="dialog"
+        aria-modal={mobileOpen}
+        aria-label="Menu de navigation"
         aria-hidden={!mobileOpen}
+        inert={!mobileOpen}
       >
         <nav
           className="flex flex-col gap-1 px-4 py-4 pb-6"
           aria-label="Navigation principale (menu)"
         >
-          {visibleLinks.length > 0 && visibleLinks.map((link) => (
-            <NavLink
-              key={link.href}
-              href={link.href}
-              label={link.label}
-              isActive={
-                link.href === ROUTES.HOME
-                  ? pathname === ROUTES.HOME
-                  : pathname.startsWith(link.href)
-              }
-              onClick={() => setMobileOpen(false)}
-            />
-          ))}
-          {showSaisiesLink && (
-            <NavLink
-              href={ROUTES.SAISIES}
-              label="Saisies"
-              isActive={pathname === ROUTES.SAISIES}
-              onClick={() => setMobileOpen(false)}
-            />
-          )}
-          {showDestructionLink && (
-            <NavLink
-              href={ROUTES.DESTRUCTION}
-              label="Destruction"
-              isActive={pathname === ROUTES.DESTRUCTION}
-              onClick={() => setMobileOpen(false)}
-            />
-          )}
-          {showCoffresLink && (
-            <NavLink
-              href={ROUTES.COFFRES}
-              label="Coffres"
-              isActive={pathname === ROUTES.COFFRES}
-              onClick={() => setMobileOpen(false)}
-            />
-          )}
-          {showComptabiliteLink && (
-            <NavLink
-              href={ROUTES.COMPTABILITE}
-              label="Comptabilité"
-              isActive={pathname === ROUTES.COMPTABILITE}
-              onClick={() => setMobileOpen(false)}
-            />
-          )}
-          {showReferenceLink && (
-            <NavLink
-              href={ROUTES.REFERENCE}
-              label="Référentiel"
-              isActive={pathname === ROUTES.REFERENCE}
-              onClick={() => setMobileOpen(false)}
-            />
-          )}
+          <NavLinks
+            links={visibleLinks}
+            pathname={pathname}
+            onItemClick={() => setMobileOpen(false)}
+          />
           <div className="mt-3 flex items-center gap-2 border-t border-sheriff-gold/30 pt-3">
             <span className="text-sm text-sheriff-paper-muted">Thème</span>
             <ThemeToggle />
@@ -383,7 +468,7 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
                 <Link
                   href={ROUTES.PROFIL}
                   onClick={() => setMobileOpen(false)}
-                  className="sheriff-focus-ring flex min-h-[48px] items-center gap-3 rounded-lg px-4 py-3 transition-colors duration-200 hover:bg-sheriff-gold/10 active:bg-sheriff-gold/15"
+                  className="sheriff-focus-ring flex min-h-12 items-center gap-3 rounded-lg px-4 py-3 transition-colors duration-200 hover:bg-sheriff-gold/10 active:bg-sheriff-gold/15"
                   title="Modifier mes informations (télégramme, armes, calèche)"
                   aria-label="Mon profil"
                 >
@@ -407,6 +492,9 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
                     <span className="text-xs text-sheriff-paper-muted">
                       {displayName ?? "Connecté"}
                     </span>
+                    {grade && (
+                      <GradeBadge grade={grade} size="xs" className="mt-1" />
+                    )}
                   </span>
                 </Link>
               )}
@@ -416,7 +504,7 @@ export function Navbar({ serverUsername = null, serverGrade = null, serverRoles 
                   setMobileOpen(false);
                   signOut({ callbackUrl: ROUTES.HOME });
                 }}
-                className="sheriff-focus-ring sheriff-btn-secondary mt-2 flex min-h-[48px] w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-medium active:scale-[0.98]"
+                className="sheriff-focus-ring sheriff-btn-secondary mt-2 flex min-h-12 w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-medium active:scale-[0.98]"
                 aria-label="Se déconnecter"
               >
                 Déconnexion

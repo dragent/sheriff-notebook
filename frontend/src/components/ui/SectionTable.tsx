@@ -70,7 +70,7 @@ export function SectionTable({
   return (
     <div
       id={id}
-      className="sheriff-card w-full rounded-lg border-sheriff-gold/40 bg-sheriff-wood shadow-md"
+      className="sheriff-card sheriff-card--paper w-full rounded-lg border-sheriff-gold/40 shadow-md"
       role={role}
       aria-label={ariaLabel ?? title}
     >
@@ -86,9 +86,9 @@ export function SectionTable({
       </div>
       {actions && <div className="border-b border-sheriff-gold/20 px-4 py-2">{actions}</div>}
       <div className="sheriff-table-scroll overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="sheriff-table--ledger w-full text-left text-sm">
           <thead className="sticky top-0 z-10">
-            <tr className="border-b border-sheriff-gold/30 bg-sheriff-charcoal/95 text-xs uppercase tracking-wide text-sheriff-gold/90 shadow-[0_1px_0_0_var(--sheriff-gold)]">
+            <tr className="sheriff-table-head-rule bg-sheriff-charcoal/95 text-xs uppercase tracking-wide text-sheriff-gold/90">
               {columns.map((col) => {
                 const align = col.align ?? "left";
                 const alignClass =

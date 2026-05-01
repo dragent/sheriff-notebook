@@ -1,7 +1,8 @@
 import type { HomeInfoCategory } from "@/lib/reference";
+import { SectionOrnament } from "@/components/ui/SectionOrnament";
 
 const PANEL_CLASS =
-  "flex flex-col overflow-hidden rounded-lg border border-sheriff-gold/40 bg-sheriff-wood shadow-md";
+  "sheriff-card--paper flex flex-col overflow-hidden rounded-lg border border-sheriff-gold/40 shadow-md";
 const PANEL_HEAD_CLASS =
   "border-b border-sheriff-gold/40 bg-sheriff-charcoal/90 px-4 py-3 font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-gold";
 
@@ -29,6 +30,8 @@ export function HomeInfoSection({ categories, action }: Props) {
           <div className="shrink-0">{action}</div>
         )}
       </div>
+
+      <SectionOrnament tone="brass" className="-mt-2" />
 
       <div className="grid gap-5 min-[500px]:grid-cols-2">
         {categories.map((cat) => (

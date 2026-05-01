@@ -1,8 +1,54 @@
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
+import { SheriffStarSvg } from "@/components/ui/SheriffStarSvg";
 
 /**
- * Skeleton shown while a page segment loads (navigation / streaming).
+ * Telegraph-style page loader. RP variant used for top-level segment
+ * navigation (acts as a friendly "le télégraphe arrive…" placeholder).
+ * The richer block skeleton (PageLoadingSkeleton) remains available for
+ * internal block-level loading states.
+ */
+export function PageLoadingTelegraph() {
+  return (
+    <div
+      className="sheriff-paper-bg flex min-h-[60vh] flex-1 flex-col items-center justify-center px-4"
+      aria-busy="true"
+      role="status"
+      aria-label="Chargement du registre"
+    >
+      <div className="sheriff-animate-in flex max-w-md flex-col items-center gap-6 text-center">
+        <SheriffStarSvg tone="brass" size="xl" />
+        <p
+          className="font-stamp text-[11px] uppercase tracking-[0.32em] text-sheriff-brass"
+          aria-hidden
+        >
+          Bureau du Shérif · Annesburg
+        </p>
+        <div
+          className="font-stamp flex items-center gap-1 text-base text-sheriff-paper-muted"
+          aria-hidden
+        >
+          {/* Three dots, three dashes — telegraph rhythm. */}
+          {[0, 0.15, 0.3, 0.45, 0.6, 0.75].map((delay, idx) => (
+            <span
+              key={idx}
+              className="inline-block animate-pulse"
+              style={{ animationDelay: `${delay}s`, animationDuration: "1.2s" }}
+            >
+              {idx < 3 ? "·" : "—"}
+            </span>
+          ))}
+        </div>
+        <p className="text-sm text-sheriff-paper-muted">
+          Le télégraphe arrive… Le registre s’ouvre dans un instant.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Block skeleton shown while a page segment loads (navigation / streaming).
  */
 export function PageLoadingSkeleton() {
   return (
