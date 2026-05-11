@@ -13,7 +13,6 @@ import {
 import {
   buildSaisieCorrectionDiscordBody,
   describeSaisieRowForLedger,
-  formatCorrectionLedgerSummaryUi,
   type CorrectionLedgerEntry,
 } from "@/lib/saisieCorrectionReport";
 
@@ -1860,20 +1859,14 @@ export function SaisiesForm({
           aria-modal="true"
           aria-labelledby="correction-stocks-modal-title"
         >
-          <div className="sheriff-card flex max-h-[min(92vh,760px)] w-full max-w-2xl flex-col rounded-lg border border-sheriff-sortie/45 bg-sheriff-wood p-4 shadow-xl sm:p-5">
+          <div className="sheriff-card flex max-h-[min(92vh,720px)] w-full max-w-2xl flex-col rounded-lg border border-sheriff-sortie/45 bg-sheriff-wood p-4 shadow-xl sm:p-5">
             <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
-              <div>
-                <h2
-                  id="correction-stocks-modal-title"
-                  className="font-heading text-base font-semibold text-sheriff-sortie sm:text-lg"
-                >
-                  Comté / adjoint — stocks et corrections
-                </h2>
-                <p className="mt-1 text-[11px] text-sheriff-paper-muted">
-                  Consultez les totaux, réduisez une quantité ou supprimez une ligne, puis validez pour publier le rapport
-                  « Erreur de saisie » sur Discord (au moins une correction requise).
-                </p>
-              </div>
+              <h2
+                id="correction-stocks-modal-title"
+                className="font-heading text-base font-semibold uppercase tracking-wider text-sheriff-gold sm:text-lg"
+              >
+                Corriger les lignes (base)
+              </h2>
               <button
                 type="button"
                 onClick={() => {
@@ -1889,157 +1882,80 @@ export function SaisiesForm({
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-md border border-sheriff-gold/15 bg-sheriff-charcoal/60 p-3 text-xs text-sheriff-paper sm:text-sm">
-              <div>
-                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold">
-                  Armes (agrégé)
-                </h3>
-                {weaponInventory.length === 0 ? (
-                  <p className="mt-1 text-[11px] text-sheriff-paper-muted">Aucune.</p>
-                ) : (
-                  <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto font-stamp text-[11px] leading-snug">
-                    {weaponInventory.map(([name, qty]) => (
-                      <li key={name}>
-                        <span className="text-sheriff-paper">{name}</span>{' '}
-                        <span className="tabular-nums text-sheriff-gold">× {qty}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold">
-                  Items (agrégé)
-                </h3>
-                {itemInventory.length === 0 ? (
-                  <p className="mt-1 text-[11px] text-sheriff-paper-muted">Aucun.</p>
-                ) : (
-                  <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto font-stamp text-[11px] leading-snug">
-                    {itemInventory.map(([name, qty]) => (
-                      <li key={name}>
-                        <span className="text-sheriff-paper">{name}</span>{' '}
-                        <span className="tabular-nums text-sheriff-gold">× {qty}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-sortie">
-                  Dollares (lignes cash)
-                </h3>
-                <p className="mt-1 font-heading text-sm tabular-nums text-sheriff-sortie">
-                  Total saisi : ${formatSeizedDollars(totalCashDollars)} — {cashEntryCount} ligne
-                  {cashEntryCount > 1 ? 's' : ''}
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-sheriff-gold/15 bg-sheriff-charcoal/60 p-3 text-xs text-sheriff-paper sm:text-sm">
+              {correctableRowsSorted.length === 0 ? (
+                <p className="text-[11px] text-sheriff-paper-muted">
+                  Aucune ligne enregistrée en base à corriger (les brouillons locaux n’apparaissent pas ici).
                 </p>
-              </div>
-              <div>
-                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold">
-                  Corriger les lignes (base)
-                </h3>
-                {correctableRowsSorted.length === 0 ? (
-                  <p className="mt-1 text-[11px] text-sheriff-paper-muted">
-                    Aucune ligne enregistrée en base à corriger (les brouillons locaux n’apparaissent pas ici).
-                  </p>
-                ) : (
-                  <div className="sheriff-table-scroll mt-2 max-h-56 overflow-auto rounded border border-sheriff-gold/15">
-                    <table className="w-full min-w-[560px] border-collapse text-left text-[10px] sm:text-[11px]">
-                      <thead>
-                        <tr className="border-b border-sheriff-gold/25 bg-sheriff-charcoal/90">
-                          <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Date</th>
-                          <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Type</th>
-                          <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Détail</th>
-                          <th className="px-2 py-1.5 text-right font-heading font-semibold text-sheriff-gold">Qté actuelle</th>
-                          <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Nouvelle qté</th>
-                          <th className="px-2 py-1.5 text-right font-heading font-semibold text-sheriff-gold">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {correctableRowsSorted.map((row) => (
-                          <tr key={row.id} className="border-b border-sheriff-gold/10">
-                            <td className="px-2 py-1.5 font-stamp whitespace-nowrap text-sheriff-paper">{row.date}</td>
-                            <td className="px-2 py-1.5 text-sheriff-paper-muted">
-                              {row.kind === 'cash' ? 'cash' : row.kind}
-                            </td>
-                            <td className="max-w-[180px] truncate px-2 py-1.5 text-sheriff-paper" title={getRowLabel(row)}>
-                              {getRowLabel(row)}
-                            </td>
-                            <td className="px-2 py-1.5 text-right tabular-nums text-sheriff-gold">
-                              {row.kind === 'cash'
-                                ? formatCashQuantityForList(typeof row.quantity === 'number' ? row.quantity : 0)
-                                : typeof row.quantity === 'number'
-                                  ? row.quantity
-                                  : '—'}
-                            </td>
-                            <td className="px-2 py-1.5">
-                              <input
-                                type="number"
-                                min={1}
-                                value={correctionQtyInputs[row.id] ?? ''}
-                                onChange={(e) =>
-                                  setCorrectionQtyInputs((p) => ({ ...p, [row.id]: e.target.value }))
-                                }
+              ) : (
+                <div className="sheriff-table-scroll max-h-[min(70vh,560px)] overflow-auto rounded border border-sheriff-gold/15">
+                  <table className="w-full min-w-[560px] border-collapse text-left text-[10px] sm:text-[11px]">
+                    <thead>
+                      <tr className="border-b border-sheriff-gold/25 bg-sheriff-charcoal/90">
+                        <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Date</th>
+                        <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Type</th>
+                        <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Détail</th>
+                        <th className="px-2 py-1.5 text-right font-heading font-semibold text-sheriff-gold">Qté actuelle</th>
+                        <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Nouvelle qté</th>
+                        <th className="px-2 py-1.5 text-right font-heading font-semibold text-sheriff-gold">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {correctableRowsSorted.map((row) => (
+                        <tr key={row.id} className="border-b border-sheriff-gold/10">
+                          <td className="px-2 py-1.5 font-stamp whitespace-nowrap text-sheriff-paper">{row.date}</td>
+                          <td className="px-2 py-1.5 text-sheriff-paper-muted">
+                            {row.kind === 'cash' ? 'cash' : row.kind}
+                          </td>
+                          <td className="max-w-[180px] truncate px-2 py-1.5 text-sheriff-paper" title={getRowLabel(row)}>
+                            {getRowLabel(row)}
+                          </td>
+                          <td className="px-2 py-1.5 text-right tabular-nums text-sheriff-gold">
+                            {row.kind === 'cash'
+                              ? formatCashQuantityForList(typeof row.quantity === 'number' ? row.quantity : 0)
+                              : typeof row.quantity === 'number'
+                                ? row.quantity
+                                : '—'}
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input
+                              type="number"
+                              min={1}
+                              value={correctionQtyInputs[row.id] ?? ''}
+                              onChange={(e) =>
+                                setCorrectionQtyInputs((p) => ({ ...p, [row.id]: e.target.value }))
+                              }
+                              disabled={saving}
+                              className="sheriff-focus-ring w-full min-w-16 rounded border border-sheriff-gold/30 bg-sheriff-charcoal/80 px-1.5 py-1 text-[11px] tabular-nums text-sheriff-paper disabled:opacity-50"
+                              aria-label={`Nouvelle quantité pour ${getRowLabel(row)}`}
+                            />
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            <div className="flex flex-wrap justify-end gap-1">
+                              <button
+                                type="button"
                                 disabled={saving}
-                                className="sheriff-focus-ring w-full min-w-16 rounded border border-sheriff-gold/30 bg-sheriff-charcoal/80 px-1.5 py-1 text-[11px] tabular-nums text-sheriff-paper disabled:opacity-50"
-                                aria-label={`Nouvelle quantité pour ${getRowLabel(row)}`}
-                              />
-                            </td>
-                            <td className="px-2 py-1.5 text-right">
-                              <div className="flex flex-wrap justify-end gap-1">
-                                <button
-                                  type="button"
-                                  disabled={saving}
-                                  onClick={() => void applyRowQuantityFromCorrectionModal(row)}
-                                  className="sheriff-focus-ring rounded border border-sheriff-gold/40 bg-sheriff-gold/10 px-2 py-0.5 text-[10px] font-medium text-sheriff-gold disabled:opacity-50"
-                                >
-                                  Appliquer
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={saving}
-                                  onClick={() => void deleteRowHard(row)}
-                                  className="sheriff-focus-ring rounded border border-red-500/45 bg-red-950/50 px-2 py-0.5 text-[10px] font-medium text-red-200 disabled:opacity-50"
-                                >
-                                  Supprimer
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-              <div>
-                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold">
-                  Corrections suivies (cette session)
-                </h3>
-                {correctionLedger.length === 0 ? (
-                  <p className="mt-1 text-[11px] italic text-sheriff-paper-muted">
-                    Aucune suppression ni baisse de quantité enregistrée depuis le chargement de la page.
-                  </p>
-                ) : (
-                  <ul className="mt-1 list-inside list-disc space-y-1 text-[11px] leading-snug text-sheriff-paper-muted">
-                    {correctionLedger.map((e) => (
-                      <li key={e.key}>{formatCorrectionLedgerSummaryUi(e)}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-paper-muted">
-                  Texte qui sera envoyé (sans le titre Discord)
-                </h3>
-                <pre className="mt-1 max-h-36 overflow-y-auto whitespace-pre-wrap rounded border border-sheriff-gold/20 bg-black/25 p-2 font-mono text-[10px] leading-relaxed text-sheriff-paper/90">
-                  {buildSaisieCorrectionDiscordBody(correctionLedger, {
-                    weaponLines: weaponInventory.map(([name, qty]) => ({ name, qty })),
-                    itemLines: itemInventory.map(([name, qty]) => ({ name, qty })),
-                    cashTotal: totalCashDollars,
-                    cashLineCount: cashEntryCount,
-                  })}
-                </pre>
-              </div>
+                                onClick={() => void applyRowQuantityFromCorrectionModal(row)}
+                                className="sheriff-focus-ring rounded border border-sheriff-gold/40 bg-sheriff-gold/10 px-2 py-0.5 text-[10px] font-medium text-sheriff-gold disabled:opacity-50"
+                              >
+                                Appliquer
+                              </button>
+                              <button
+                                type="button"
+                                disabled={saving}
+                                onClick={() => void deleteRowHard(row)}
+                                className="sheriff-focus-ring rounded border border-red-500/45 bg-red-950/50 px-2 py-0.5 text-[10px] font-medium text-red-200 disabled:opacity-50"
+                              >
+                                Supprimer
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {correctionNotifyFeedback && !correctionNotifyFeedback.startsWith('Rapport') ? (

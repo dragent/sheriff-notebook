@@ -77,17 +77,6 @@ export function formatCorrectionLedgerLinePlain(e: CorrectionLedgerEntry): strin
   return `**Quantité retirée** — ${e.label} — ${unit}${e.fromQty} → ${unit}${e.toQty} (−${unit}${removed}) (${e.date})`;
 }
 
-/** Même contenu sans markdown, pour affichage UI. */
-export function formatCorrectionLedgerSummaryUi(e: CorrectionLedgerEntry): string {
-  if (e.action === "delete") {
-    const q = e.kind === "cash" ? `${e.quantity.toLocaleString("fr-FR")} $` : `${e.quantity}`;
-    return `Suppression — ${e.label} — ${q} (${e.date})`;
-  }
-  const removed = e.fromQty - e.toQty;
-  const unit = e.kind === "cash" ? "$" : "";
-  return `Quantité retirée — ${e.label} — ${unit}${e.fromQty} → ${unit}${e.toQty} (−${unit}${removed}) (${e.date})`;
-}
-
 /**
  * Body passed to POST /api/saisies/notify-corrections (backend prepends « Erreur de saisie » title).
  */
