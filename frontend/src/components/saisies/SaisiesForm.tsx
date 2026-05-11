@@ -20,11 +20,40 @@ import {
 const TOAST_DURATION_MS = 2500;
 const INVENTORY_MAX_ITEMS = 50;
 
-const dollarsIntl = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
+const dollarsIntl = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
 
-/** Display seized dollar totals (RP : montants entiers). */
+/** Display seized dollar totals (up to 2 decimal places). */
 function formatSeizedDollars(amount: number): string {
   return dollarsIntl.format(Math.max(0, amount));
+}
+
+const cashQtyDisplayIntl = new Intl.NumberFormat('fr-FR', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+function formatCashQuantityForList(amount: number): string {
+  return cashQtyDisplayIntl.format(amount);
+}
+
+/** Parse modal quantity: cash accepts `,` or `.` and up to 2 decimals; item/weapon must be a positive integer. */
+function parseSeizureQuantityInput(raw: string, type: SaisieType): number | null {
+  const trimmed = raw.trim().replace(/\u00a0/g, '').replace(/\s/g, '');
+  if (trimmed === '') return null;
+  const normalized = trimmed.replace(',', '.');
+  const n = Number(normalized);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (type === 'cash') {
+    const cents = Math.round(n * 100);
+    const rounded = cents / 100;
+    if (cents < 1) return null;
+    return rounded;
+  }
+  if (!Number.isInteger(n)) return null;
+  return n;
 }
 
 type SaisieType = 'item' | 'weapon' | 'cash';
@@ -513,7 +542,12 @@ export function SaisiesForm({
       type: row.kind,
       date: row.date,
       sheriff: normalizeStoredSheriffSelectValue(row.sheriff, sheriffs),
-      quantity: typeof row.quantity === 'number' ? String(row.quantity) : '1',
+      quantity:
+        typeof row.quantity === 'number'
+          ? row.kind === 'cash'
+            ? String(Number.parseFloat(row.quantity.toFixed(2)))
+            : String(row.quantity)
+          : '1',
       itemName: row.itemName,
       possessedBy: row.possessedBy,
       weaponModel: row.weaponModel,
@@ -536,8 +570,8 @@ export function SaisiesForm({
   }
 
   function buildRowFromForm(): SaisieRow | null {
-    const quantity = Number.parseInt(form.quantity.replace(/\s/g, ''), 10);
-    if (!form.date || !form.sheriff || Number.isNaN(quantity) || quantity <= 0) return null;
+    const quantity = parseSeizureQuantityInput(form.quantity, form.type);
+    if (!form.date || !form.sheriff || quantity === null) return null;
     const type: SaisieType = form.type;
     const base: SaisieRow = {
       id: createId('row'),
@@ -966,7 +1000,11 @@ export function SaisiesForm({
                               : 'bg-sheriff-gold/15 text-sheriff-gold'
                           }`}
                         >
-                          {typeof row.quantity === 'number' ? row.quantity : 0}
+                          {typeof row.quantity === 'number'
+                            ? row.kind === 'cash'
+                              ? formatCashQuantityForList(row.quantity)
+                              : row.quantity
+                            : 0}
                         </span>
                       </td>
                       <td className={CELL_BASE + ' py-1.5'}>{row.possessedBy || '—'}</td>
@@ -1556,7 +1594,9 @@ export function SaisiesForm({
                   <input
                     id="saisie-qty"
                     type="number"
-                    min={1}
+                    min={form.type === 'cash' ? 0.01 : 1}
+                    step={form.type === 'cash' ? '0.01' : '1'}
+                    inputMode={form.type === 'cash' ? 'decimal' : 'numeric'}
                     required
                     readOnly={!!editingRowId && !canCorrectSaisieErrors}
                     title={

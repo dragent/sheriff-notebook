@@ -83,7 +83,7 @@ class SeizureRecordRepository extends ServiceEntityRepository
      *
      * Replaces an in-memory loop over every seizure row with a single SQL aggregation.
      *
-     * @return array<string, int>
+     * @return array<string, float|int>
      */
     public function getSeizedQuantityByKey(): array
     {
@@ -96,19 +96,21 @@ class SeizureRecordRepository extends ServiceEntityRepository
 
         $out = [];
         foreach ($rows as $row) {
-            $qty = (int) $row['qty'];
+            $qtyRaw = $row['qty'];
+            $qty = \is_numeric($qtyRaw) ? (float) $qtyRaw : 0.0;
             if ($qty <= 0) {
                 continue;
             }
             switch ($row['type']) {
                 case SeizureRecord::TYPE_CASH:
                     $key = SeizureRecord::DESTRUCTION_LINE_KEY_CASH;
-                    $out[$key] = ($out[$key] ?? 0) + $qty;
+                    $dollars = round($qty / 100.0, 2);
+                    $out[$key] = ($out[$key] ?? 0.0) + $dollars;
                     break;
                 case SeizureRecord::TYPE_ITEM:
                     $name = (string) ($row['itemName'] ?? '');
                     if ('' !== $name) {
-                        $out[$name] = ($out[$name] ?? 0) + $qty;
+                        $out[$name] = (int) (($out[$name] ?? 0) + $qty);
                     }
                     break;
                 case SeizureRecord::TYPE_WEAPON:
@@ -116,11 +118,11 @@ class SeizureRecordRepository extends ServiceEntityRepository
                     if ('' === $model) {
                         break;
                     }
-                    $out[$model] = ($out[$model] ?? 0) + $qty;
+                    $out[$model] = (int) (($out[$model] ?? 0) + $qty);
                     $serial = (string) ($row['serialNumber'] ?? '');
                     if ('' !== $serial) {
                         $compositeKey = $model.'|'.$serial;
-                        $out[$compositeKey] = ($out[$compositeKey] ?? 0) + $qty;
+                        $out[$compositeKey] = (int) (($out[$compositeKey] ?? 0) + $qty);
                     }
                     break;
             }

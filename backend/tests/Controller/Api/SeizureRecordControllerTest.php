@@ -185,8 +185,30 @@ final class SeizureRecordControllerTest extends WebTestCase
         self::assertIsArray($data);
         self::assertArrayHasKey('id', $data);
         self::assertSame('cash', $data['type']);
-        self::assertSame(1250, $data['quantity']);
+        self::assertEqualsWithDelta(1250.0, (float) $data['quantity'], 0.001);
         self::assertNull($data['itemName']);
         self::assertNull($data['weaponModel']);
+    }
+
+    /**
+     * POST /api/saisies type cash avec 2 décimales : 201 et montant conservé.
+     */
+    public function testCreateCashWithTwoDecimalPlacesReturns201(): void
+    {
+        $client = self::createClient();
+        [$user, $token] = $this->createUserAndJwt($client, ['username' => 'SheriffCashDec', 'grade' => 'Sheriff Adjoint']);
+
+        $body = json_encode([
+            'type' => 'cash',
+            'date' => '2025-01-22',
+            'sheriff' => $user->getUsername(),
+            'quantity' => 12.34,
+        ]);
+        $this->requestWithJwt($client, 'POST', '/api/saisies', $token, $body);
+
+        self::assertResponseStatusCodeSame(201);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        self::assertIsArray($data);
+        self::assertEqualsWithDelta(12.34, (float) $data['quantity'], 0.001);
     }
 }

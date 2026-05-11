@@ -52,6 +52,10 @@ class SeizureRecord
     )]
     private string $sheriff;
 
+    /**
+     * For type=cash: amount in cents (API exposes dollars with up to 2 decimals).
+     * For item/weapon: discrete unit count (integer).
+     */
     #[ORM\Column(type: 'integer')]
     #[Assert\NotNull(message: 'La quantité est requise.')]
     #[Assert\GreaterThanOrEqual(value: 1, message: 'La quantité doit être supérieure ou égale à 1.')]
@@ -187,6 +191,26 @@ class SeizureRecord
     {
         $this->quantity = $quantity;
         $this->updatedAt = new \DateTimeImmutable('now');
+    }
+
+    /** API / formulaires : dollars avec max 2 décimales → centimes stockés en base. */
+    public static function storedQuantityFromApiInput(string $type, float $quantity): int
+    {
+        if (self::TYPE_CASH === $type) {
+            return (int) round($quantity * 100);
+        }
+
+        return (int) round($quantity);
+    }
+
+    /** Base (centimes si cash, unités sinon) → valeur exposée par l’API. */
+    public static function apiQuantityFromStored(string $type, int $stored): float|int
+    {
+        if (self::TYPE_CASH === $type) {
+            return (float) round($stored / 100, 2);
+        }
+
+        return $stored;
     }
 
     public function getItemName(): ?string

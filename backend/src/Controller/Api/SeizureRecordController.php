@@ -76,7 +76,7 @@ final class SeizureRecordController
             $dto->type,
             $dto->date,
             $dto->sheriff,
-            $dto->quantity,
+            SeizureRecord::storedQuantityFromApiInput($dto->type, $dto->quantity),
             SeizureRecord::TYPE_ITEM === $dto->type ? $dto->itemName : null,
             SeizureRecord::TYPE_WEAPON === $dto->type ? $dto->weaponModel : null,
             SeizureRecord::TYPE_CASH === $dto->type ? null : $dto->serialNumber,
@@ -189,7 +189,17 @@ final class SeizureRecordController
             }
         }
 
-        if (null !== $dto->quantity && $dto->quantity !== $record->getQuantity()) {
+        if (null !== $dto->quantity) {
+            $err = $this->validateQuantityForSeizureType($record->getType(), $dto->quantity);
+            if (null !== $err) {
+                return new JsonResponse(['error' => $err], 400);
+            }
+        }
+
+        $newStoredQuantity = null !== $dto->quantity
+            ? SeizureRecord::storedQuantityFromApiInput($record->getType(), $dto->quantity)
+            : null;
+        if (null !== $newStoredQuantity && $newStoredQuantity !== $record->getQuantity()) {
             if (!$this->authorizationChecker->isGranted(SeizureCorrectionVoter::CORRECT)) {
                 return new JsonResponse([
                     'error' => 'Seuls le Sheriff de comté et le Sheriff Adjoint peuvent modifier la quantité d\'une saisie.',
@@ -201,7 +211,7 @@ final class SeizureRecordController
 
         // Apply updates (only non-null fields).
         if (null !== $dto->quantity) {
-            $record->setQuantity($dto->quantity);
+            $record->setQuantity(SeizureRecord::storedQuantityFromApiInput($record->getType(), $dto->quantity));
         }
         if (null !== $dto->date) {
             $record->setDate($dto->date);
@@ -297,7 +307,7 @@ final class SeizureRecordController
             'type' => $r->getType(),
             'date' => $r->getDate(),
             'sheriff' => $r->getSheriff(),
-            'quantity' => $r->getQuantity(),
+            'quantity' => SeizureRecord::apiQuantityFromStored($r->getType(), $r->getQuantity()),
             'itemName' => $r->getItemName(),
             'weaponModel' => $r->getWeaponModel(),
             'serialNumber' => $r->getSerialNumber(),
@@ -307,5 +317,30 @@ final class SeizureRecordController
             'cancelledReason' => $r->getCancelledReason(),
             'cancelledBy' => $r->getCancelledBy(),
         ];
+    }
+
+    private function validateQuantityForSeizureType(string $type, float $quantity): ?string
+    {
+        if (SeizureRecord::TYPE_CASH === $type) {
+            $cents = (int) round($quantity * 100);
+            if ($cents < 1) {
+                return 'Le montant en dollars doit être au moins 0,01 $.';
+            }
+            if (abs($quantity - ($cents / 100.0)) > 1.0e-6) {
+                return 'Le montant en dollars ne peut avoir que 2 décimales au maximum.';
+            }
+
+            return null;
+        }
+
+        if ($quantity < 1.0) {
+            return 'La quantité doit être au moins 1.';
+        }
+        $whole = (int) round($quantity);
+        if (abs($quantity - $whole) > 1.0e-6) {
+            return 'La quantité doit être un nombre entier pour une saisie d\'item ou d\'arme.';
+        }
+
+        return null;
     }
 }
