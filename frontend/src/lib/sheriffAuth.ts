@@ -34,17 +34,11 @@ export function canCorrectSaisieErrors(grade: string | null | undefined): boolea
 }
 
 /**
- * Indique si le grade donne accès à la page Destruction.
- * Règle métier : à partir de Sheriff Deputy (inclus), donc tous les grades sheriff sauf Deputy.
+ * Indique si le grade donne accès à la page Destruction (réduction du stock via enregistrement de destruction).
+ * Aligné sur le backend : tout grade sheriff, y compris Deputy — la correction directe des quantités sur Saisies reste comté/adjoint.
  */
 export function canAccessDestructionPage(
   grade: string | null | undefined
 ): boolean {
-  if (!grade) return false;
-  if (grade === "Sheriff Deputy") return true;
-  return (
-    grade === "Sheriff" ||
-    grade === "Sheriff en chef" ||
-    COMTE_ADJOINT_GRADES.has(grade)
-  );
+  return isSheriffGrade(grade);
 }

@@ -16,9 +16,9 @@ This document describes the Next.js API routes that proxy to the Symfony backend
 | `/api/coffres` | PATCH | `PATCH /api/coffres` | Yes | Update a quantity (section + type + quantity) |
 | `/api/comptabilite` | GET | `GET /api/comptabilite` | Yes | List accounting entries (in/out) |
 | `/api/comptabilite` | POST | `POST /api/comptabilite` | Yes | Create an entry (in or out) |
-| `/api/destructions` | GET | `GET /api/destructions` | Yes | List destruction history |
-| `/api/destructions` | POST | `POST /api/destructions` | Yes | Create a destruction record (`lines[].destruction` may be `__cash_seizure__` for dollars; `qte` = dollars removed, FIFO on cash seizures) |
-| `/api/destructions/[id]` | PATCH | `PATCH /api/destructions/{id}` | Yes | Single validation: success or lost |
+| `/api/destructions` | GET | `GET /api/destructions` | Yes | List destruction history (all sheriff grades, including Deputy — stock reduction via this flow) |
+| `/api/destructions` | POST | `POST /api/destructions` | Yes | Create a destruction record (`lines[].destruction` may be `__cash_seizure__` for dollars; `qte` = dollars removed, FIFO on cash seizures); same grade rule as GET |
+| `/api/destructions/[id]` | PATCH | `PATCH /api/destructions/{id}` | Yes | Single validation: success or lost (same grade rule) |
 | `/api/discord/effectif` | GET | `GET /api/discord/effectif` | Yes | Roster message preview (markdown, count, date) — County Sheriff / Deputy |
 | `/api/discord/effectif/send` | POST | `POST /api/discord/effectif/send` | Yes | Publish roster message to Discord channel — County Sheriff / Deputy |
 | `/api/me` | GET | `GET /api/me` | Yes | User profile (roles, etc.) |

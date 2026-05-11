@@ -12,7 +12,8 @@ use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
 /**
- * Destructions (registry, listing, creation) — gated to operational sheriffs.
+ * Destructions (liste, création, validation) — tout grade sheriff, y compris Deputy.
+ * La réduction de stock saisi passe par ce flux ; la correction directe sur /api/saisies (quantité) reste comté/adjoint.
  */
 final class DestructionVoter extends Voter
 {
@@ -30,6 +31,6 @@ final class DestructionVoter extends Voter
             return false;
         }
 
-        return GradeHierarchy::isOperationalSheriff(Grade::tryFromLabel($user->getGrade()));
+        return GradeHierarchy::isSheriff(Grade::tryFromLabel($user->getGrade()));
     }
 }
