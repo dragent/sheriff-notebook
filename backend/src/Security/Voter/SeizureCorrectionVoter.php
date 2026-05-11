@@ -11,17 +11,14 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
-/**
- * Destructions (liste, création, validation) — tout grade sheriff, y compris Deputy.
- * La réduction de stock saisi passe par ce flux ; la correction directe sur /api/saisies (quantité) reste comté/adjoint.
- */
-final class DestructionVoter extends Voter
+/** Correction saisies (suppression ligne, notification Discord) — Sheriff de comté et Adjoint uniquement. */
+final class SeizureCorrectionVoter extends Voter
 {
-    public const MANAGE = 'DESTRUCTION_MANAGE';
+    public const CORRECT = 'SEIZURE_CORRECT';
 
     protected function supports(string $attribute, mixed $subject): bool
     {
-        return self::MANAGE === $attribute;
+        return self::CORRECT === $attribute;
     }
 
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?Vote $vote = null): bool
@@ -31,6 +28,6 @@ final class DestructionVoter extends Voter
             return false;
         }
 
-        return GradeHierarchy::isSheriff(Grade::tryFromLabel($user->getGrade()));
+        return GradeHierarchy::canCorrectSeizureErrors(Grade::tryFromLabel($user->getGrade()));
     }
 }

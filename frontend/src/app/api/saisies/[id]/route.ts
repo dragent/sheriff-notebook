@@ -42,3 +42,24 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   return NextResponse.json(result.data, { status: result.status });
 }
 
+/**
+ * Proxie DELETE vers le backend /api/saisies/{id} (suppression ligne). Spec: docs/PROXY_SPEC.md
+ */
+export async function DELETE(_request: NextRequest, { params }: Params) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json(UNAUTHORIZED_JSON, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  const token = createBackendJwt(session);
+  const context = createProxyContext(`api/saisies/${id}`, getUserIdFromSession(session));
+  const result = await proxyRequest(context, {
+    method: "DELETE",
+    path: `/api/saisies/${encodeURIComponent(id)}`,
+    token,
+  });
+
+  return NextResponse.json(result.data, { status: result.status });
+}

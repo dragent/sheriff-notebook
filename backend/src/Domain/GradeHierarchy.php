@@ -88,8 +88,8 @@ final class GradeHierarchy
     }
 
     /**
-     * True when the user is allowed to perform sheriff-only writes that exclude the lowest "Deputy" tier
-     * (DestructionRecordController uses order <= 4).
+     * True for sheriff roles from County down to Sheriff Deputy (excludes Deputy = 5).
+     * Use when a write must exclude the lowest field tier (not used for destruction — see DestructionVoter).
      */
     public static function isOperationalSheriff(?Grade $grade): bool
     {
@@ -110,5 +110,13 @@ final class GradeHierarchy
     public static function canManageBureau(?Grade $grade): bool
     {
         return null !== $grade && $grade->order() <= 2;
+    }
+
+    /**
+     * Saisies: suppression d'une ligne en base et notification Discord des corrections (sans flux destruction).
+     */
+    public static function canCorrectSeizureErrors(?Grade $grade): bool
+    {
+        return null !== $grade && $grade->order() <= 1;
     }
 }

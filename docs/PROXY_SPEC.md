@@ -16,9 +16,9 @@ This document describes the Next.js API routes that proxy to the Symfony backend
 | `/api/coffres` | PATCH | `PATCH /api/coffres` | Yes | Update a quantity (section + type + quantity) |
 | `/api/comptabilite` | GET | `GET /api/comptabilite` | Yes | List accounting entries (in/out) |
 | `/api/comptabilite` | POST | `POST /api/comptabilite` | Yes | Create an entry (in or out) |
-| `/api/destructions` | GET | `GET /api/destructions` | Yes | List destruction history |
-| `/api/destructions` | POST | `POST /api/destructions` | Yes | Create a destruction record (`lines[].destruction` may be `__cash_seizure__` for dollars; `qte` = dollars removed, FIFO on cash seizures) |
-| `/api/destructions/[id]` | PATCH | `PATCH /api/destructions/{id}` | Yes | Single validation: success or lost |
+| `/api/destructions` | GET | `GET /api/destructions` | Yes | List destruction history (all sheriff grades, including Deputy — stock reduction via this flow) |
+| `/api/destructions` | POST | `POST /api/destructions` | Yes | Create a destruction record (`lines[].destruction` may be `__cash_seizure__` for dollars; `qte` = dollars removed, FIFO on cash seizures); same grade rule as GET |
+| `/api/destructions/[id]` | PATCH | `PATCH /api/destructions/{id}` | Yes | Single validation: success or lost (same grade rule) |
 | `/api/discord/effectif` | GET | `GET /api/discord/effectif` | Yes | Roster message preview (markdown, count, date) — County Sheriff / Deputy |
 | `/api/discord/effectif/send` | POST | `POST /api/discord/effectif/send` | Yes | Publish roster message to Discord channel — County Sheriff / Deputy |
 | `/api/me` | GET | `GET /api/me` | Yes | User profile (roles, etc.) |
@@ -27,8 +27,10 @@ This document describes the Next.js API routes that proxy to the Symfony backend
 | `/api/reference` | PUT | `PUT /api/reference` | Yes | Update reference data (County Sheriff / Deputy) |
 | `/api/saisies` | GET | `GET /api/saisies` | Yes | List seizures (items, weapons, cash) |
 | `/api/saisies` | POST | `POST /api/saisies` | Yes | Create a seizure (`type`: `item`, `weapon`, or `cash`; `quantity` is dollar amount for `cash`) |
-| `/api/saisies/[id]` | PATCH | `PATCH /api/saisies/{id}` | Yes | Update a seizure (no type change; 409 if already cancelled) |
+| `/api/saisies/[id]` | PATCH | `PATCH /api/saisies/{id}` | Yes | Update a seizure (no type change; 409 if already cancelled; **quantity** change only for Sheriff de comté / Adjoint — others get 403) |
+| `/api/saisies/[id]` | DELETE | `DELETE /api/saisies/{id}` | Yes | Hard-delete a seizure line (Sheriff de comté / Adjoint only; 204 empty body) |
 | `/api/saisies/[id]/cancel` | POST | `POST /api/saisies/{id}/cancel` | Yes | Cancel a seizure with a reason (audit trail) |
+| `/api/saisies/notify-corrections` | POST | `POST /api/saisies/notify-corrections` | Yes | Post a summary to Discord (`message` JSON) with title « Erreur de saisie » (Sheriff de comté / Adjoint only) |
 | `/api/services/[id]` | PATCH | `PATCH /api/services/{id}` | Yes | Update a service (planning, weapon, etc.) |
 | `/api/services/planning/reset` | POST | `POST /api/services/planning/reset` | Yes | Snapshot the current planning presences table, reset all presences, and post an automatic Discord log (County Sheriff / Deputy / Chief) |
 | `/api/users/[id]` | PATCH | `PATCH /api/users/{id}` | Yes | Update a user's grade (recruitment) |
@@ -98,5 +100,5 @@ Output: `console.info` for success, `console.error` for error; one line = one JS
 ## 4. Implementation
 
 - **Shared module**: `frontend/src/lib/proxyBackend.ts` — `proxyRequest()`, `getBackendBase()`, `createProxyContext()`, and logger `proxyLog()`.
-- **Routes**: `api/me`, `api/reference`, `api/services/[id]`, `api/recruits`, `api/users/[id]`, `api/comptabilite`, `api/coffres`, `api/bureau-weapons`, `api/bureau-weapons/[id]`, `api/saisies`, `api/destructions`, `api/destructions/[id]` use this module to avoid duplication and ensure the spec (error + log) is followed.
+- **Routes**: `api/me`, `api/reference`, `api/services/[id]`, `api/recruits`, `api/users/[id]`, `api/comptabilite`, `api/coffres`, `api/bureau-weapons`, `api/bureau-weapons/[id]`, `api/saisies`, `api/saisies/[id]`, `api/saisies/notify-corrections`, `api/destructions`, `api/destructions/[id]` use this module to avoid duplication and ensure the spec (error + log) is followed.
 - **Updating this document**: whenever a new proxy route is added or behaviour changes (codes, log fields).
