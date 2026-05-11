@@ -26,6 +26,14 @@ export function canAccessSaisiesPage(grade: string | null | undefined): boolean 
 }
 
 /**
+ * Suppression définitive d’une ligne de saisie + rapport Discord « Erreur de saisie » (comté / adjoint).
+ */
+export function canCorrectSaisieErrors(grade: string | null | undefined): boolean {
+  if (!grade) return false;
+  return COMTE_ADJOINT_GRADES.has(grade);
+}
+
+/**
  * Indique si le grade donne accès à la page Destruction.
  * Règle métier : à partir de Sheriff Deputy (inclus), donc tous les grades sheriff sauf Deputy.
  */

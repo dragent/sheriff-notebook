@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\SeizureCorrectionNotifyDto;
 use App\Dto\SeizureRecordCancelDto;
 use App\Dto\SeizureRecordCreateDto;
 use App\Dto\SeizureRecordUpdateDto;
@@ -11,10 +12,14 @@ use App\Entity\SeizureRecord;
 use App\Entity\SeizureRecordEvent;
 use App\Entity\User;
 use App\Repository\SeizureRecordRepository;
+use App\Security\Voter\SeizureCorrectionVoter;
 use App\Security\Voter\SeizureVoter;
+use App\Service\DiscordChannelNotifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -28,6 +33,8 @@ final class SeizureRecordController
         private readonly SeizureRecordRepository $repository,
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
+        private readonly DiscordChannelNotifier $discordChannelNotifier,
+        private readonly string $saisieCorrectionChannelId = '',
     ) {
     }
 
@@ -83,6 +90,55 @@ final class SeizureRecordController
         $this->entityManager->flush();
 
         return new JsonResponse($this->recordToArray($record), 201);
+    }
+
+    #[Route('/notify-corrections', name: 'api_saisies_notify_corrections', methods: ['POST'], priority: 10)]
+    #[IsGranted(SeizureCorrectionVoter::CORRECT, message: 'Accès réservé au Sheriff de comté et au Sheriff Adjoint.')]
+    public function notifyCorrections(
+        #[MapRequestPayload(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] SeizureCorrectionNotifyDto $dto,
+        #[CurrentUser] User $user,
+    ): JsonResponse {
+        if ('' === $this->saisieCorrectionChannelId) {
+            return new JsonResponse([
+                'error' => 'Canal Discord non configuré (DISCORD_SAISIE_CORRECTION_CHANNEL_ID).',
+            ], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        $actor = $user->getUsername() ?? '?';
+        $stamp = (new \DateTimeImmutable('now'))->format('d/m/Y H:i');
+        $body = trim($dto->message);
+        $content = "**Erreur de saisie**\n\n".$body."\n\n— ".$actor.' · '.$stamp;
+        if (\strlen($content) > 2000) {
+            $content = mb_substr($content, 0, 1997).'…';
+        }
+
+        $err = $this->discordChannelNotifier->sendMessage($this->saisieCorrectionChannelId, $content);
+        if (null !== $err) {
+            return new JsonResponse(['error' => $err], Response::HTTP_BAD_GATEWAY);
+        }
+
+        return new JsonResponse(['ok' => true]);
+    }
+
+    #[Route('/{id}', name: 'api_saisies_delete', methods: ['DELETE'])]
+    #[IsGranted(SeizureCorrectionVoter::CORRECT, message: 'Accès réservé au Sheriff de comté et au Sheriff Adjoint.')]
+    public function delete(string $id): JsonResponse|Response
+    {
+        try {
+            $uuid = \Symfony\Component\Uid\Uuid::fromString($id);
+        } catch (\Throwable) {
+            return new JsonResponse(['error' => 'Identifiant invalide.'], 400);
+        }
+
+        $record = $this->repository->find($uuid);
+        if (!$record instanceof SeizureRecord) {
+            return new JsonResponse(['error' => 'Saisie introuvable.'], 404);
+        }
+
+        $this->entityManager->remove($record);
+        $this->entityManager->flush();
+
+        return new Response('', Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/{id}', name: 'api_saisies_update', methods: ['PATCH'])]

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { createBackendJwt } from "@/lib/backendJwt";
-import { canAccessSaisiesPage } from "@/lib/sheriffAuth";
+import { canAccessSaisiesPage, canCorrectSaisieErrors } from "@/lib/sheriffAuth";
 import { ROUTES } from "@/lib/routes";
 import { redirectWithAccessDenied } from "@/lib/flashRedirect";
 import { getBackendBase } from "@/lib/proxyBackend";
@@ -256,6 +256,7 @@ export default async function SaisiesPage() {
           sheriffs={sheriffsResult.sheriffs}
           weaponCategories={weaponCategories}
           itemCategories={itemCategories}
+          canCorrectSaisieErrors={canCorrectSaisieErrors(me.grade ?? null)}
           initialRows={saisiesResult.data.map((r) => ({
             id: r.id,
             type: r.type,

@@ -12,6 +12,7 @@ parameters:
     discord_bot_token_default: ''
     discord_effectif_channel_id_default: '1491575814012276948'
     discord_planning_channel_id_default: ''
+    discord_saisie_correction_channel_id_default: '1478335119302590659'
     discord_recruitment_hierarchy_role_ids:
         - '1478333880925819014'
         - '1478334122404483215'
@@ -85,6 +86,10 @@ services:
         arguments:
             $planningLogChannelId: '%env(default:discord_planning_channel_id_default:DISCORD_PLANNING_CHANNEL_ID)%'
             $planningResetTimezone: '%env(default:planning_reset_timezone_default:PLANNING_RESET_TIMEZONE)%'
+
+    App\Controller\Api\SeizureRecordController:
+        arguments:
+            $saisieCorrectionChannelId: '%env(default:discord_saisie_correction_channel_id_default:DISCORD_SAISIE_CORRECTION_CHANNEL_ID)%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

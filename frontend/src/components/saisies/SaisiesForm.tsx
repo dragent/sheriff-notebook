@@ -73,9 +73,14 @@ type SaisiesFormProps = {
   weaponCategories: WeaponCategoryOption[];
   /** Items groupés par catégorie. */
   itemCategories: ItemCategoryOption[];
+  /** Sheriff de comté / Adjoint : suppression de ligne + rapport Discord « Erreur de saisie ». */
+  canCorrectSaisieErrors?: boolean;
   /** Saisies déjà en base (chargées au rendu de la page). */
   initialRows?: InitialRowInput[];
 };
+
+/** Identifiants renvoyés par le backend (UUID) — évite d’exposer « Supprimer » sur des lignes locales non persistées. */
+const PERSISTED_SAISIE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CELL_BASE =
   'border-b border-sheriff-gold/15 px-2.5 py-2 align-middle text-xs sm:text-sm text-sheriff-paper-muted';
@@ -128,7 +133,13 @@ function recordToRow(r: InitialRowInput): SaisieRow {
   };
 }
 
-export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initialRows }: SaisiesFormProps) {
+export function SaisiesForm({
+  sheriffs,
+  weaponCategories,
+  itemCategories,
+  canCorrectSaisieErrors = false,
+  initialRows,
+}: SaisiesFormProps) {
   const weaponNames = useMemo(
     () =>
       Array.from(
@@ -164,6 +175,9 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
   const cashTriggerRef = useRef<HTMLButtonElement>(null);
   const historyRef = useRef<HTMLElement>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [correctionNotifyBody, setCorrectionNotifyBody] = useState('');
+  const [correctionNotifySending, setCorrectionNotifySending] = useState(false);
+  const [correctionNotifyFeedback, setCorrectionNotifyFeedback] = useState<string | null>(null);
 
   /** Ferme le modal et rend le focus au bouton déclencheur. */
   const closeModal = useCallback(() => {
@@ -194,6 +208,12 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
     const t = setTimeout(() => setToastError(null), TOAST_DURATION_MS);
     return () => clearTimeout(t);
   }, [toastError]);
+
+  useEffect(() => {
+    if (!correctionNotifyFeedback) return;
+    const t = setTimeout(() => setCorrectionNotifyFeedback(null), 4000);
+    return () => clearTimeout(t);
+  }, [correctionNotifyFeedback]);
 
   const showToast = useCallback(() => {
     setToastVisible(true);
@@ -648,6 +668,56 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
     }
   }
 
+  async function deleteRowHard(row: SaisieRow) {
+    if (!canCorrectSaisieErrors || !PERSISTED_SAISIE_ID_RE.test(row.id)) return;
+    const ok = window.confirm(
+      `Supprimer définitivement cette ligne de saisie (${getRowLabel(row)}, ${row.date}) ? Cette action est irréversible.`
+    );
+    if (!ok) return;
+    setToastError(null);
+    setCorrectionNotifyFeedback(null);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/saisies/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setToastError(data?.error ?? `Erreur ${res.status}. Réessayez.`);
+        return;
+      }
+      setRows((current) => current.filter((r) => r.id !== row.id));
+      setCorrectionNotifyFeedback('Ligne supprimée.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function submitCorrectionDiscordReport() {
+    const msg = correctionNotifyBody.trim();
+    if (!msg) {
+      setCorrectionNotifyFeedback('Saisissez un résumé des corrections avant d’envoyer.');
+      return;
+    }
+    setCorrectionNotifySending(true);
+    setCorrectionNotifyFeedback(null);
+    setToastError(null);
+    try {
+      const res = await fetch('/api/saisies/notify-corrections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setCorrectionNotifyFeedback(data?.error ?? `Échec (${res.status}).`);
+        return;
+      }
+      setCorrectionNotifyBody('');
+      setCorrectionNotifyFeedback('Rapport « Erreur de saisie » publié sur Discord.');
+    } finally {
+      setCorrectionNotifySending(false);
+    }
+  }
+
   if (!mounted) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -833,7 +903,7 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                         ) : null}
                       </td>
                       <td className={`${CELL_BASE} py-1.5 text-right`}>
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
                           <button
                             type="button"
                             onClick={() => openEdit(row)}
@@ -850,6 +920,16 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
                           >
                             Annuler
                           </button>
+                          {canCorrectSaisieErrors && PERSISTED_SAISIE_ID_RE.test(row.id) ? (
+                            <button
+                              type="button"
+                              onClick={() => void deleteRowHard(row)}
+                              disabled={saving}
+                              className="sheriff-focus-ring rounded-md border border-red-500/45 bg-red-950/40 px-2 py-1 text-[11px] font-medium text-red-200/95 transition hover:bg-red-950/70 disabled:opacity-50"
+                            >
+                              Supprimer
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -864,6 +944,52 @@ export function SaisiesForm({ sheriffs, weaponCategories, itemCategories, initia
           </p>
         )}
       </section>
+
+      {canCorrectSaisieErrors ? (
+        <section
+          aria-label="Correction des saisies et rapport Discord"
+          className="sheriff-card rounded-lg border border-sheriff-sortie/35 bg-sheriff-charcoal/70 p-4 shadow-sm sm:p-5"
+        >
+          <h3 className="font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-sortie sm:text-sm">
+            Comté / Adjoint — corrections
+          </h3>
+          <p className="mt-1 text-[11px] leading-snug text-sheriff-paper-muted/90">
+            Réduisez une quantité via « Modifier », ou supprimez une ligne erronée sans passer par la page Destruction.
+            Une fois les saisies corrigées, décrivez ici ce qui a été rectifié : un message sera posté sur le canal bureau
+            avec le titre <span className="font-medium text-sheriff-paper">Erreur de saisie</span>.
+          </p>
+          <label htmlFor="saisie-correction-report" className="mt-3 mb-1 block text-xs font-medium text-sheriff-paper-muted">
+            Synthèse des corrections
+          </label>
+          <textarea
+            id="saisie-correction-report"
+            rows={4}
+            value={correctionNotifyBody}
+            onChange={(e) => setCorrectionNotifyBody(e.target.value)}
+            disabled={correctionNotifySending}
+            placeholder="Ex. : suppression doublon X, ajustement quantité arme Y…"
+            className="sheriff-focus-ring w-full rounded-md border border-sheriff-gold/25 bg-sheriff-charcoal/80 px-3 py-2 text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted/50 disabled:opacity-60"
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void submitCorrectionDiscordReport()}
+              disabled={correctionNotifySending}
+              className="sheriff-focus-ring rounded-md border border-sheriff-sortie/50 bg-sheriff-sortie-bg px-3 py-1.5 text-xs font-medium text-sheriff-sortie transition hover:bg-sheriff-sortie/20 disabled:opacity-60 sm:text-sm"
+            >
+              {correctionNotifySending ? 'Publication…' : 'Publier « Erreur de saisie » sur Discord'}
+            </button>
+            {correctionNotifyFeedback ? (
+              <span
+                className={`text-xs ${correctionNotifyFeedback.startsWith('Rapport') || correctionNotifyFeedback.startsWith('Ligne') ? 'text-emerald-400/90' : 'text-sheriff-sortie'}`}
+                role="status"
+              >
+                {correctionNotifyFeedback}
+              </span>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section aria-label="Total des dollares saisis">
         <div className="flex flex-col gap-3 text-sheriff-sortie sm:flex-row sm:items-end sm:justify-between">

@@ -111,4 +111,12 @@ final class GradeHierarchy
     {
         return null !== $grade && $grade->order() <= 2;
     }
+
+    /**
+     * Saisies: suppression d'une ligne en base et notification Discord des corrections (sans flux destruction).
+     */
+    public static function canCorrectSeizureErrors(?Grade $grade): bool
+    {
+        return null !== $grade && $grade->order() <= 1;
+    }
 }
