@@ -96,8 +96,6 @@ export function buildSaisieCorrectionDiscordBody(
   stocks: SaisieCorrectionStockSnapshot,
   maxLen = 1750
 ): string {
-  const intro =
-    "**Rapport automatique (session courante)**\n\nLes corrections ci-dessous ont été enregistrées depuis l’ouverture de cette page (suppression de ligne ou baisse de quantité par le comté / l’adjoint).\n\n";
   const stockBlock = formatStockBlock(stocks);
   let corrections: string;
   if (entries.length === 0) {
@@ -112,7 +110,7 @@ export function buildSaisieCorrectionDiscordBody(
       "\n\n**Corrections enregistrées**\n\n" +
       entries.map((e) => `• ${formatCorrectionLedgerLinePlain(e)}`).join("\n");
   }
-  let out = intro + stockBlock + corrections;
+  let out = stockBlock + corrections;
   if (out.length > maxLen) {
     out = out.slice(0, Math.max(0, maxLen - 40)) + "\n\n… _(message tronqué — trop long pour Discord)_";
   }
