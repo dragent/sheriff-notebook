@@ -327,7 +327,7 @@ export function SaisiesForm({
   const currentMonthPrefix = useMemo(() => todayIso.slice(0, 7), [todayIso]);
 
   const [rows, setRows] = useState<SaisieRow[]>(() =>
-    initialRows?.length ? initialRows.map((r) => recordToRow(r, [])) : []
+    initialRows?.length ? initialRows.map((r) => recordToRow(r, sheriffs)) : []
   );
   const historyRows = useMemo(
     () => rows.filter((r) => typeof r.date === 'string' && r.date.startsWith(currentMonthPrefix)),
@@ -661,21 +661,24 @@ export function SaisiesForm({
         setToastError(data?.error ?? `Erreur ${res.status}. Réessayez.`);
         return;
       }
-      const savedRow = recordToRow({
-        id: (data.id ?? (isEdit ? editingRowId! : row.id)) as string,
-        type: (data.type === 'item' || data.type === 'weapon' || data.type === 'cash' ? data.type : form.type) as SaisieType,
-        date: data.date ?? row.date,
-        sheriff: data.sheriff ?? row.sheriff,
-        quantity: typeof data.quantity === 'number' ? data.quantity : (row.quantity as number),
-        itemName: data.itemName ?? undefined,
-        weaponModel: data.weaponModel ?? undefined,
-        serialNumber: data.serialNumber ?? undefined,
-        possessedBy: data.possessedBy ?? undefined,
-        notes: data.notes ?? undefined,
-        cancelledAt: data.cancelledAt ?? undefined,
-        cancelledReason: data.cancelledReason ?? undefined,
-        cancelledBy: data.cancelledBy ?? undefined,
-      });
+      const savedRow = recordToRow(
+        {
+          id: (data.id ?? (isEdit ? editingRowId! : row.id)) as string,
+          type: (data.type === 'item' || data.type === 'weapon' || data.type === 'cash' ? data.type : form.type) as SaisieType,
+          date: data.date ?? row.date,
+          sheriff: data.sheriff ?? row.sheriff,
+          quantity: typeof data.quantity === 'number' ? data.quantity : (row.quantity as number),
+          itemName: data.itemName ?? undefined,
+          weaponModel: data.weaponModel ?? undefined,
+          serialNumber: data.serialNumber ?? undefined,
+          possessedBy: data.possessedBy ?? undefined,
+          notes: data.notes ?? undefined,
+          cancelledAt: data.cancelledAt ?? undefined,
+          cancelledReason: data.cancelledReason ?? undefined,
+          cancelledBy: data.cancelledBy ?? undefined,
+        },
+        sheriffs
+      );
       if (isEdit) {
         setRows((current) => current.map((r) => (r.id === savedRow.id ? { ...r, ...savedRow } : r)));
       } else {
