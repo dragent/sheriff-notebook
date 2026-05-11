@@ -10,6 +10,12 @@ import {
   SHERIFF_FIELD_DENSE as INPUT_BASE,
   SHERIFF_NATIVE_SELECT_DENSE as SELECT_BASE,
 } from "@/lib/formFieldClasses";
+import {
+  buildSaisieCorrectionDiscordBody,
+  describeSaisieRowForLedger,
+  formatCorrectionLedgerSummaryUi,
+  type CorrectionLedgerEntry,
+} from "@/lib/saisieCorrectionReport";
 
 const TOAST_DURATION_MS = 2500;
 const INVENTORY_MAX_ITEMS = 50;
@@ -179,7 +185,8 @@ export function SaisiesForm({
   const cashTriggerRef = useRef<HTMLButtonElement>(null);
   const historyRef = useRef<HTMLElement>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [correctionNotifyBody, setCorrectionNotifyBody] = useState('');
+  const [correctionLedger, setCorrectionLedger] = useState<CorrectionLedgerEntry[]>([]);
+  const [correctionStocksModalOpen, setCorrectionStocksModalOpen] = useState(false);
   const [correctionNotifySending, setCorrectionNotifySending] = useState(false);
   const [correctionNotifyFeedback, setCorrectionNotifyFeedback] = useState<string | null>(null);
 
@@ -560,6 +567,9 @@ export function SaisiesForm({
     e.preventDefault();
     const row = buildRowFromForm();
     if (!row) return;
+    const editingIdAtStart = editingRowId;
+    const prevRowForLedger =
+      editingIdAtStart !== null ? rows.find((r) => r.id === editingIdAtStart) ?? null : null;
     setToastError(null);
     setSaving(true);
     try {
@@ -637,6 +647,24 @@ export function SaisiesForm({
       } else {
         setRows((current) => [...current, savedRow]);
       }
+      if (isEdit && canCorrectSaisieErrors && includeQuantity && prevRowForLedger) {
+        const pq = prevRowForLedger.quantity;
+        const sq = savedRow.quantity;
+        if (typeof pq === 'number' && typeof sq === 'number' && sq < pq) {
+          setCorrectionLedger((prev) => [
+            ...prev,
+            {
+              key: createId('ledger'),
+              action: 'qty_down',
+              kind: savedRow.kind,
+              label: describeSaisieRowForLedger(savedRow),
+              date: savedRow.date,
+              fromQty: pq,
+              toQty: sq,
+            },
+          ]);
+        }
+      }
       showToast();
       if (!isEdit && addAnother) {
         resetFormKeepingDateSheriff();
@@ -713,16 +741,26 @@ export function SaisiesForm({
         return;
       }
       setRows((current) => current.filter((r) => r.id !== row.id));
-      setCorrectionNotifyFeedback('Ligne supprimée.');
+      setCorrectionLedger((prev) => [
+        ...prev,
+        {
+          key: createId('ledger'),
+          action: 'delete',
+          kind: row.kind,
+          label: describeSaisieRowForLedger(row),
+          quantity: typeof row.quantity === 'number' ? row.quantity : 0,
+          date: row.date,
+        },
+      ]);
     } finally {
       setSaving(false);
     }
   }
 
-  async function submitCorrectionDiscordReport() {
-    const msg = correctionNotifyBody.trim();
+  async function submitCorrectionDiscordReport(message: string) {
+    const msg = message.trim();
     if (!msg) {
-      setCorrectionNotifyFeedback('Saisissez un résumé des corrections avant d’envoyer.');
+      setCorrectionNotifyFeedback('Message vide.');
       return;
     }
     setCorrectionNotifySending(true);
@@ -739,11 +777,23 @@ export function SaisiesForm({
         setCorrectionNotifyFeedback(data?.error ?? `Échec (${res.status}).`);
         return;
       }
-      setCorrectionNotifyBody('');
+      setCorrectionLedger([]);
+      setCorrectionStocksModalOpen(false);
       setCorrectionNotifyFeedback('Rapport « Erreur de saisie » publié sur Discord.');
     } finally {
       setCorrectionNotifySending(false);
     }
+  }
+
+  function sendCorrectionReportFromModal() {
+    const snapshot = {
+      weaponLines: weaponInventory.map(([name, qty]) => ({ name, qty })),
+      itemLines: itemInventory.map(([name, qty]) => ({ name, qty })),
+      cashTotal: totalCashDollars,
+      cashLineCount: cashEntryCount,
+    };
+    const body = buildSaisieCorrectionDiscordBody(correctionLedger, snapshot);
+    void submitCorrectionDiscordReport(body);
   }
 
   if (!mounted) {
@@ -982,35 +1032,32 @@ export function SaisiesForm({
             Comté / Adjoint — corrections
           </h3>
           <p className="mt-1 text-[11px] leading-snug text-sheriff-paper-muted/90">
-            Changez la quantité via « Modifier » (comme la suppression de ligne, réservé au comté et à l’adjoint), sans
-            passer par la page Destruction. Une fois les saisies corrigées, décrivez ici ce qui a été rectifié : un
-            message sera posté sur le canal bureau avec le titre{' '}
+            Modifiez les quantités ou supprimez des lignes depuis l’historique. Chaque action est mémorisée pour cette
+            page : ouvrez le rapport pour voir les <strong className="text-sheriff-paper">stocks actuels</strong> et la
+            liste des suppressions / retraits de quantité, puis publiez sur Discord sous le titre{' '}
             <span className="font-medium text-sheriff-paper">Erreur de saisie</span>.
           </p>
-          <label htmlFor="saisie-correction-report" className="mt-3 mb-1 block text-xs font-medium text-sheriff-paper-muted">
-            Synthèse des corrections
-          </label>
-          <textarea
-            id="saisie-correction-report"
-            rows={4}
-            value={correctionNotifyBody}
-            onChange={(e) => setCorrectionNotifyBody(e.target.value)}
-            disabled={correctionNotifySending}
-            placeholder="Ex. : suppression doublon X, ajustement quantité arme Y…"
-            className="sheriff-focus-ring w-full rounded-md border border-sheriff-gold/25 bg-sheriff-charcoal/80 px-3 py-2 text-sm text-sheriff-paper placeholder:text-sheriff-paper-muted/50 disabled:opacity-60"
-          />
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => void submitCorrectionDiscordReport()}
+              onClick={() => {
+                setCorrectionNotifyFeedback(null);
+                setCorrectionStocksModalOpen(true);
+              }}
               disabled={correctionNotifySending}
               className="sheriff-focus-ring rounded-md border border-sheriff-sortie/50 bg-sheriff-sortie-bg px-3 py-1.5 text-xs font-medium text-sheriff-sortie transition hover:bg-sheriff-sortie/20 disabled:opacity-60 sm:text-sm"
             >
-              {correctionNotifySending ? 'Publication…' : 'Publier « Erreur de saisie » sur Discord'}
+              Voir les stocks et le rapport Discord
             </button>
+            {correctionLedger.length > 0 ? (
+              <span className="text-[11px] text-sheriff-paper-muted">
+                {correctionLedger.length} correction{correctionLedger.length > 1 ? 's' : ''} suivie
+                {correctionLedger.length > 1 ? 's' : ''} sur cette session
+              </span>
+            ) : null}
             {correctionNotifyFeedback ? (
               <span
-                className={`text-xs ${correctionNotifyFeedback.startsWith('Rapport') || correctionNotifyFeedback.startsWith('Ligne') ? 'text-emerald-400/90' : 'text-sheriff-sortie'}`}
+                className={`text-xs ${correctionNotifyFeedback.startsWith('Rapport') ? 'text-emerald-400/90' : 'text-sheriff-sortie'}`}
                 role="status"
               >
                 {correctionNotifyFeedback}
@@ -1704,6 +1751,148 @@ export function SaisiesForm({
           </div>
         </div>
       )}
+
+      {correctionStocksModalOpen ? (
+        <div
+          className="fixed inset-0 z-70 flex items-center justify-center bg-black/65 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="correction-stocks-modal-title"
+        >
+          <div className="sheriff-card flex max-h-[min(92vh,760px)] w-full max-w-2xl flex-col rounded-lg border border-sheriff-sortie/45 bg-sheriff-wood p-4 shadow-xl sm:p-5">
+            <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
+              <div>
+                <h2
+                  id="correction-stocks-modal-title"
+                  className="font-heading text-base font-semibold text-sheriff-sortie sm:text-lg"
+                >
+                  Stocks saisis et rapport Discord
+                </h2>
+                <p className="mt-1 text-[11px] text-sheriff-paper-muted">
+                  Inventaires actuels (hors lignes annulées), puis liste des suppressions et des baisses de quantité
+                  enregistrées depuis l’ouverture de cette page.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCorrectionStocksModalOpen(false);
+                  setCorrectionNotifyFeedback(null);
+                }}
+                className="sheriff-focus-ring rounded-full p-1.5 text-sheriff-paper-muted transition hover:bg-sheriff-charcoal/60 hover:text-sheriff-paper"
+                aria-label="Fermer"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                  <path d="M6 6l12 12M6 18L18 6" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-md border border-sheriff-gold/15 bg-sheriff-charcoal/60 p-3 text-xs text-sheriff-paper sm:text-sm">
+              <div>
+                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold">
+                  Armes (agrégé)
+                </h3>
+                {weaponInventory.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-sheriff-paper-muted">Aucune.</p>
+                ) : (
+                  <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto font-stamp text-[11px] leading-snug">
+                    {weaponInventory.map(([name, qty]) => (
+                      <li key={name}>
+                        <span className="text-sheriff-paper">{name}</span>{' '}
+                        <span className="tabular-nums text-sheriff-gold">× {qty}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold">
+                  Items (agrégé)
+                </h3>
+                {itemInventory.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-sheriff-paper-muted">Aucun.</p>
+                ) : (
+                  <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto font-stamp text-[11px] leading-snug">
+                    {itemInventory.map(([name, qty]) => (
+                      <li key={name}>
+                        <span className="text-sheriff-paper">{name}</span>{' '}
+                        <span className="tabular-nums text-sheriff-gold">× {qty}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-sortie">
+                  Dollares (lignes cash)
+                </h3>
+                <p className="mt-1 font-heading text-sm tabular-nums text-sheriff-sortie">
+                  Total saisi : ${formatSeizedDollars(totalCashDollars)} — {cashEntryCount} ligne
+                  {cashEntryCount > 1 ? 's' : ''}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold">
+                  Corrections suivies (cette session)
+                </h3>
+                {correctionLedger.length === 0 ? (
+                  <p className="mt-1 text-[11px] italic text-sheriff-paper-muted">
+                    Aucune suppression ni baisse de quantité enregistrée depuis le chargement de la page.
+                  </p>
+                ) : (
+                  <ul className="mt-1 list-inside list-disc space-y-1 text-[11px] leading-snug text-sheriff-paper-muted">
+                    {correctionLedger.map((e) => (
+                      <li key={e.key}>{formatCorrectionLedgerSummaryUi(e)}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-paper-muted">
+                  Texte qui sera envoyé (sans le titre Discord)
+                </h3>
+                <pre className="mt-1 max-h-36 overflow-y-auto whitespace-pre-wrap rounded border border-sheriff-gold/20 bg-black/25 p-2 font-mono text-[10px] leading-relaxed text-sheriff-paper/90">
+                  {buildSaisieCorrectionDiscordBody(correctionLedger, {
+                    weaponLines: weaponInventory.map(([name, qty]) => ({ name, qty })),
+                    itemLines: itemInventory.map(([name, qty]) => ({ name, qty })),
+                    cashTotal: totalCashDollars,
+                    cashLineCount: cashEntryCount,
+                  })}
+                </pre>
+              </div>
+            </div>
+
+            {correctionNotifyFeedback && !correctionNotifyFeedback.startsWith('Rapport') ? (
+              <p role="alert" className="mt-2 shrink-0 text-xs text-sheriff-sortie">
+                {correctionNotifyFeedback}
+              </p>
+            ) : null}
+
+            <div className="mt-3 flex shrink-0 flex-wrap justify-end gap-2 border-t border-sheriff-gold/15 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setCorrectionStocksModalOpen(false);
+                  setCorrectionNotifyFeedback(null);
+                }}
+                disabled={correctionNotifySending}
+                className="sheriff-focus-ring sheriff-btn-secondary rounded-md px-4 py-1.5 text-xs font-medium disabled:opacity-60 sm:text-sm"
+              >
+                Fermer
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendCorrectionReportFromModal()}
+                disabled={correctionNotifySending}
+                className="sheriff-focus-ring rounded-md border border-sheriff-sortie/50 bg-sheriff-sortie-bg px-4 py-1.5 text-xs font-medium text-sheriff-sortie transition hover:bg-sheriff-sortie/20 disabled:opacity-60 sm:text-sm"
+              >
+                {correctionNotifySending ? 'Envoi…' : 'Publier sur Discord'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
