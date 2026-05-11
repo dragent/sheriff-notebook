@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Security\Voter\ReferenceVoter;
 use App\Service\DiscordChannelNotifier;
+use App\Service\DiscordGuildMemberResolver;
 use App\Service\EffectifMessageBuilder;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,6 +26,7 @@ final class DiscordEffectifController
         private readonly UserRepository $userRepository,
         private readonly EffectifMessageBuilder $messageBuilder,
         private readonly DiscordChannelNotifier $channelNotifier,
+        private readonly DiscordGuildMemberResolver $discordGuildMemberResolver,
         private readonly ClockInterface $clock,
         private readonly string $effectifChannelId = '',
     ) {
@@ -110,6 +112,12 @@ final class DiscordEffectifController
             return strcasecmp($a->getUsername(), $b->getUsername());
         });
 
+        $discordIds = array_values(array_unique(array_map(
+            static fn (User $u): string => $u->getDiscordId(),
+            $candidates,
+        )));
+        $displayByDiscordId = $this->discordGuildMemberResolver->resolveDisplayNamesByDiscordIds($discordIds);
+
         $sheriffs = [];
         foreach ($candidates as $u) {
             $grade = $u->getGrade();
@@ -118,8 +126,10 @@ final class DiscordEffectifController
             }
             $badge = $this->getBadgeForUser($u);
             $telegram = $this->getTelegramForUser($u);
+            $discordId = $u->getDiscordId();
+            $displayName = $displayByDiscordId[$discordId] ?? $u->getUsername();
             $sheriffs[] = [
-                'username' => $u->getUsername(),
+                'username' => $displayName,
                 'grade' => $grade,
                 'badge' => $badge,
                 'telegram' => $telegram,

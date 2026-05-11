@@ -287,6 +287,75 @@ final class DiscordGuildMemberResolver
         }));
     }
 
+    /**
+     * Resolves display names (guild nick, else global username) for the given Discord user ids.
+     * Paginates GET /guilds/{guild}/members until every id is found or the list ends.
+     *
+     * @param list<string> $discordUserIds
+     *
+     * @return array<string, string> discord_id => display name
+     */
+    public function resolveDisplayNamesByDiscordIds(array $discordUserIds): array
+    {
+        if ('' === $this->guildId || '' === $this->botToken) {
+            return [];
+        }
+
+        $wanted = [];
+        foreach ($discordUserIds as $rawId) {
+            $id = trim((string) $rawId);
+            if ('' !== $id) {
+                $wanted[$id] = true;
+            }
+        }
+        if ([] === $wanted) {
+            return [];
+        }
+
+        $found = [];
+        $after = '0';
+        while (\count($found) < \count($wanted)) {
+            $url = self::API_BASE.'/guilds/'.$this->guildId.'/members?limit=1000&after='.$after;
+            $json = $this->fetch($url);
+            if (null === $json) {
+                break;
+            }
+            $data = json_decode($json, true);
+            if (!\is_array($data) || isset($data['code'], $data['message'])) {
+                break;
+            }
+            if ([] === $data) {
+                break;
+            }
+            $lastId = $after;
+            foreach ($data as $member) {
+                if (!\is_array($member) || !isset($member['user']['id'])) {
+                    continue;
+                }
+                $user = $member['user'];
+                $discordId = (string) $user['id'];
+                $lastId = $discordId;
+                if (!isset($wanted[$discordId])) {
+                    continue;
+                }
+                $display = isset($user['username']) && \is_string($user['username']) ? $user['username'] : $discordId;
+                if (isset($member['nick']) && \is_string($member['nick']) && '' !== trim($member['nick'])) {
+                    $display = trim($member['nick']);
+                }
+                $found[$discordId] = $display;
+                if (\count($found) >= \count($wanted)) {
+                    break 2;
+                }
+            }
+            $after = $lastId;
+            if (\count($data) < 1000) {
+                break;
+            }
+        }
+
+        return $found;
+    }
+
     public function getServerDisplayName(string $discordUserId): ?string
     {
         if ('' === $discordUserId || '' === $this->guildId || '' === $this->botToken) {

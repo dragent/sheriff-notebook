@@ -187,6 +187,62 @@ final class DiscordGuildMemberResolverTest extends TestCase
         self::assertStringContainsString('Maréchal', $error);
     }
 
+    public function testResolveDisplayNamesByDiscordIdsReturnsEmptyWhenConfigMissing(): void
+    {
+        $resolver = new DiscordGuildMemberResolver(
+            new MockHttpClient([], 'https://discord.com'),
+            guildId: '',
+            botToken: '',
+        );
+
+        self::assertSame([], $resolver->resolveDisplayNamesByDiscordIds(['1', '2']));
+    }
+
+    public function testResolveDisplayNamesByDiscordIdsUsesNickAndStopsEarly(): void
+    {
+        $page = [
+            [
+                'user' => ['id' => '10', 'username' => 'global_a'],
+                'nick' => 'RP Name A',
+            ],
+            [
+                'user' => ['id' => '20', 'username' => 'global_b'],
+            ],
+        ];
+        $client = new MockHttpClient([
+            new MockResponse((string) json_encode($page)),
+        ], 'https://discord.com');
+
+        $resolver = $this->makeResolver($client);
+        $map = $resolver->resolveDisplayNamesByDiscordIds(['10', '20']);
+
+        self::assertSame(['10' => 'RP Name A', '20' => 'global_b'], $map);
+        self::assertSame(1, $client->getRequestsCount());
+    }
+
+    public function testResolveDisplayNamesByDiscordIdsFetchesSecondPageWhenNeeded(): void
+    {
+        $page1 = [];
+        for ($i = 0; $i < 1000; ++$i) {
+            $page1[] = ['user' => ['id' => (string) (10_000 + $i), 'username' => 'fill_'.$i]];
+        }
+        $client = new MockHttpClient([
+            new MockResponse((string) json_encode($page1)),
+            new MockResponse((string) json_encode([
+                [
+                    'user' => ['id' => '2', 'username' => 'two_global'],
+                    'nick' => 'Two Nick',
+                ],
+            ])),
+        ], 'https://discord.com');
+
+        $resolver = $this->makeResolver($client);
+        $map = $resolver->resolveDisplayNamesByDiscordIds(['2']);
+
+        self::assertSame(['2' => 'Two Nick'], $map);
+        self::assertSame(2, $client->getRequestsCount());
+    }
+
     public function testGetRecruitmentExcludedRoleIdsIncludesHardcodedHierarchy(): void
     {
         $client = new MockHttpClient([], 'https://discord.com');
