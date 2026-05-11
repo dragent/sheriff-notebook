@@ -8,6 +8,7 @@ use App\Domain\Grade;
 use App\Domain\GradeHierarchy;
 use App\Entity\User;
 use App\Message\Discord\SetSheriffRoleMessage;
+use App\Message\Discord\SheriffRecruitmentWelcomeDmMessage;
 use App\Repository\UserRepository;
 use App\Service\DiscordGuildMemberResolver;
 use App\Service\UserServiceRecordProvisioner;
@@ -96,6 +97,7 @@ final class UserController
         }
 
         $previousGrade = $user instanceof User ? Grade::tryFromLabel($user->getGrade()) : null;
+        $recruitedAtBeforePatch = $user->getRecruitedAt();
         $actorEntity = $this->security->getUser();
         $actor = $actorEntity instanceof User ? Grade::tryFromLabel($actorEntity->getGrade()) : null;
 
@@ -148,6 +150,9 @@ final class UserController
                     $newIsSheriff ? $newGrade : null,
                 ));
                 $discordRoleQueued = true;
+            }
+            if ($newIsSheriff && null === $previousGrade && null === $recruitedAtBeforePatch) {
+                $this->messageBus->dispatch(new SheriffRecruitmentWelcomeDmMessage($user->getDiscordId()));
             }
         }
 

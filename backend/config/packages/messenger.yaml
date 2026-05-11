@@ -6,3 +6,4 @@ framework:
         routing:
             App\Message\Discord\SetSheriffRoleMessage: app
             App\Message\Discord\PostChannelMessage: app
+            App\Message\Discord\SheriffRecruitmentWelcomeDmMessage: app
