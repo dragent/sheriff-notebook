@@ -216,6 +216,8 @@ export function SaisiesForm({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [correctionLedger, setCorrectionLedger] = useState<CorrectionLedgerEntry[]>([]);
   const [correctionStocksModalOpen, setCorrectionStocksModalOpen] = useState(false);
+  /** Draft quantities in the correction modal (persisted rows only). */
+  const [correctionQtyInputs, setCorrectionQtyInputs] = useState<Record<string, string>>({});
   const [correctionNotifySending, setCorrectionNotifySending] = useState(false);
   const [correctionNotifyFeedback, setCorrectionNotifyFeedback] = useState<string | null>(null);
 
@@ -329,6 +331,32 @@ export function SaisiesForm({
   const [rows, setRows] = useState<SaisieRow[]>(() =>
     initialRows?.length ? initialRows.map((r) => recordToRow(r, sheriffs)) : []
   );
+
+  const correctableRowsSorted = useMemo(
+    () =>
+      rows
+        .filter((r) => !r.cancelledAt && PERSISTED_SAISIE_ID_RE.test(r.id))
+        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
+    [rows]
+  );
+
+  const correctionModalOpenedRef = useRef(false);
+  useEffect(() => {
+    if (correctionStocksModalOpen) {
+      if (!correctionModalOpenedRef.current) {
+        const initial: Record<string, string> = {};
+        for (const r of rows) {
+          if (r.cancelledAt || !PERSISTED_SAISIE_ID_RE.test(r.id)) continue;
+          if (typeof r.quantity === 'number') initial[r.id] = String(r.quantity);
+        }
+        setCorrectionQtyInputs(initial);
+        correctionModalOpenedRef.current = true;
+      }
+    } else {
+      correctionModalOpenedRef.current = false;
+    }
+  }, [correctionStocksModalOpen, rows]);
+
   const historyRows = useMemo(
     () => rows.filter((r) => typeof r.date === 'string' && r.date.startsWith(currentMonthPrefix)),
     [rows, currentMonthPrefix]
@@ -778,6 +806,11 @@ export function SaisiesForm({
         return;
       }
       setRows((current) => current.filter((r) => r.id !== row.id));
+      setCorrectionQtyInputs((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
       setCorrectionLedger((prev) => [
         ...prev,
         {
@@ -787,6 +820,58 @@ export function SaisiesForm({
           label: describeSaisieRowForLedger(row),
           quantity: typeof row.quantity === 'number' ? row.quantity : 0,
           date: row.date,
+        },
+      ]);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function applyRowQuantityFromCorrectionModal(row: SaisieRow) {
+    if (!canCorrectSaisieErrors) return;
+    const cur = typeof row.quantity === 'number' ? row.quantity : 0;
+    const raw = (correctionQtyInputs[row.id] ?? String(cur)).replace(/\s/g, '');
+    const newQty = Number.parseInt(raw, 10);
+    if (Number.isNaN(newQty) || newQty < 1) {
+      setCorrectionNotifyFeedback('Indiquez une quantité entière ≥ 1.');
+      return;
+    }
+    if (newQty >= cur) {
+      setCorrectionNotifyFeedback('La nouvelle quantité doit être inférieure à la quantité actuelle.');
+      return;
+    }
+    setToastError(null);
+    setCorrectionNotifyFeedback(null);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/saisies/${encodeURIComponent(row.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: newQty }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        quantity?: number;
+      };
+      if (!res.ok) {
+        setCorrectionNotifyFeedback(data?.error ?? `Erreur ${res.status}.`);
+        return;
+      }
+      const updatedQty = typeof data.quantity === 'number' ? data.quantity : newQty;
+      setRows((current) =>
+        current.map((r) => (r.id === row.id ? { ...r, quantity: updatedQty } : r))
+      );
+      setCorrectionQtyInputs((prev) => ({ ...prev, [row.id]: String(updatedQty) }));
+      setCorrectionLedger((prev) => [
+        ...prev,
+        {
+          key: createId('ledger'),
+          action: 'qty_down',
+          kind: row.kind,
+          label: describeSaisieRowForLedger(row),
+          date: row.date,
+          fromQty: cur,
+          toQty: updatedQty,
         },
       ]);
     } finally {
@@ -823,6 +908,12 @@ export function SaisiesForm({
   }
 
   function sendCorrectionReportFromModal() {
+    if (correctionLedger.length === 0) {
+      setCorrectionNotifyFeedback(
+        'Effectuez au moins une suppression ou une baisse de quantité avant de publier sur Discord.'
+      );
+      return;
+    }
     const snapshot = {
       weaponLines: weaponInventory.map(([name, qty]) => ({ name, qty })),
       itemLines: itemInventory.map(([name, qty]) => ({ name, qty })),
@@ -914,8 +1005,29 @@ export function SaisiesForm({
             >
               + Saisie de dollares
             </button>
+            {canCorrectSaisieErrors ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCorrectionNotifyFeedback(null);
+                  setCorrectionStocksModalOpen(true);
+                }}
+                disabled={correctionNotifySending}
+                className="sheriff-focus-ring rounded-md border border-sheriff-sortie/50 bg-sheriff-sortie-bg px-3 py-1.5 text-xs font-medium text-sheriff-sortie transition hover:bg-sheriff-sortie/20 disabled:opacity-60 sm:text-sm"
+              >
+                Stocks et corrections
+              </button>
+            ) : null}
           </div>
         </div>
+        {canCorrectSaisieErrors && correctionNotifyFeedback && !correctionStocksModalOpen ? (
+          <p
+            className={`mt-3 text-xs ${correctionNotifyFeedback.includes('publié') ? 'text-emerald-400/90' : 'text-sheriff-sortie'}`}
+            role="status"
+          >
+            {correctionNotifyFeedback}
+          </p>
+        ) : null}
       </section>
 
       <section
@@ -1039,16 +1151,6 @@ export function SaisiesForm({
                           >
                             Annuler
                           </button>
-                          {canCorrectSaisieErrors && PERSISTED_SAISIE_ID_RE.test(row.id) ? (
-                            <button
-                              type="button"
-                              onClick={() => void deleteRowHard(row)}
-                              disabled={saving}
-                              className="sheriff-focus-ring rounded-md border border-red-500/45 bg-red-950/40 px-2 py-1 text-[11px] font-medium text-red-200/95 transition hover:bg-red-950/70 disabled:opacity-50"
-                            >
-                              Supprimer
-                            </button>
-                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -1063,50 +1165,6 @@ export function SaisiesForm({
           </p>
         )}
       </section>
-
-      {canCorrectSaisieErrors ? (
-        <section
-          aria-label="Correction des saisies et rapport Discord"
-          className="sheriff-card rounded-lg border border-sheriff-sortie/35 bg-sheriff-charcoal/70 p-4 shadow-sm sm:p-5"
-        >
-          <h3 className="font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-sortie sm:text-sm">
-            Comté / Adjoint — corrections
-          </h3>
-          <p className="mt-1 text-[11px] leading-snug text-sheriff-paper-muted/90">
-            Modifiez les quantités ou supprimez des lignes depuis l’historique. Chaque action est mémorisée pour cette
-            page : ouvrez le rapport pour voir les <strong className="text-sheriff-paper">stocks actuels</strong> et la
-            liste des suppressions / retraits de quantité, puis publiez sur Discord sous le titre{' '}
-            <span className="font-medium text-sheriff-paper">Erreur de saisie</span>.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setCorrectionNotifyFeedback(null);
-                setCorrectionStocksModalOpen(true);
-              }}
-              disabled={correctionNotifySending}
-              className="sheriff-focus-ring rounded-md border border-sheriff-sortie/50 bg-sheriff-sortie-bg px-3 py-1.5 text-xs font-medium text-sheriff-sortie transition hover:bg-sheriff-sortie/20 disabled:opacity-60 sm:text-sm"
-            >
-              Voir les stocks et le rapport Discord
-            </button>
-            {correctionLedger.length > 0 ? (
-              <span className="text-[11px] text-sheriff-paper-muted">
-                {correctionLedger.length} correction{correctionLedger.length > 1 ? 's' : ''} suivie
-                {correctionLedger.length > 1 ? 's' : ''} sur cette session
-              </span>
-            ) : null}
-            {correctionNotifyFeedback ? (
-              <span
-                className={`text-xs ${correctionNotifyFeedback.startsWith('Rapport') ? 'text-emerald-400/90' : 'text-sheriff-sortie'}`}
-                role="status"
-              >
-                {correctionNotifyFeedback}
-              </span>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
 
       <section aria-label="Total des dollares saisis">
         <div className="flex flex-col gap-3 text-sheriff-sortie sm:flex-row sm:items-end sm:justify-between">
@@ -1809,11 +1867,11 @@ export function SaisiesForm({
                   id="correction-stocks-modal-title"
                   className="font-heading text-base font-semibold text-sheriff-sortie sm:text-lg"
                 >
-                  Stocks saisis et rapport Discord
+                  Comté / adjoint — stocks et corrections
                 </h2>
                 <p className="mt-1 text-[11px] text-sheriff-paper-muted">
-                  Inventaires actuels (hors lignes annulées), puis liste des suppressions et des baisses de quantité
-                  enregistrées depuis l’ouverture de cette page.
+                  Consultez les totaux, réduisez une quantité ou supprimez une ligne, puis validez pour publier le rapport
+                  « Erreur de saisie » sur Discord (au moins une correction requise).
                 </p>
               </div>
               <button
@@ -1877,6 +1935,84 @@ export function SaisiesForm({
               </div>
               <div>
                 <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold">
+                  Corriger les lignes (base)
+                </h3>
+                {correctableRowsSorted.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-sheriff-paper-muted">
+                    Aucune ligne enregistrée en base à corriger (les brouillons locaux n’apparaissent pas ici).
+                  </p>
+                ) : (
+                  <div className="sheriff-table-scroll mt-2 max-h-56 overflow-auto rounded border border-sheriff-gold/15">
+                    <table className="w-full min-w-[560px] border-collapse text-left text-[10px] sm:text-[11px]">
+                      <thead>
+                        <tr className="border-b border-sheriff-gold/25 bg-sheriff-charcoal/90">
+                          <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Date</th>
+                          <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Type</th>
+                          <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Détail</th>
+                          <th className="px-2 py-1.5 text-right font-heading font-semibold text-sheriff-gold">Qté actuelle</th>
+                          <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Nouvelle qté</th>
+                          <th className="px-2 py-1.5 text-right font-heading font-semibold text-sheriff-gold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {correctableRowsSorted.map((row) => (
+                          <tr key={row.id} className="border-b border-sheriff-gold/10">
+                            <td className="px-2 py-1.5 font-stamp whitespace-nowrap text-sheriff-paper">{row.date}</td>
+                            <td className="px-2 py-1.5 text-sheriff-paper-muted">
+                              {row.kind === 'cash' ? 'cash' : row.kind}
+                            </td>
+                            <td className="max-w-[180px] truncate px-2 py-1.5 text-sheriff-paper" title={getRowLabel(row)}>
+                              {getRowLabel(row)}
+                            </td>
+                            <td className="px-2 py-1.5 text-right tabular-nums text-sheriff-gold">
+                              {row.kind === 'cash'
+                                ? formatCashQuantityForList(typeof row.quantity === 'number' ? row.quantity : 0)
+                                : typeof row.quantity === 'number'
+                                  ? row.quantity
+                                  : '—'}
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="number"
+                                min={1}
+                                value={correctionQtyInputs[row.id] ?? ''}
+                                onChange={(e) =>
+                                  setCorrectionQtyInputs((p) => ({ ...p, [row.id]: e.target.value }))
+                                }
+                                disabled={saving}
+                                className="sheriff-focus-ring w-full min-w-16 rounded border border-sheriff-gold/30 bg-sheriff-charcoal/80 px-1.5 py-1 text-[11px] tabular-nums text-sheriff-paper disabled:opacity-50"
+                                aria-label={`Nouvelle quantité pour ${getRowLabel(row)}`}
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 text-right">
+                              <div className="flex flex-wrap justify-end gap-1">
+                                <button
+                                  type="button"
+                                  disabled={saving}
+                                  onClick={() => void applyRowQuantityFromCorrectionModal(row)}
+                                  className="sheriff-focus-ring rounded border border-sheriff-gold/40 bg-sheriff-gold/10 px-2 py-0.5 text-[10px] font-medium text-sheriff-gold disabled:opacity-50"
+                                >
+                                  Appliquer
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={saving}
+                                  onClick={() => void deleteRowHard(row)}
+                                  className="sheriff-focus-ring rounded border border-red-500/45 bg-red-950/50 px-2 py-0.5 text-[10px] font-medium text-red-200 disabled:opacity-50"
+                                >
+                                  Supprimer
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              <div>
+                <h3 className="font-heading text-[11px] font-semibold uppercase tracking-wider text-sheriff-gold">
                   Corrections suivies (cette session)
                 </h3>
                 {correctionLedger.length === 0 ? (
@@ -1927,10 +2063,10 @@ export function SaisiesForm({
               <button
                 type="button"
                 onClick={() => void sendCorrectionReportFromModal()}
-                disabled={correctionNotifySending}
+                disabled={correctionNotifySending || correctionLedger.length === 0}
                 className="sheriff-focus-ring rounded-md border border-sheriff-sortie/50 bg-sheriff-sortie-bg px-4 py-1.5 text-xs font-medium text-sheriff-sortie transition hover:bg-sheriff-sortie/20 disabled:opacity-60 sm:text-sm"
               >
-                {correctionNotifySending ? 'Envoi…' : 'Publier sur Discord'}
+                {correctionNotifySending ? 'Envoi…' : 'Valider et publier sur Discord'}
               </button>
             </div>
           </div>
