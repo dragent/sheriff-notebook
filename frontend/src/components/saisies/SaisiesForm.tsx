@@ -794,14 +794,13 @@ export function SaisiesForm({
       `Supprimer définitivement cette ligne de saisie (${getRowLabel(row)}, ${row.date}) ? Cette action est irréversible.`
     );
     if (!ok) return;
-    setToastError(null);
     setCorrectionNotifyFeedback(null);
     setSaving(true);
     try {
       const res = await fetch(`/api/saisies/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setToastError(data?.error ?? `Erreur ${res.status}. Réessayez.`);
+        setCorrectionNotifyFeedback(data?.error ?? `Erreur ${res.status}. Réessayez.`);
         return;
       }
       setRows((current) => current.filter((r) => r.id !== row.id));
