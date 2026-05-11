@@ -8,6 +8,7 @@ use App\Dto\SeizureCorrectionNotifyDto;
 use App\Dto\SeizureRecordCancelDto;
 use App\Dto\SeizureRecordCreateDto;
 use App\Dto\SeizureRecordUpdateDto;
+use App\Dto\SeizureStockAdjustDto;
 use App\Entity\SeizureRecord;
 use App\Entity\SeizureRecordEvent;
 use App\Entity\User;
@@ -120,6 +121,106 @@ final class SeizureRecordController
         }
 
         return new JsonResponse(['ok' => true]);
+    }
+
+    #[Route('/stock-adjust', name: 'api_saisies_stock_adjust', methods: ['POST'], priority: 9)]
+    #[IsGranted(SeizureCorrectionVoter::CORRECT, message: 'Accès réservé au Sheriff de comté et au Sheriff Adjoint.')]
+    public function stockAdjust(
+        #[MapRequestPayload(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] SeizureStockAdjustDto $dto,
+    ): JsonResponse {
+        $key = trim($dto->key);
+        if ('' === $key) {
+            return new JsonResponse(['error' => 'Clé de stock invalide.'], 400);
+        }
+
+        $isCashLine = SeizureRecord::DESTRUCTION_LINE_KEY_CASH === $key;
+        $remove = (float) $dto->removeQuantity;
+        $remove = $isCashLine ? $remove : (float) (int) $remove;
+        if ($remove <= 0) {
+            return new JsonResponse(['error' => 'La quantité à retirer doit être > 0.'], 400);
+        }
+        $typeForValidation = $isCashLine ? SeizureRecord::TYPE_CASH : SeizureRecord::TYPE_ITEM;
+        $err = $this->validateQuantityForSeizureType($typeForValidation, $remove);
+        if (null !== $err) {
+            return new JsonResponse(['error' => $err], 400);
+        }
+
+        $beforeAgg = $this->repository->getSeizedQuantityByKey();
+        $before = $beforeAgg[$key] ?? 0;
+        if ($before <= 0) {
+            return new JsonResponse(['error' => 'Stock introuvable ou déjà à zéro.'], 404);
+        }
+        if ($remove > (float) $before + ($isCashLine ? 1.0e-6 : 0)) {
+            return new JsonResponse([
+                'error' => 'La quantité à retirer dépasse le stock disponible.',
+                'available' => $before,
+            ], 400);
+        }
+
+        if ($isCashLine) {
+            $seizures = $this->repository->findCashOrderedByDateAsc();
+        } else {
+            $pipe = strpos($key, '|');
+            if (false !== $pipe) {
+                $weaponModel = substr($key, 0, $pipe);
+                $serialNumber = substr($key, $pipe + 1);
+                $seizures = $this->repository->findByWeaponModelOrderedByDateAsc($weaponModel, $serialNumber);
+            } else {
+                $seizuresItem = $this->repository->findByItemNameOrderedByDateAsc($key);
+                $seizuresWeapon = $this->repository->findByWeaponModelOrderedByDateAsc($key, null);
+                $seizures = array_merge($seizuresItem, $seizuresWeapon);
+                usort($seizures, static function (SeizureRecord $a, SeizureRecord $b): int {
+                    $d = strcmp($a->getDate(), $b->getDate());
+                    if (0 !== $d) {
+                        return $d;
+                    }
+
+                    return $a->getCreatedAt() <=> $b->getCreatedAt();
+                });
+            }
+        }
+
+        $remaining = $remove;
+        foreach ($seizures as $seizure) {
+            if ($remaining <= ($isCashLine ? 1.0e-6 : 0)) {
+                break;
+            }
+            $stored = $seizure->getQuantity();
+            if ($isCashLine) {
+                $availableDollars = round($stored / 100.0, 2);
+                $takeDollars = min($availableDollars, $remaining);
+                $takeCents = (int) round($takeDollars * 100.0);
+                $newCents = $stored - $takeCents;
+                $remaining = round($remaining - $takeDollars, 2);
+                if ($newCents <= 0) {
+                    $this->entityManager->remove($seizure);
+                } else {
+                    $seizure->setQuantity($newCents);
+                }
+            } else {
+                $take = min($stored, (int) $remaining);
+                $newQty = $stored - $take;
+                $remaining -= $take;
+                if ($newQty <= 0) {
+                    $this->entityManager->remove($seizure);
+                } else {
+                    $seizure->setQuantity($newQty);
+                }
+            }
+        }
+
+        $this->entityManager->flush();
+
+        $afterAgg = $this->repository->getSeizedQuantityByKey();
+        $after = $afterAgg[$key] ?? 0;
+
+        return new JsonResponse([
+            'ok' => true,
+            'key' => $key,
+            'before' => $before,
+            'after' => $after,
+            'removed' => $remove,
+        ]);
     }
 
     #[Route('/{id}', name: 'api_saisies_delete', methods: ['DELETE'])]

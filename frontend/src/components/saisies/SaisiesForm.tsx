@@ -38,6 +38,27 @@ function formatCashQuantityForList(amount: number): string {
   return cashQtyDisplayIntl.format(amount);
 }
 
+function parseRemoveQuantityInput(raw: string, kind: SaisieType): number | null {
+  const trimmed = raw.trim().replace(/\u00a0/g, '').replace(/\s/g, '');
+  if (trimmed === '') return null;
+  const normalized = trimmed.replace(',', '.');
+  const n = Number(normalized);
+  if (!Number.isFinite(n)) return null;
+
+  if (kind === 'cash') {
+    const cents = Math.round(n * 100);
+    const back = cents / 100;
+    if (cents < 1) return null;
+    if (Math.abs(n - back) > 1e-6) return null;
+    return back;
+  }
+
+  if (n < 1) return null;
+  const whole = Math.round(n);
+  if (Math.abs(n - whole) > 1e-6) return null;
+  return whole;
+}
+
 /** Parse modal quantity: cash accepts `,` or `.` and up to 2 decimals; item/weapon must be a positive integer. */
 function parseSeizureQuantityInput(raw: string, type: SaisieType): number | null {
   const trimmed = raw.trim().replace(/\u00a0/g, '').replace(/\s/g, '');
@@ -116,9 +137,6 @@ type SaisiesFormProps = {
   /** Saisies déjà en base (chargées au rendu de la page). */
   initialRows?: InitialRowInput[];
 };
-
-/** Identifiants renvoyés par le backend (UUID) — évite d’exposer « Supprimer » sur des lignes locales non persistées. */
-const PERSISTED_SAISIE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CELL_BASE =
   'border-b border-sheriff-gold/15 px-2.5 py-2 align-middle text-xs sm:text-sm text-sheriff-paper-muted';
@@ -215,8 +233,8 @@ export function SaisiesForm({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [correctionLedger, setCorrectionLedger] = useState<CorrectionLedgerEntry[]>([]);
   const [correctionStocksModalOpen, setCorrectionStocksModalOpen] = useState(false);
-  /** Draft quantities in the correction modal (persisted rows only). */
-  const [correctionQtyInputs, setCorrectionQtyInputs] = useState<Record<string, string>>({});
+  /** Draft remove quantities in the correction modal (by stock key). */
+  const [correctionRemoveInputs, setCorrectionRemoveInputs] = useState<Record<string, string>>({});
   const [correctionNotifySending, setCorrectionNotifySending] = useState(false);
   const [correctionNotifyFeedback, setCorrectionNotifyFeedback] = useState<string | null>(null);
 
@@ -331,24 +349,11 @@ export function SaisiesForm({
     initialRows?.length ? initialRows.map((r) => recordToRow(r, sheriffs)) : []
   );
 
-  const correctableRowsSorted = useMemo(
-    () =>
-      rows
-        .filter((r) => !r.cancelledAt && PERSISTED_SAISIE_ID_RE.test(r.id))
-        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
-    [rows]
-  );
-
   const correctionModalOpenedRef = useRef(false);
   useEffect(() => {
     if (correctionStocksModalOpen) {
       if (!correctionModalOpenedRef.current) {
-        const initial: Record<string, string> = {};
-        for (const r of rows) {
-          if (r.cancelledAt || !PERSISTED_SAISIE_ID_RE.test(r.id)) continue;
-          if (typeof r.quantity === 'number') initial[r.id] = String(r.quantity);
-        }
-        setCorrectionQtyInputs(initial);
+        setCorrectionRemoveInputs({});
         correctionModalOpenedRef.current = true;
       }
     } else {
@@ -788,90 +793,79 @@ export function SaisiesForm({
     }
   }
 
-  async function deleteRowHard(row: SaisieRow) {
-    if (!canCorrectSaisieErrors || !PERSISTED_SAISIE_ID_RE.test(row.id)) return;
-    const ok = window.confirm(
-      `Supprimer définitivement cette ligne de saisie (${getRowLabel(row)}, ${row.date}) ? Cette action est irréversible.`
-    );
-    if (!ok) return;
-    setCorrectionNotifyFeedback(null);
-    setSaving(true);
+  async function reloadSaisiesFromApi() {
     try {
-      const res = await fetch(`/api/saisies/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setCorrectionNotifyFeedback(data?.error ?? `Erreur ${res.status}. Réessayez.`);
-        return;
-      }
-      setRows((current) => current.filter((r) => r.id !== row.id));
-      setCorrectionQtyInputs((prev) => {
-        const next = { ...prev };
-        delete next[row.id];
-        return next;
-      });
-      setCorrectionLedger((prev) => [
-        ...prev,
-        {
-          key: createId('ledger'),
-          action: 'delete',
-          kind: row.kind,
-          label: describeSaisieRowForLedger(row),
-          quantity: typeof row.quantity === 'number' ? row.quantity : 0,
-          date: row.date,
-        },
-      ]);
-    } finally {
-      setSaving(false);
+      const res = await fetch('/api/saisies', { cache: 'no-store' });
+      const json = (await res.json()) as { data?: InitialRowInput[]; error?: string };
+      const list = Array.isArray(json?.data) ? json.data : [];
+      setRows(list.map((r) => recordToRow(r, sheriffs)));
+    } catch {
+      // ignore: UI can still show old values until refresh
     }
   }
 
-  async function applyRowQuantityFromCorrectionModal(row: SaisieRow) {
-    if (!canCorrectSaisieErrors) return;
-    const cur = typeof row.quantity === 'number' ? row.quantity : 0;
-    const raw = (correctionQtyInputs[row.id] ?? String(cur)).replace(/\s/g, '');
-    const newQty = Number.parseInt(raw, 10);
-    if (Number.isNaN(newQty) || newQty < 1) {
-      setCorrectionNotifyFeedback('Indiquez une quantité entière ≥ 1.');
-      return;
+  type StockLine = { key: string; kind: SaisieType; label: string; qty: number };
+  const stockLines: StockLine[] = useMemo(() => {
+    const out: StockLine[] = [];
+    for (const [name, qty] of itemInventory) {
+      out.push({ key: name, kind: 'item', label: name, qty });
     }
-    if (newQty >= cur) {
-      setCorrectionNotifyFeedback('La nouvelle quantité doit être inférieure à la quantité actuelle.');
-      return;
+    for (const [model, qty] of weaponInventory) {
+      out.push({ key: model, kind: 'weapon', label: model, qty });
     }
-    setToastError(null);
+    if (totalCashDollars > 0) {
+      out.push({ key: '__cash_seizure__', kind: 'cash', label: 'Dollares', qty: totalCashDollars });
+    }
+    return out;
+  }, [itemInventory, weaponInventory, totalCashDollars]);
+
+  async function removeFromStock(line: StockLine, removeQty: number) {
     setCorrectionNotifyFeedback(null);
     setSaving(true);
     try {
-      const res = await fetch(`/api/saisies/${encodeURIComponent(row.id)}`, {
-        method: 'PATCH',
+      const res = await fetch('/api/saisies/stock-adjust', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: newQty }),
+        body: JSON.stringify({ key: line.key, removeQuantity: removeQty }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
-        quantity?: number;
+        before?: number;
+        after?: number;
       };
       if (!res.ok) {
         setCorrectionNotifyFeedback(data?.error ?? `Erreur ${res.status}.`);
         return;
       }
-      const updatedQty = typeof data.quantity === 'number' ? data.quantity : newQty;
-      setRows((current) =>
-        current.map((r) => (r.id === row.id ? { ...r, quantity: updatedQty } : r))
-      );
-      setCorrectionQtyInputs((prev) => ({ ...prev, [row.id]: String(updatedQty) }));
-      setCorrectionLedger((prev) => [
-        ...prev,
-        {
-          key: createId('ledger'),
-          action: 'qty_down',
-          kind: row.kind,
-          label: describeSaisieRowForLedger(row),
-          date: row.date,
-          fromQty: cur,
-          toQty: updatedQty,
-        },
-      ]);
+      const before = typeof data.before === 'number' ? data.before : line.qty;
+      const after = typeof data.after === 'number' ? data.after : Math.max(0, line.qty - removeQty);
+      if (after <= 0) {
+        setCorrectionLedger((prev) => [
+          ...prev,
+          {
+            key: createId('ledger'),
+            action: 'delete',
+            kind: line.kind,
+            label: line.label,
+            quantity: before,
+            date: todayIso,
+          },
+        ]);
+      } else {
+        setCorrectionLedger((prev) => [
+          ...prev,
+          {
+            key: createId('ledger'),
+            action: 'qty_down',
+            kind: line.kind,
+            label: line.label,
+            date: todayIso,
+            fromQty: before,
+            toQty: after,
+          },
+        ]);
+      }
+      await reloadSaisiesFromApi();
     } finally {
       setSaving(false);
     }
@@ -1864,7 +1858,7 @@ export function SaisiesForm({
                 id="correction-stocks-modal-title"
                 className="font-heading text-base font-semibold uppercase tracking-wider text-sheriff-gold sm:text-lg"
               >
-                Corriger les lignes (base)
+                Corriger les stocks actuels
               </h2>
               <button
                 type="button"
@@ -1882,51 +1876,46 @@ export function SaisiesForm({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-sheriff-gold/15 bg-sheriff-charcoal/60 p-3 text-xs text-sheriff-paper sm:text-sm">
-              {correctableRowsSorted.length === 0 ? (
+              {stockLines.length === 0 ? (
                 <p className="text-[11px] text-sheriff-paper-muted">
-                  Aucune ligne enregistrée en base à corriger (les brouillons locaux n’apparaissent pas ici).
+                  Aucun stock saisi actuellement.
                 </p>
               ) : (
                 <div className="sheriff-table-scroll max-h-[min(70vh,560px)] overflow-auto rounded border border-sheriff-gold/15">
                   <table className="w-full min-w-[560px] border-collapse text-left text-[10px] sm:text-[11px]">
                     <thead>
                       <tr className="border-b border-sheriff-gold/25 bg-sheriff-charcoal/90">
-                        <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Date</th>
                         <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Type</th>
                         <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Détail</th>
-                        <th className="px-2 py-1.5 text-right font-heading font-semibold text-sheriff-gold">Qté actuelle</th>
-                        <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Nouvelle qté</th>
+                        <th className="px-2 py-1.5 text-right font-heading font-semibold text-sheriff-gold">Stock actuel</th>
+                        <th className="px-2 py-1.5 font-heading font-semibold text-sheriff-gold">Retirer</th>
                         <th className="px-2 py-1.5 text-right font-heading font-semibold text-sheriff-gold">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {correctableRowsSorted.map((row) => (
-                        <tr key={row.id} className="border-b border-sheriff-gold/10">
-                          <td className="px-2 py-1.5 font-stamp whitespace-nowrap text-sheriff-paper">{row.date}</td>
+                      {stockLines.map((line) => (
+                        <tr key={`${line.kind}:${line.key}`} className="border-b border-sheriff-gold/10">
                           <td className="px-2 py-1.5 text-sheriff-paper-muted">
-                            {row.kind === 'cash' ? 'cash' : row.kind}
+                            {line.kind === 'cash' ? 'cash' : line.kind}
                           </td>
-                          <td className="max-w-[180px] truncate px-2 py-1.5 text-sheriff-paper" title={getRowLabel(row)}>
-                            {getRowLabel(row)}
+                          <td className="max-w-[240px] truncate px-2 py-1.5 text-sheriff-paper" title={line.label}>
+                            {line.label}
                           </td>
                           <td className="px-2 py-1.5 text-right tabular-nums text-sheriff-gold">
-                            {row.kind === 'cash'
-                              ? formatCashQuantityForList(typeof row.quantity === 'number' ? row.quantity : 0)
-                              : typeof row.quantity === 'number'
-                                ? row.quantity
-                                : '—'}
+                            {line.kind === 'cash' ? formatCashQuantityForList(line.qty) : line.qty}
                           </td>
                           <td className="px-2 py-1.5">
                             <input
-                              type="number"
-                              min={1}
-                              value={correctionQtyInputs[row.id] ?? ''}
+                              type="text"
+                              inputMode="decimal"
+                              value={correctionRemoveInputs[line.key] ?? ''}
                               onChange={(e) =>
-                                setCorrectionQtyInputs((p) => ({ ...p, [row.id]: e.target.value }))
+                                setCorrectionRemoveInputs((p) => ({ ...p, [line.key]: e.target.value }))
                               }
                               disabled={saving}
                               className="sheriff-focus-ring w-full min-w-16 rounded border border-sheriff-gold/30 bg-sheriff-charcoal/80 px-1.5 py-1 text-[11px] tabular-nums text-sheriff-paper disabled:opacity-50"
-                              aria-label={`Nouvelle quantité pour ${getRowLabel(row)}`}
+                              placeholder={line.kind === 'cash' ? 'ex: 12,50' : 'ex: 3'}
+                              aria-label={`Quantité à retirer pour ${line.label}`}
                             />
                           </td>
                           <td className="px-2 py-1.5 text-right">
@@ -1934,15 +1923,25 @@ export function SaisiesForm({
                               <button
                                 type="button"
                                 disabled={saving}
-                                onClick={() => void applyRowQuantityFromCorrectionModal(row)}
+                                onClick={() => {
+                                  const parsed = parseRemoveQuantityInput(correctionRemoveInputs[line.key] ?? '', line.kind);
+                                  if (parsed === null) {
+                                    setCorrectionNotifyFeedback(line.kind === 'cash'
+                                      ? 'Montant invalide (max 2 décimales, min 0,01).'
+                                      : 'Quantité invalide (entier ≥ 1).'
+                                    );
+                                    return;
+                                  }
+                                  void removeFromStock(line, parsed);
+                                }}
                                 className="sheriff-focus-ring rounded border border-sheriff-gold/40 bg-sheriff-gold/10 px-2 py-0.5 text-[10px] font-medium text-sheriff-gold disabled:opacity-50"
                               >
-                                Appliquer
+                                Retirer
                               </button>
                               <button
                                 type="button"
                                 disabled={saving}
-                                onClick={() => void deleteRowHard(row)}
+                                onClick={() => void removeFromStock(line, line.qty)}
                                 className="sheriff-focus-ring rounded border border-red-500/45 bg-red-950/50 px-2 py-0.5 text-[10px] font-medium text-red-200 disabled:opacity-50"
                               >
                                 Supprimer
