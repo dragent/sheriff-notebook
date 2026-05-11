@@ -74,6 +74,11 @@ services:
             $botToken: '%env(default:discord_bot_token_default:DISCORD_BOT_TOKEN)%'
             $logger: '@monolog.logger.discord'
 
+    App\Service\DiscordDirectMessageNotifier:
+        arguments:
+            $botToken: '%env(default:discord_bot_token_default:DISCORD_BOT_TOKEN)%'
+            $logger: '@monolog.logger.discord'
+
     App\Controller\Api\CountyReferenceController:
         arguments:
             $logger: '@monolog.logger.business'
