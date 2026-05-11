@@ -30,6 +30,7 @@ This document describes the Next.js API routes that proxy to the Symfony backend
 | `/api/saisies/[id]` | PATCH | `PATCH /api/saisies/{id}` | Yes | Update a seizure (no type change; 409 if already cancelled; **quantity** change only for Sheriff de comté / Adjoint — others get 403) |
 | `/api/saisies/[id]` | DELETE | `DELETE /api/saisies/{id}` | Yes | Hard-delete a seizure line (Sheriff de comté / Adjoint only; 204 empty body) |
 | `/api/saisies/[id]/cancel` | POST | `POST /api/saisies/{id}/cancel` | Yes | Cancel a seizure with a reason (audit trail) |
+| `/api/saisies/stock-adjust` | POST | `POST /api/saisies/stock-adjust` | Yes | Adjust **current aggregated stock** (FIFO) for a key (Sheriff de comté / Adjoint only): `{ key, removeQuantity }` |
 | `/api/saisies/notify-corrections` | POST | `POST /api/saisies/notify-corrections` | Yes | Post a summary to Discord (`message` JSON) with title « Erreur de saisie » (Sheriff de comté / Adjoint only) |
 | `/api/services/[id]` | PATCH | `PATCH /api/services/{id}` | Yes | Update a service (planning, weapon, etc.) |
 | `/api/services/planning/reset` | POST | `POST /api/services/planning/reset` | Yes | Snapshot the current planning presences table, reset all presences, and post an automatic Discord log (County Sheriff / Deputy / Chief) |
@@ -100,5 +101,5 @@ Output: `console.info` for success, `console.error` for error; one line = one JS
 ## 4. Implementation
 
 - **Shared module**: `frontend/src/lib/proxyBackend.ts` — `proxyRequest()`, `getBackendBase()`, `createProxyContext()`, and logger `proxyLog()`.
-- **Routes**: `api/me`, `api/reference`, `api/services/[id]`, `api/recruits`, `api/users/[id]`, `api/comptabilite`, `api/coffres`, `api/bureau-weapons`, `api/bureau-weapons/[id]`, `api/saisies`, `api/saisies/[id]`, `api/saisies/notify-corrections`, `api/destructions`, `api/destructions/[id]` use this module to avoid duplication and ensure the spec (error + log) is followed.
+- **Routes**: `api/me`, `api/reference`, `api/services/[id]`, `api/recruits`, `api/users/[id]`, `api/comptabilite`, `api/coffres`, `api/bureau-weapons`, `api/bureau-weapons/[id]`, `api/saisies`, `api/saisies/[id]`, `api/saisies/stock-adjust`, `api/saisies/notify-corrections`, `api/destructions`, `api/destructions/[id]` use this module to avoid duplication and ensure the spec (error + log) is followed.
 - **Updating this document**: whenever a new proxy route is added or behaviour changes (codes, log fields).
