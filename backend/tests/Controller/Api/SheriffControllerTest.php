@@ -52,6 +52,8 @@ final class SheriffControllerTest extends WebTestCase
         $sheriff = $data[array_search('SheriffListed', $usernames)];
         self::assertArrayHasKey('id', $sheriff);
         self::assertArrayHasKey('username', $sheriff);
+        self::assertArrayHasKey('displayName', $sheriff);
+        self::assertSame($sheriff['username'], $sheriff['displayName']);
         self::assertArrayHasKey('avatarUrl', $sheriff);
         self::assertArrayHasKey('grade', $sheriff);
         self::assertArrayHasKey('recruitedAt', $sheriff);

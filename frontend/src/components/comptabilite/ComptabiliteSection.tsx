@@ -8,6 +8,10 @@ import {
 } from "./ComptabiliteView";
 import { Flashbag } from "@/components/feedback/Flashbag";
 import {
+  normalizeStoredSheriffSelectValue,
+  sheriffSelectValue,
+} from "@/lib/sheriffOptions";
+import {
   SHERIFF_FIELD_COMFORTABLE as MODAL_FIELD_BASE,
   SHERIFF_NATIVE_SELECT_COMFORTABLE as MODAL_SELECT_BASE,
 } from "@/lib/formFieldClasses";
@@ -122,7 +126,8 @@ type ComptabiliteApiResponse = {
   error?: string;
 };
 
-export type SheriffOption = { id: string; username: string };
+/** displayName: guild nick (or Discord global) from bot API; username stays the DB value used as form value. */
+export type SheriffOption = { id: string; username: string; displayName?: string };
 
 type ComptabiliteSectionProps = {
   sheriffs: SheriffOption[];
@@ -297,11 +302,32 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
     [sortiesRaw]
   );
 
+  const entreesForDisplay = useMemo(
+    () =>
+      entreesSorted.map((r) =>
+        toDisplayRow({
+          ...r,
+          sheriff: normalizeStoredSheriffSelectValue(r.sheriff, sheriffs),
+        }),
+      ),
+    [entreesSorted, sheriffs],
+  );
+  const sortiesForDisplay = useMemo(
+    () =>
+      sortiesSorted.map((r) =>
+        toDisplayRow({
+          ...r,
+          sheriff: normalizeStoredSheriffSelectValue(r.sheriff, sheriffs),
+        }),
+      ),
+    [sortiesSorted, sheriffs],
+  );
+
   const data: ComptabiliteData = {
     soldePremierMois,
     soldeTotal,
-    entrees: entreesSorted.map(toDisplayRow),
-    sorties: sortiesSorted.map(toDisplayRow),
+    entrees: entreesForDisplay,
+    sorties: sortiesForDisplay,
   };
 
   const hasAnyTransaction = entreesRaw.length > 0 || sortiesRaw.length > 0;
@@ -487,8 +513,8 @@ export function ComptabiliteSection({ sheriffs = [] }: ComptabiliteSectionProps)
                 >
                   <option value="">Choisir un sheriff</option>
                   {sheriffs.map((s) => (
-                    <option key={s.id} value={s.username}>
-                      {s.username}
+                    <option key={s.id} value={sheriffSelectValue(s)}>
+                      {sheriffSelectValue(s)}
                     </option>
                   ))}
                 </select>

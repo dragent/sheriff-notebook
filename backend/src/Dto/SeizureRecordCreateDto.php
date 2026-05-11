@@ -36,9 +36,8 @@ final readonly class SeizureRecordCreateDto
         public string $sheriff,
 
         #[Assert\NotNull(message: 'La quantité est requise.')]
-        #[Assert\Type(type: 'integer', message: 'La quantité doit être un entier.')]
-        #[Assert\GreaterThanOrEqual(value: 1, message: 'La quantité doit être supérieure ou égale à 1.')]
-        public int $quantity,
+        #[Assert\GreaterThan(value: 0, message: 'La quantité doit être supérieure à 0.')]
+        public float $quantity,
 
         #[Assert\Length(
             max: 255,
@@ -87,6 +86,32 @@ final readonly class SeizureRecordCreateDto
                 ->atPath('weaponModel')
                 ->addViolation();
         }
+
+        if (SeizureRecord::TYPE_CASH === $this->type) {
+            $cents = (int) round($this->quantity * 100);
+            if ($cents < 1) {
+                $context->buildViolation('Le montant en dollars doit être au moins 0,01 $.')
+                    ->atPath('quantity')
+                    ->addViolation();
+            } elseif (abs($this->quantity - ($cents / 100.0)) > 1.0e-6) {
+                $context->buildViolation('Le montant en dollars ne peut avoir que 2 décimales au maximum.')
+                    ->atPath('quantity')
+                    ->addViolation();
+            }
+        } else {
+            if ($this->quantity < 1.0) {
+                $context->buildViolation('La quantité doit être au moins 1.')
+                    ->atPath('quantity')
+                    ->addViolation();
+            } else {
+                $whole = (int) round($this->quantity);
+                if (abs($this->quantity - $whole) > 1.0e-6) {
+                    $context->buildViolation('La quantité doit être un nombre entier pour une saisie d\'item ou d\'arme.')
+                        ->atPath('quantity')
+                        ->addViolation();
+                }
+            }
+        }
     }
 
     /** @param array<string, mixed> $data */
@@ -96,9 +121,9 @@ final readonly class SeizureRecordCreateDto
         $date = isset($data['date']) && \is_string($data['date']) ? trim($data['date']) : '';
         $sheriff = isset($data['sheriff']) && \is_string($data['sheriff']) ? trim($data['sheriff']) : '';
 
-        $quantity = 0;
-        if (isset($data['quantity']) && (\is_int($data['quantity']) || is_numeric($data['quantity']))) {
-            $quantity = (int) $data['quantity'];
+        $quantity = 0.0;
+        if (isset($data['quantity']) && (\is_int($data['quantity']) || \is_float($data['quantity']) || is_numeric($data['quantity']))) {
+            $quantity = (float) $data['quantity'];
         }
 
         $itemName = isset($data['itemName']) && \is_string($data['itemName']) ? trim($data['itemName']) : null;

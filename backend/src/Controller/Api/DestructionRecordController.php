@@ -133,20 +133,32 @@ final class DestructionRecordController
             $totalSeized = $seized[$name] ?? 0;
             $alreadyDestroyed = $destroyed[$name] ?? 0;
             $after = $alreadyDestroyed + $qteNew;
-            if ($after > $totalSeized) {
+            $isCash = SeizureRecord::DESTRUCTION_LINE_KEY_CASH === $name;
+            $tolerance = $isCash ? 1.0e-4 : 0.0;
+            if ($after > $totalSeized + $tolerance) {
                 $pipePos = strpos($name, '|');
-                $displayName = SeizureRecord::DESTRUCTION_LINE_KEY_CASH === $name
+                $displayName = $isCash
                     ? 'Dollars saisis'
                     : (false !== $pipePos
                         ? substr($name, 0, $pipePos).' (n° '.substr($name, $pipePos + 1).')'
                         : $name);
 
+                if ($isCash) {
+                    return \sprintf(
+                        'La quantité à détruire pour « %s » dépasse la quantité saisie (saisi : %.2f $, déjà détruit : %.2f $, disponible : %.2f $).',
+                        $displayName,
+                        (float) $totalSeized,
+                        (float) $alreadyDestroyed,
+                        (float) $totalSeized - (float) $alreadyDestroyed
+                    );
+                }
+
                 return \sprintf(
                     'La quantité à détruire pour « %s » dépasse la quantité saisie (saisi : %d, déjà détruit : %d, disponible : %d).',
                     $displayName,
-                    $totalSeized,
-                    $alreadyDestroyed,
-                    $totalSeized - $alreadyDestroyed
+                    (int) $totalSeized,
+                    (int) $alreadyDestroyed,
+                    (int) $totalSeized - (int) $alreadyDestroyed
                 );
             }
         }
@@ -159,12 +171,14 @@ final class DestructionRecordController
     {
         foreach ($normalized as $line) {
             $key = isset($line['destruction']) && \is_string($line['destruction']) ? trim($line['destruction']) : '';
-            $toConsume = isset($line['qte']) && is_numeric($line['qte']) ? (int) $line['qte'] : 0;
+            $toConsumeRaw = isset($line['qte']) && is_numeric($line['qte']) ? (float) $line['qte'] : 0.0;
+            $isCashLine = SeizureRecord::DESTRUCTION_LINE_KEY_CASH === $key;
+            $toConsume = $isCashLine ? $toConsumeRaw : (float) (int) $toConsumeRaw;
             if ('' === $key || $toConsume <= 0) {
                 continue;
             }
 
-            if (SeizureRecord::DESTRUCTION_LINE_KEY_CASH === $key) {
+            if ($isCashLine) {
                 $seizures = $this->seizureRepository->findCashOrderedByDateAsc();
             } else {
                 $pipe = strpos($key, '|');
@@ -189,16 +203,30 @@ final class DestructionRecordController
 
             $remaining = $toConsume;
             foreach ($seizures as $seizure) {
-                if ($remaining <= 0) {
+                if ($remaining <= ($isCashLine ? 1.0e-6 : 0)) {
                     break;
                 }
-                $take = min($seizure->getQuantity(), $remaining);
-                $newQty = $seizure->getQuantity() - $take;
-                $remaining -= $take;
-                if ($newQty <= 0) {
-                    $this->entityManager->remove($seizure);
+                $stored = $seizure->getQuantity();
+                if ($isCashLine) {
+                    $availableDollars = round($stored / 100.0, 2);
+                    $takeDollars = min($availableDollars, $remaining);
+                    $takeCents = (int) round($takeDollars * 100.0);
+                    $newCents = $stored - $takeCents;
+                    $remaining = round($remaining - $takeDollars, 2);
+                    if ($newCents <= 0) {
+                        $this->entityManager->remove($seizure);
+                    } else {
+                        $seizure->setQuantity($newCents);
+                    }
                 } else {
-                    $seizure->setQuantity($newQty);
+                    $take = min($stored, (int) $remaining);
+                    $newQty = $stored - $take;
+                    $remaining -= $take;
+                    if ($newQty <= 0) {
+                        $this->entityManager->remove($seizure);
+                    } else {
+                        $seizure->setQuantity($newQty);
+                    }
                 }
             }
         }

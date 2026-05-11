@@ -21,9 +21,7 @@ final readonly class SeizureRecordUpdateDto
         )]
         public ?string $sheriff = null,
 
-        #[Assert\Type(type: 'integer', message: 'La quantité doit être un entier.')]
-        #[Assert\GreaterThanOrEqual(value: 1, message: 'La quantité doit être supérieure ou égale à 1.')]
-        public ?int $quantity = null,
+        public ?float $quantity = null,
 
         #[Assert\Length(
             max: 255,
@@ -83,8 +81,8 @@ final readonly class SeizureRecordUpdateDto
 
         $quantity = null;
         if (\array_key_exists('quantity', $data)) {
-            if (\is_int($data['quantity']) || is_numeric($data['quantity'])) {
-                $quantity = (int) $data['quantity'];
+            if (\is_int($data['quantity']) || \is_float($data['quantity']) || is_numeric($data['quantity'])) {
+                $quantity = (float) $data['quantity'];
             }
         }
 
