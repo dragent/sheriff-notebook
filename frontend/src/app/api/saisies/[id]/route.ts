@@ -61,5 +61,8 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     token,
   });
 
+  if (result.status === 204) {
+    return new NextResponse(null, { status: 204 });
+  }
   return NextResponse.json(result.data, { status: result.status });
 }
