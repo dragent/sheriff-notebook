@@ -1015,7 +1015,7 @@ export function SaisiesForm({
                 disabled={correctionNotifySending}
                 className="sheriff-focus-ring rounded-md border border-sheriff-sortie/50 bg-sheriff-sortie-bg px-3 py-1.5 text-xs font-medium text-sheriff-sortie transition hover:bg-sheriff-sortie/20 disabled:opacity-60 sm:text-sm"
               >
-                Stocks et corrections (Discord)
+                Stocks et corrections
               </button>
             ) : null}
           </div>
