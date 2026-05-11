@@ -7,6 +7,10 @@ import { WeaponSelect } from "@/components/ui/WeaponSelect";
 import { OptionSelect } from "@/components/ui/OptionSelect";
 import type { WeaponCategoryOption } from "@/lib/reference";
 import type { SheriffOption } from "@/components/comptabilite/ComptabiliteSection";
+import {
+  normalizeStoredSheriffSelectValue,
+  sheriffSelectValue,
+} from "@/lib/sheriffOptions";
 import { SHERIFF_FIELD_COMFORTABLE, SHERIFF_FIELD_DENSE } from "@/lib/formFieldClasses";
 
 type CoffresTabId = "munitions" | "accessoires" | "recensement";
@@ -218,6 +222,17 @@ export function CoffresView({
     }
   }, [initialData]);
 
+  useEffect(() => {
+    if (sheriffs.length === 0) return;
+    setState((s) => ({
+      ...s,
+      recensement: s.recensement.map((r) => ({
+        ...r,
+        assigne: normalizeStoredSheriffSelectValue(r.assigne, sheriffs),
+      })),
+    }));
+  }, [sheriffs]);
+
   // Chargement inventaire + accessoires + recensement depuis l’API au montage
   useEffect(() => {
     let cancelled = false;
@@ -358,7 +373,7 @@ export function CoffresView({
             pret: !!created.onLoan,
             coffre: !!created.inChest,
             lunette: !!created.hasScope,
-            assigne: (created.comments ?? "").trim(),
+            assigne: normalizeStoredSheriffSelectValue((created.comments ?? "").trim(), sheriffs),
           },
         ],
       }));
@@ -366,7 +381,7 @@ export function CoffresView({
     } catch {
       return false;
     }
-  }, []);
+  }, [sheriffs]);
 
   const updateRecensement = useCallback((id: string, patch: Partial<ArmeRecensement>) => {
     setState((s) => ({
@@ -663,7 +678,10 @@ export function CoffresView({
                     updateRecensement(row.id, { assigne: v });
                     void persistRecensementPatch(row.id, { assigne: v });
                   }}
-                  options={sheriffs.map((s) => ({ value: s.username, label: s.username }))}
+                  options={sheriffs.map((s) => ({
+                    value: sheriffSelectValue(s),
+                    label: sheriffSelectValue(s),
+                  }))}
                   placeholder="Non assignée"
                   aria-label="Assigné à"
                   variant="dense"
@@ -732,7 +750,9 @@ function ModalRecensement({
   const [pret, setPret] = useState(false);
   const [coffre, setCoffre] = useState(false);
   const [lunette, setLunette] = useState(false);
-  const [assigne, setAssigne] = useState(sheriffs[0]?.username ?? "");
+  const [assigne, setAssigne] = useState(() =>
+    sheriffs[0] ? sheriffSelectValue(sheriffs[0]) : "",
+  );
   const [submitting, setSubmitting] = useState(false);
   const serieInputRef = useRef<HTMLInputElement>(null);
 
@@ -753,7 +773,7 @@ function ModalRecensement({
     setPret(false);
     setCoffre(false);
     setLunette(false);
-    setAssigne(sheriffs[0]?.username ?? "");
+    setAssigne(sheriffs[0] ? sheriffSelectValue(sheriffs[0]) : "");
     queueMicrotask(() => serieInputRef.current?.focus());
   };
 
@@ -876,7 +896,10 @@ function ModalRecensement({
                 id="rec-assigne"
                 value={assigne}
                 onChange={setAssigne}
-                options={sheriffs.map((s) => ({ value: s.username, label: s.username }))}
+                options={sheriffs.map((s) => ({
+                  value: sheriffSelectValue(s),
+                  label: sheriffSelectValue(s),
+                }))}
                 placeholder="Choisir un sheriff"
                 aria-label="Assigné à"
               />

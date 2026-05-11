@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SheriffOption } from "@/components/comptabilite/ComptabiliteSection";
 import {
+  normalizeStoredSheriffSelectValue,
+  sheriffSelectValue,
+} from "@/lib/sheriffOptions";
+import {
   SHERIFF_FIELD_DENSE as INPUT_BASE,
   SHERIFF_NATIVE_SELECT_DENSE as SELECT_BASE,
 } from "@/lib/formFieldClasses";
@@ -115,12 +119,12 @@ function createEmptyRow(defaultDate: string, defaultSheriff: string | null): Sai
 type SortKey = 'name' | 'qty';
 type SortDir = 'asc' | 'desc';
 
-function recordToRow(r: InitialRowInput): SaisieRow {
+function recordToRow(r: InitialRowInput, sheriffList: SheriffOption[]): SaisieRow {
   return {
     id: r.id,
     kind: r.type,
     date: r.date,
-    sheriff: r.sheriff,
+    sheriff: normalizeStoredSheriffSelectValue(r.sheriff, sheriffList),
     quantity: r.quantity,
     itemName: r.itemName ?? '',
     possessedBy: r.possessedBy ?? '',
@@ -198,6 +202,22 @@ export function SaisiesForm({
   }, []);
 
   useEffect(() => {
+    if (sheriffs.length === 0) return;
+    setRows((prev) =>
+      prev.map((row) => ({
+        ...row,
+        sheriff: normalizeStoredSheriffSelectValue(row.sheriff, sheriffs),
+      })),
+    );
+    setForm((f) => ({
+      ...f,
+      sheriff: f.sheriff
+        ? normalizeStoredSheriffSelectValue(f.sheriff, sheriffs)
+        : f.sheriff,
+    }));
+  }, [sheriffs]);
+
+  useEffect(() => {
     if (!toastVisible) return;
     const t = setTimeout(() => setToastVisible(false), TOAST_DURATION_MS);
     return () => clearTimeout(t);
@@ -264,11 +284,14 @@ export function SaisiesForm({
   }, [modalOpen, openModalType]);
 
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const defaultSheriff = sheriffs[0]?.username ?? null;
+  const defaultSheriff = useMemo(
+    () => (sheriffs[0] ? sheriffSelectValue(sheriffs[0]) : null),
+    [sheriffs],
+  );
   const currentMonthPrefix = useMemo(() => todayIso.slice(0, 7), [todayIso]);
 
   const [rows, setRows] = useState<SaisieRow[]>(() =>
-    initialRows?.length ? initialRows.map(recordToRow) : []
+    initialRows?.length ? initialRows.map((r) => recordToRow(r, [])) : []
   );
   const historyRows = useMemo(
     () => rows.filter((r) => typeof r.date === 'string' && r.date.startsWith(currentMonthPrefix)),
@@ -438,7 +461,7 @@ export function SaisiesForm({
         base ??
         createEmptyRow(
           todayIso,
-          sheriffs[0]?.username ?? null
+          sheriffs[0] ? sheriffSelectValue(sheriffs[0]) : null
         );
       const next: SaisieRow = {
         ...template,
@@ -482,7 +505,7 @@ export function SaisiesForm({
     setForm({
       type: row.kind,
       date: row.date,
-      sheriff: row.sheriff,
+      sheriff: normalizeStoredSheriffSelectValue(row.sheriff, sheriffs),
       quantity: typeof row.quantity === 'number' ? String(row.quantity) : '1',
       itemName: row.itemName,
       possessedBy: row.possessedBy,
@@ -1467,8 +1490,8 @@ export function SaisiesForm({
                   >
                     <option value="">Choisir</option>
                     {sheriffs.map((s) => (
-                      <option key={s.id} value={s.username}>
-                        {s.username}
+                      <option key={s.id} value={sheriffSelectValue(s)}>
+                        {sheriffSelectValue(s)}
                       </option>
                     ))}
                   </select>

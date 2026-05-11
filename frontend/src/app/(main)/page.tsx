@@ -23,6 +23,8 @@ export const dynamic = "force-dynamic";
 export type Sheriff = {
   id: string;
   username: string;
+  /** Guild nick or Discord global from bot; may match username when unset in Discord. */
+  displayName?: string;
   avatarUrl: string | null;
   grade: string;
   recruitedAt: string | null;
@@ -57,7 +59,9 @@ function sortSheriffsByGrade(sheriffs: Sheriff[]): Sheriff[] {
     if (byGrade !== 0) return byGrade;
     const byDate = compareRecruitedAtIso(a.recruitedAt, b.recruitedAt);
     if (byDate !== 0) return byDate;
-    return a.username.localeCompare(b.username, undefined, { sensitivity: "base" });
+    return (a.displayName ?? a.username).localeCompare(b.displayName ?? b.username, undefined, {
+      sensitivity: "base",
+    });
   });
 }
 

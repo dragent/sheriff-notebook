@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Domain\Grade;
+use App\Entity\User;
 use App\Repository\UserRepository;
+use App\Service\DiscordGuildMemberResolver;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -14,6 +16,7 @@ final class SheriffController
 {
     public function __construct(
         private readonly UserRepository $userRepository,
+        private readonly DiscordGuildMemberResolver $discordGuildMemberResolver,
     ) {
     }
 
@@ -28,6 +31,12 @@ final class SheriffController
             ->getQuery()
             ->getResult();
 
+        $discordIds = array_values(array_unique(array_map(
+            static fn (User $user): string => $user->getDiscordId(),
+            $users,
+        )));
+        $displayByDiscordId = $this->discordGuildMemberResolver->resolveDisplayNamesByDiscordIds($discordIds);
+
         $sheriffs = [];
         foreach ($users as $user) {
             $grade = $user->getGrade();
@@ -35,9 +44,13 @@ final class SheriffController
                 continue;
             }
             $recruitedAt = $user->getRecruitedAt();
+            $discordId = $user->getDiscordId();
+            $username = $user->getUsername();
+            $displayName = $displayByDiscordId[$discordId] ?? $username;
             $sheriffs[] = [
                 'id' => $user->getId()->toRfc4122(),
-                'username' => $user->getUsername(),
+                'username' => $username,
+                'displayName' => $displayName,
                 'avatarUrl' => $user->getAvatarUrl(),
                 'grade' => $grade,
                 'recruitedAt' => null !== $recruitedAt ? $recruitedAt->format(\DateTimeInterface::ATOM) : null,
@@ -53,7 +66,7 @@ final class SheriffController
             $dateA = $a['recruitedAt'];
             $dateB = $b['recruitedAt'];
             if (null === $dateA && null === $dateB) {
-                return strcasecmp($a['username'], $b['username']);
+                return strcasecmp($a['displayName'], $b['displayName']);
             }
             if (null === $dateA) {
                 return 1;
@@ -66,7 +79,7 @@ final class SheriffController
                 return $cmp;
             }
 
-            return strcasecmp($a['username'], $b['username']);
+            return strcasecmp($a['displayName'], $b['displayName']);
         });
 
         return new JsonResponse($sheriffs);
