@@ -27,7 +27,7 @@ This document describes the Next.js API routes that proxy to the Symfony backend
 | `/api/reference` | PUT | `PUT /api/reference` | Yes | Update reference data (County Sheriff / Deputy) |
 | `/api/saisies` | GET | `GET /api/saisies` | Yes | List seizures (items, weapons, cash) |
 | `/api/saisies` | POST | `POST /api/saisies` | Yes | Create a seizure (`type`: `item`, `weapon`, or `cash`; `quantity` is dollar amount for `cash`) |
-| `/api/saisies/[id]` | PATCH | `PATCH /api/saisies/{id}` | Yes | Update a seizure (no type change; 409 if already cancelled) |
+| `/api/saisies/[id]` | PATCH | `PATCH /api/saisies/{id}` | Yes | Update a seizure (no type change; 409 if already cancelled; **quantity** change only for Sheriff de comté / Adjoint — others get 403) |
 | `/api/saisies/[id]` | DELETE | `DELETE /api/saisies/{id}` | Yes | Hard-delete a seizure line (Sheriff de comté / Adjoint only; 204 empty body) |
 | `/api/saisies/[id]/cancel` | POST | `POST /api/saisies/{id}/cancel` | Yes | Cancel a seizure with a reason (audit trail) |
 | `/api/saisies/notify-corrections` | POST | `POST /api/saisies/notify-corrections` | Yes | Post a summary to Discord (`message` JSON) with title « Erreur de saisie » (Sheriff de comté / Adjoint only) |

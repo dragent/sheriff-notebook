@@ -540,27 +540,32 @@ export function SaisiesForm({
     setToastError(null);
     setSaving(true);
     try {
+      const isEdit = editingRowId !== null;
+      const includeQuantity = !isEdit || canCorrectSaisieErrors;
       const body =
         form.type === 'cash'
           ? {
-              type: form.type,
+              ...(!isEdit ? { type: form.type } : {}),
               date: form.date,
               sheriff: form.sheriff,
-              quantity: typeof row.quantity === 'number' ? row.quantity : 1,
+              ...(includeQuantity
+                ? { quantity: typeof row.quantity === 'number' ? row.quantity : 1 }
+                : {}),
               possessedBy: row.possessedBy || undefined,
               notes: row.notes || undefined,
             }
           : {
-              type: form.type,
+              ...(!isEdit ? { type: form.type } : {}),
               date: form.date,
               sheriff: form.sheriff,
-              quantity: typeof row.quantity === 'number' ? row.quantity : 1,
+              ...(includeQuantity
+                ? { quantity: typeof row.quantity === 'number' ? row.quantity : 1 }
+                : {}),
               serialNumber: row.serialNumber || undefined,
               possessedBy: row.possessedBy || undefined,
               notes: row.notes || undefined,
               ...(form.type === 'item' ? { itemName: row.itemName } : { weaponModel: row.weaponModel }),
             };
-      const isEdit = editingRowId !== null;
       const endpoint = isEdit ? `/api/saisies/${encodeURIComponent(editingRowId)}` : '/api/saisies';
       const method = isEdit ? 'PATCH' : 'POST';
 
@@ -954,9 +959,10 @@ export function SaisiesForm({
             Comté / Adjoint — corrections
           </h3>
           <p className="mt-1 text-[11px] leading-snug text-sheriff-paper-muted/90">
-            Réduisez une quantité via « Modifier », ou supprimez une ligne erronée sans passer par la page Destruction.
-            Une fois les saisies corrigées, décrivez ici ce qui a été rectifié : un message sera posté sur le canal bureau
-            avec le titre <span className="font-medium text-sheriff-paper">Erreur de saisie</span>.
+            Changez la quantité via « Modifier » (comme la suppression de ligne, réservé au comté et à l’adjoint), sans
+            passer par la page Destruction. Une fois les saisies corrigées, décrivez ici ce qui a été rectifié : un
+            message sera posté sur le canal bureau avec le titre{' '}
+            <span className="font-medium text-sheriff-paper">Erreur de saisie</span>.
           </p>
           <label htmlFor="saisie-correction-report" className="mt-3 mb-1 block text-xs font-medium text-sheriff-paper-muted">
             Synthèse des corrections
@@ -1482,14 +1488,25 @@ export function SaisiesForm({
                     type="number"
                     min={1}
                     required
+                    readOnly={!!editingRowId && !canCorrectSaisieErrors}
+                    title={
+                      editingRowId && !canCorrectSaisieErrors
+                        ? 'Seuls le Sheriff de comté et le Sheriff Adjoint peuvent modifier la quantité.'
+                        : undefined
+                    }
                     value={form.quantity}
                     onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
                     className={
                       form.type === 'cash'
-                        ? `${INPUT_BASE} border-sheriff-sortie/40 bg-sheriff-sortie-bg font-heading text-sheriff-sortie tabular-nums`
-                        : INPUT_BASE
+                        ? `${INPUT_BASE} border-sheriff-sortie/40 bg-sheriff-sortie-bg font-heading text-sheriff-sortie tabular-nums${editingRowId && !canCorrectSaisieErrors ? ' cursor-not-allowed opacity-80' : ''}`
+                        : `${INPUT_BASE}${editingRowId && !canCorrectSaisieErrors ? ' cursor-not-allowed opacity-80' : ''}`
                     }
                   />
+                  {editingRowId && !canCorrectSaisieErrors ? (
+                    <p className="mt-1 text-[10px] text-sheriff-paper-muted/85">
+                      Quantité figée — contactez le comté ou l’adjoint pour la corriger.
+                    </p>
+                  ) : null}
                 </div>
                 <div>
                   <label

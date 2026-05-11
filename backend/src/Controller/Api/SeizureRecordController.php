@@ -21,6 +21,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -33,6 +34,7 @@ final class SeizureRecordController
         private readonly SeizureRecordRepository $repository,
         private readonly EntityManagerInterface $entityManager,
         private readonly ValidatorInterface $validator,
+        private readonly AuthorizationCheckerInterface $authorizationChecker,
         private readonly DiscordChannelNotifier $discordChannelNotifier,
         private readonly string $saisieCorrectionChannelId = '',
     ) {
@@ -184,6 +186,14 @@ final class SeizureRecordController
         if (SeizureRecord::TYPE_CASH === $record->getType()) {
             if (null !== $dto->itemName || null !== $dto->weaponModel || null !== $dto->serialNumber) {
                 return new JsonResponse(['error' => 'Les champs item/arme/série ne sont pas autorisés pour une saisie de cash.'], 400);
+            }
+        }
+
+        if (null !== $dto->quantity && $dto->quantity !== $record->getQuantity()) {
+            if (!$this->authorizationChecker->isGranted(SeizureCorrectionVoter::CORRECT)) {
+                return new JsonResponse([
+                    'error' => 'Seuls le Sheriff de comté et le Sheriff Adjoint peuvent modifier la quantité d\'une saisie.',
+                ], 403);
             }
         }
 
