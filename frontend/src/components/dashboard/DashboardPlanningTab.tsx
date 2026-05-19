@@ -17,6 +17,7 @@ import {
 } from "@/lib/dashboardPermissions";
 import type { ServiceRecordFull } from "@/components/dashboard/Dashboard";
 import type { BureauRow } from "@/components/dashboard/dashboardShared";
+import { sheriffDisplayLabel } from "@/components/dashboard/dashboardShared";
 
 type Props = {
   bureauRows: BureauRow[];
@@ -138,7 +139,7 @@ export function DashboardPlanningTab({
               r ? (
                 <tr key={r.id} className="group transition hover:bg-sheriff-gold/5">
                   <td className="sticky left-0 z-1 w-36 shrink-0 whitespace-nowrap bg-sheriff-wood px-2 py-2 font-medium text-sheriff-paper sheriff-sticky-col-shadow group-hover:bg-sheriff-gold/5">
-                    {r.name}
+                    {sheriffDisplayLabel(sheriff)}
                   </td>
                   <td className="font-stamp whitespace-nowrap px-2 py-2 text-sheriff-paper-muted">{r.telegramPrimary ?? "—"}</td>
                   <td className="whitespace-nowrap px-2 py-2 text-center">
@@ -247,7 +248,7 @@ export function DashboardPlanningTab({
                       currentGrade,
                       resolveRowGrade(r.grade, sheriff.grade),
                       currentUsername,
-                      sheriff.username,
+                      sheriffDisplayLabel(sheriff),
                     ) &&
                       (() => {
                         const targetGrade = resolveRowGrade(r.grade, sheriff.grade);
@@ -272,7 +273,7 @@ export function DashboardPlanningTab({
               ) : (
                 <tr key={`sheriff-${sheriff.username}`} className="group transition hover:bg-sheriff-gold/5">
                   <td className="sticky left-0 z-1 w-36 shrink-0 whitespace-nowrap bg-sheriff-wood px-2 py-2 font-medium text-sheriff-paper sheriff-sticky-col-shadow group-hover:bg-sheriff-gold/5">
-                    {sheriff.username}
+                    {sheriffDisplayLabel(sheriff)}
                   </td>
                   <td className="font-stamp whitespace-nowrap px-2 py-2 text-sheriff-paper-muted">—</td>
                   <td className="whitespace-nowrap px-2 py-2 text-center">

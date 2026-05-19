@@ -6,6 +6,7 @@ import { resolveRowGrade } from "@/lib/grades";
 import {
   canDisplayScopeForWeapon,
   formatCartAndBoat,
+  sheriffDisplayLabel,
   type BureauRow,
 } from "@/components/dashboard/dashboardShared";
 
@@ -85,7 +86,7 @@ export function DashboardWeaponsTab({ bureauRows, sheriffsCount }: Props) {
               r ? (
                 <tr key={r.id} className="group transition hover:bg-sheriff-gold/5">
                   <td className="sticky left-0 z-1 w-36 shrink-0 whitespace-nowrap bg-sheriff-wood px-2 py-2 font-medium text-sheriff-paper sheriff-sticky-col-shadow group-hover:bg-sheriff-gold/5">
-                    {r.name}
+                    {sheriffDisplayLabel(sheriff)}
                   </td>
                   <td className="font-stamp whitespace-nowrap px-2 py-2 text-sheriff-paper-muted">{r.telegramPrimary ?? "—"}</td>
                   <td className="whitespace-nowrap px-2 py-2 text-center">
@@ -170,7 +171,7 @@ export function DashboardWeaponsTab({ bureauRows, sheriffsCount }: Props) {
               ) : (
                 <tr key={`sheriff-${sheriff.username}`} className="group transition hover:bg-sheriff-gold/5">
                   <td className="sticky left-0 z-1 w-36 shrink-0 whitespace-nowrap bg-sheriff-wood px-2 py-2 font-medium text-sheriff-paper sheriff-sticky-col-shadow group-hover:bg-sheriff-gold/5">
-                    {sheriff.username}
+                    {sheriffDisplayLabel(sheriff)}
                   </td>
                   <td className="whitespace-nowrap px-2 py-2 text-sheriff-paper-muted">—</td>
                   <td className="whitespace-nowrap px-2 py-2 text-center">

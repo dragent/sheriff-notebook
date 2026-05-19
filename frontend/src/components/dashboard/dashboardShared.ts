@@ -4,9 +4,17 @@ import type { ServiceRecordFull } from "@/components/dashboard/Dashboard";
 export type SheriffRef = {
   id: string;
   username: string;
+  /** Guild nick from Discord bot API when available. */
+  displayName?: string;
   grade: string;
   recruitedAt: string | null;
 };
+
+/** Label shown in dashboard tables (Discord server nick when available). */
+export function sheriffDisplayLabel(sheriff: Pick<SheriffRef, "username" | "displayName">): string {
+  const label = (sheriff.displayName ?? sheriff.username).trim();
+  return label !== "" ? label : sheriff.username;
+}
 
 /** Pairing of a sheriff with their service record (or null when no record exists yet). */
 export type BureauRow = {

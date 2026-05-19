@@ -8,10 +8,8 @@ import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { DashboardPlanningTab } from "@/components/dashboard/DashboardPlanningTab";
 import { DashboardWeaponsTab } from "@/components/dashboard/DashboardWeaponsTab";
 import { DashboardFormationsTab } from "@/components/dashboard/DashboardFormationsTab";
-import type {
-  BureauRow,
-  SheriffRef,
-} from "@/components/dashboard/dashboardShared";
+import type { BureauRow, SheriffRef } from "@/components/dashboard/dashboardShared";
+import { sheriffDisplayLabel } from "@/components/dashboard/dashboardShared";
 
 export type ServiceRecordFull = {
   id: string;
@@ -97,15 +95,19 @@ export function Dashboard({
       const byId = recordsByUserId.get(sheriffUid);
       if (byId) return byId;
     }
-    const byExact = recordsByName.get(sheriff.username);
+    const displayLabel = sheriffDisplayLabel(sheriff);
+    const byExact =
+      recordsByName.get(displayLabel) ??
+      recordsByName.get(sheriff.username);
     if (byExact) return byExact;
     return (
-      records.find(
-        (r) =>
-          r.name.localeCompare(sheriff.username, undefined, {
-            sensitivity: "base",
-          }) === 0,
-      ) ?? null
+      records.find((r) => {
+        const name = r.name;
+        return (
+          name.localeCompare(displayLabel, undefined, { sensitivity: "base" }) === 0 ||
+          name.localeCompare(sheriff.username, undefined, { sensitivity: "base" }) === 0
+        );
+      }) ?? null
     );
   };
   const bureauRows: BureauRow[] = sheriffs.map((sheriff) => ({
