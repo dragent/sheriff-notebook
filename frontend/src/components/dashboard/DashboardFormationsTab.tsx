@@ -5,6 +5,7 @@ import { resolveRowGrade, GRADE_ORDER } from "@/lib/grades";
 import { canEditFormation } from "@/lib/dashboardPermissions";
 import type { ServiceRecordFull } from "@/components/dashboard/Dashboard";
 import type { BureauRow } from "@/components/dashboard/dashboardShared";
+import { sheriffDisplayLabel } from "@/components/dashboard/dashboardShared";
 
 type Formation = { id: string; label: string; maxGradeOrder?: number };
 
@@ -79,7 +80,7 @@ export function DashboardFormationsTab({
             className="group transition hover:bg-sheriff-gold/5"
           >
             <td className="sticky left-0 z-1 w-36 shrink-0 whitespace-nowrap bg-sheriff-wood px-2 py-2 font-medium text-sheriff-paper sheriff-sticky-col-shadow group-hover:bg-sheriff-gold/5">
-              {sheriff.username}
+              {sheriffDisplayLabel(sheriff)}
             </td>
             {displayFormations.map((f) => {
               const targetGrade = r

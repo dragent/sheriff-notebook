@@ -177,6 +177,7 @@ export default async function Home() {
           {
             id: me.id ?? "current-user",
             username: me.username,
+            displayName: me.username,
             avatarUrl: me.avatarUrl ?? null,
             grade: me.grade,
             recruitedAt: me.recruitedAt ?? null,
@@ -237,6 +238,7 @@ export default async function Home() {
                   sheriffs={sheriffs.map((s) => ({
                     id: s.id,
                     username: s.username,
+                    displayName: s.displayName,
                     grade: s.grade,
                     recruitedAt: s.recruitedAt ?? null,
                   }))}
