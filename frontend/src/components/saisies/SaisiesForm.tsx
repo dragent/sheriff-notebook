@@ -19,6 +19,31 @@ import {
 const TOAST_DURATION_MS = 2500;
 const INVENTORY_MAX_ITEMS = 50;
 
+/**
+ * Stored seizure dates use in-game calendar: pick a RL date in the modal, subtract this many years for API/storage.
+ */
+const SAISIE_CALENDAR_YEAR_SHIFT = 103;
+
+function shiftIsoCalendarDateByYears(isoYmd: string, deltaYears: number): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoYmd.trim());
+  if (!m) return isoYmd;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const utcMs = Date.UTC(y + deltaYears, mo - 1, d);
+  const shifted = new Date(utcMs);
+  if (Number.isNaN(shifted.getTime())) return isoYmd;
+  return shifted.toISOString().slice(0, 10);
+}
+
+function modalDateToStoredSeizureDate(modalRlIso: string): string {
+  return shiftIsoCalendarDateByYears(modalRlIso, -SAISIE_CALENDAR_YEAR_SHIFT);
+}
+
+function storedSeizureDateToModalDate(storedIso: string): string {
+  return shiftIsoCalendarDateByYears(storedIso, SAISIE_CALENDAR_YEAR_SHIFT);
+}
+
 const dollarsIntl = new Intl.NumberFormat('fr-FR', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
@@ -343,7 +368,11 @@ export function SaisiesForm({
     () => (sheriffs[0] ? sheriffSelectValue(sheriffs[0]) : null),
     [sheriffs],
   );
-  const currentMonthPrefix = useMemo(() => todayIso.slice(0, 7), [todayIso]);
+  /** In-game YYYY-MM for “this month” history (stored dates are RL minus SAISIE_CALENDAR_YEAR_SHIFT). */
+  const currentMonthPrefix = useMemo(
+    () => modalDateToStoredSeizureDate(todayIso).slice(0, 7),
+    [todayIso]
+  );
 
   const [rows, setRows] = useState<SaisieRow[]>(() =>
     initialRows?.length ? initialRows.map((r) => recordToRow(r, sheriffs)) : []
@@ -572,7 +601,7 @@ export function SaisiesForm({
     setEditingRowId(row.id);
     setForm({
       type: row.kind,
-      date: row.date,
+      date: storedSeizureDateToModalDate(row.date),
       sheriff: normalizeStoredSheriffSelectValue(row.sheriff, sheriffs),
       quantity:
         typeof row.quantity === 'number'
@@ -608,7 +637,7 @@ export function SaisiesForm({
     const base: SaisieRow = {
       id: createId('row'),
       kind: type,
-      date: form.date,
+      date: modalDateToStoredSeizureDate(form.date),
       sheriff: form.sheriff,
       quantity,
       itemName: '',
@@ -645,7 +674,7 @@ export function SaisiesForm({
         form.type === 'cash'
           ? {
               ...(!isEdit ? { type: form.type } : {}),
-              date: form.date,
+              date: modalDateToStoredSeizureDate(form.date),
               sheriff: form.sheriff,
               ...(includeQuantity
                 ? { quantity: typeof row.quantity === 'number' ? row.quantity : 1 }
@@ -655,7 +684,7 @@ export function SaisiesForm({
             }
           : {
               ...(!isEdit ? { type: form.type } : {}),
-              date: form.date,
+              date: modalDateToStoredSeizureDate(form.date),
               sheriff: form.sheriff,
               ...(includeQuantity
                 ? { quantity: typeof row.quantity === 'number' ? row.quantity : 1 }
