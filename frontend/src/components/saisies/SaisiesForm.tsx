@@ -22,7 +22,7 @@ const INVENTORY_MAX_ITEMS = 50;
 /**
  * Stored seizure dates use in-game calendar: pick a RL date in the modal, subtract this many years for API/storage.
  */
-const SAISIE_CALENDAR_YEAR_SHIFT = 103;
+const SAISIE_CALENDAR_YEAR_SHIFT = 123;
 
 function shiftIsoCalendarDateByYears(isoYmd: string, deltaYears: number): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoYmd.trim());
