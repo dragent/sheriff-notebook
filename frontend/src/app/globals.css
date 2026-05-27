@@ -117,6 +117,8 @@
    */
   --sheriff-brass: #b89968;
   --sheriff-brass-soft: rgba(184, 153, 104, 0.22);
+  /* Ledger zebra — opaque mix (never transparent: avoids checkbox bleed-through on striped rows) */
+  --sheriff-ledger-row-alt: color-mix(in srgb, var(--sheriff-paper) 2%, var(--sheriff-wood));
 }
 
 /* ========== Light mode — same slate hue family as dark (inverted) ========== */
@@ -222,6 +224,7 @@
      reads as engraving on cool paper instead of saloon gold. */
   --sheriff-brass: #7a5e34;
   --sheriff-brass-soft: rgba(122, 94, 52, 0.2);
+  --sheriff-ledger-row-alt: color-mix(in srgb, var(--sheriff-ink) 3%, var(--sheriff-wood));
 }
 
 @theme inline {
@@ -957,12 +960,11 @@ body {
 /*
  * Ledger striping — opt-in subtle alternation on tbody rows. Use by adding
  * the .sheriff-table--ledger class on the <table> element.
+ * Row alt must stay fully opaque (mix with --sheriff-wood, not transparent)
+ * so checkbox borders in adjacent cells do not show through striped cells.
  */
 .sheriff-table--ledger tbody tr:nth-child(even) > td {
-  background-color: color-mix(in srgb, var(--sheriff-paper) 2%, transparent);
-}
-[data-theme="light"] .sheriff-table--ledger tbody tr:nth-child(even) > td {
-  background-color: color-mix(in srgb, var(--sheriff-ink) 3%, transparent);
+  background-color: var(--sheriff-ledger-row-alt);
 }
 
 /*

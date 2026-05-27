@@ -36,7 +36,7 @@ const TABLE_HEAD_CLASS =
   "sheriff-table-head-shadow sticky top-0 z-10 border-b border-sheriff-gold/40 bg-sheriff-charcoal/95 px-3 py-2.5 text-left font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-gold";
 const TABLE_CELL_CLASS = "border-b border-sheriff-gold/15 px-3 py-2.5 text-sm text-sheriff-paper-muted";
 const TABLE_SUM_CLASS = `${TABLE_CELL_CLASS} text-right tabular-nums whitespace-nowrap`;
-const TABLE_ROW_ALT = "bg-sheriff-charcoal/25";
+const TABLE_ROW_ALT = "bg-[var(--sheriff-ledger-row-alt)]";
 const TABLE_TOTAL_ROW =
   "border-t-2 border-sheriff-gold/40 bg-linear-to-b from-sheriff-charcoal/55 to-sheriff-charcoal/75 font-medium text-sheriff-paper";
 const TABLE_TOTAL_LABEL = "px-4 py-3.5 text-right align-middle font-heading text-[11px] font-semibold uppercase tracking-widest text-sheriff-gold/90";
