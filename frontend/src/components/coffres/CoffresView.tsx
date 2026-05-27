@@ -37,7 +37,7 @@ export type CoffresData = {
 const TABLE_HEAD =
   "border-b border-sheriff-gold/40 bg-sheriff-charcoal/90 px-3 py-2.5 text-left font-heading text-xs font-semibold uppercase tracking-wider text-sheriff-gold";
 const TABLE_CELL = "px-3 py-2.5 text-sm text-sheriff-paper-muted";
-const TABLE_ROW_ALT = "bg-sheriff-charcoal/25";
+const TABLE_ROW_ALT = "bg-[var(--sheriff-ledger-row-alt)]";
 const TYPES_MUNITION = [
   "Munition de revolver",
   "Munition de pistolet",
