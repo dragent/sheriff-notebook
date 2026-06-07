@@ -242,6 +242,7 @@ export default async function Home() {
                     grade: s.grade,
                     recruitedAt: s.recruitedAt ?? null,
                   }))}
+                  currentUserId={me?.id ?? null}
                   currentUsername={me?.username ?? null}
                   currentGrade={me?.grade ?? null}
                 />

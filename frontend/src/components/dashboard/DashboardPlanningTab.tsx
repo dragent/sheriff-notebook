@@ -17,12 +17,13 @@ import {
 } from "@/lib/dashboardPermissions";
 import type { ServiceRecordFull } from "@/components/dashboard/Dashboard";
 import type { BureauRow } from "@/components/dashboard/dashboardShared";
-import { sheriffDisplayLabel } from "@/components/dashboard/dashboardShared";
+import { isOwnBureauRow, sheriffDisplayLabel } from "@/components/dashboard/dashboardShared";
 
 type Props = {
   bureauRows: BureauRow[];
   sheriffsCount: number;
   currentGrade?: string | null;
+  currentUserId?: string | null;
   currentUsername?: string | null;
   updating: string | null;
   deletingId: string | null;
@@ -34,11 +35,6 @@ type Props = {
   onClearPlanning: () => Promise<void>;
 };
 
-function ciEquals(a: string | null | undefined, b: string | null | undefined): boolean {
-  if (!a || !b) return false;
-  return a.localeCompare(b, undefined, { sensitivity: "base" }) === 0;
-}
-
 /**
  * "Planning / Paie" tab — registry-style ledger with two-level day headers,
  * RH actions (promotion / demotion / dismissal) on the right.
@@ -47,6 +43,7 @@ export function DashboardPlanningTab({
   bureauRows,
   sheriffsCount,
   currentGrade,
+  currentUserId,
   currentUsername,
   updating,
   deletingId,
@@ -57,8 +54,6 @@ export function DashboardPlanningTab({
   onDeleteSheriff,
   onClearPlanning,
 }: Props) {
-  const isOwnRecord = (recordName: string) => ciEquals(recordName, currentUsername);
-  const canEditRecord = (recordName: string) => isOwnRecord(recordName);
 
   return (
     <div
@@ -158,8 +153,12 @@ export function DashboardPlanningTab({
                   {PLANNING_COLUMNS.map((col) => {
                     const planningAdmin =
                       canPlanningAdminActions(currentGrade ?? null) && !cleaningPlanning;
-                    const editable = canEditRecord(r.name) || planningAdmin;
-                    const isOwnRow = canEditRecord(r.name);
+                    const isOwnRow = isOwnBureauRow(
+                      { sheriff, record: r },
+                      currentUserId,
+                      currentUsername,
+                    );
+                    const editable = isOwnRow || planningAdmin;
                     let checkboxTitle: string | undefined;
                     if (!editable) {
                       checkboxTitle = "Modification réservée à votre propre fiche";
