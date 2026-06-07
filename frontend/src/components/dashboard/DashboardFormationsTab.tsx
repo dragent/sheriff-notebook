@@ -5,7 +5,7 @@ import { resolveRowGrade, GRADE_ORDER } from "@/lib/grades";
 import { canEditFormation } from "@/lib/dashboardPermissions";
 import type { ServiceRecordFull } from "@/components/dashboard/Dashboard";
 import type { BureauRow } from "@/components/dashboard/dashboardShared";
-import { sheriffDisplayLabel } from "@/components/dashboard/dashboardShared";
+import { isOwnBureauRow, sheriffDisplayLabel } from "@/components/dashboard/dashboardShared";
 
 type Formation = { id: string; label: string; maxGradeOrder?: number };
 
@@ -14,6 +14,7 @@ type Props = {
   sheriffsCount: number;
   displayFormations: Formation[];
   currentGrade?: string | null;
+  currentUserId?: string | null;
   currentUsername?: string | null;
   updating: string | null;
   onPatchRecord: (id: string, payload: Partial<ServiceRecordFull>) => Promise<void>;
@@ -32,17 +33,13 @@ function LockIcon({ className }: { className?: string }) {
   );
 }
 
-function ciEquals(a: string | null | undefined, b: string | null | undefined): boolean {
-  if (!a || !b) return false;
-  return a.localeCompare(b, undefined, { sensitivity: "base" }) === 0;
-}
-
 /** "Formations" tab — grid of (sheriff × formation) toggles, gated by grade. */
 export function DashboardFormationsTab({
   bureauRows,
   sheriffsCount,
   displayFormations,
   currentGrade,
+  currentUserId,
   currentUsername,
   updating,
   onPatchRecord,
@@ -94,7 +91,11 @@ export function DashboardFormationsTab({
                 targetGradeOrder === null || maxGradeOrder >= targetGradeOrder;
               const lockedByGrade =
                 currentUserOrder !== null && currentUserOrder > maxGradeOrder;
-              const isOwnRow = r ? ciEquals(r.name, currentUsername) : false;
+              const isOwnRow = isOwnBureauRow(
+                { sheriff, record: r },
+                currentUserId,
+                currentUsername,
+              );
               const editable = r
                 ? canEditFormation(currentGrade, targetGrade, maxGradeOrder, isOwnRow)
                 : false;

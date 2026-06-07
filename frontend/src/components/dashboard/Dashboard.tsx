@@ -60,6 +60,8 @@ type Props = {
   allowedFormations: { id: string; label: string }[];
   allFormations?: { id: string; label: string }[];
   sheriffs: SheriffRef[];
+  /** Stable Symfony user id of the connected user (matches sheriff.id and record.userId). */
+  currentUserId?: string | null;
   currentUsername?: string | null;
   currentGrade?: string | null;
 };
@@ -74,6 +76,7 @@ export function Dashboard({
   allowedFormations,
   allFormations,
   sheriffs,
+  currentUserId,
   currentUsername,
   currentGrade,
 }: Props) {
@@ -144,6 +147,7 @@ export function Dashboard({
           bureauRows={bureauRows}
           sheriffsCount={sheriffs.length}
           currentGrade={currentGrade}
+          currentUserId={currentUserId}
           currentUsername={currentUsername}
           updating={actions.updating}
           deletingId={actions.deletingId}
@@ -166,6 +170,7 @@ export function Dashboard({
           sheriffsCount={sheriffs.length}
           displayFormations={displayFormations}
           currentGrade={currentGrade}
+          currentUserId={currentUserId}
           currentUsername={currentUsername}
           updating={actions.updating}
           onPatchRecord={actions.patchRecord}

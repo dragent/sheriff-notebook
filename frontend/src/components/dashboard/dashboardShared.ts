@@ -22,6 +22,28 @@ export type BureauRow = {
   record: ServiceRecordFull | null;
 };
 
+/**
+ * True when a bureau row belongs to the current user.
+ *
+ * Matches on the stable Symfony user id (1:1 with the Discord account, unaffected
+ * by username/nickname changes), mirroring the backend rule
+ * `record.user.id === me.id`. Falls back to a case-insensitive name comparison only
+ * when ids are unavailable (e.g. legacy unlinked records or `/api/me` without `id`).
+ */
+export function isOwnBureauRow(
+  row: BureauRow,
+  currentUserId: string | null | undefined,
+  currentUsername: string | null | undefined,
+): boolean {
+  const recordUserId = row.record?.userId ?? null;
+  if (currentUserId && recordUserId) {
+    return recordUserId.trim().toLowerCase() === currentUserId.trim().toLowerCase();
+  }
+  const recordName = row.record?.name ?? null;
+  if (!currentUsername || !recordName) return false;
+  return recordName.localeCompare(currentUsername, undefined, { sensitivity: "base" }) === 0;
+}
+
 const SCOPE_UNSUPPORTED_WEAPON_TOKENS = [
   "pistolet",
   "revolver",
